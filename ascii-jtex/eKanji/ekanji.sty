@@ -1,0 +1,78 @@
+%%
+%% This is file `ekanji.sty' for eKanji fonts
+%% by Hirotsugu Kakugawa (h.kakugwa@computer.org)
+%%
+\NeedsTeXFormat{LaTeX2e}%
+\ProvidesPackage{ekanji}[1999/12/07 ver 1.0]%
+
+\DeclareKanjiEncodingDefaults{}{}
+\DeclareYokoKanjiEncoding{JY1}{ekan}{}
+\DeclareTateKanjiEncoding{JT1}{ekan}{}
+
+% eKanji Unicode 
+\newcommand{\EKU}[1]{\ek@char{#1}{10}}
+% eKanji KangXi
+\newcommand{\EKK}[1]{\ek@char{#1}{20}}
+% eKanji Morohashi
+\newcommand{\EKM}[1]{\ek@char{#1}{30}}
+
+
+\newcommand{\ek@char}[2]{%
+\@tempcnta#1\relax\advance\@tempcnta-1\relax\divide\@tempcnta5640\relax%
+\ifnum\@tempcnta<10%
+  \xdef\ek@block{0\the\@tempcnta}%
+\else%
+  \xdef\ek@block{\the\@tempcnta}%
+\fi%
+\@tempcntb\@tempcnta%
+\multiply\@tempcntb5640\relax\@tempcntb-\@tempcntb%
+\@tempcnta#1\relax\advance\@tempcnta-1\relax\advance\@tempcntb\@tempcnta%
+\xdef\ek@inblock{\the\@tempcntb}%
+%\typeout{\ek@block, \ek@inblock}
+\ek@@char{\ek@inblock}%
+%\typeout{0x\ek@Ku\ek@Ten}
+{\iftdir%
+    \kanjiencoding{JT1}\kanjifamily{ekan}%
+    \kanjishape{#2\ek@block}\kanjiseries{m}%
+ \else%
+    \kanjiencoding{JY1}\kanjifamily{ekan}%
+    \kanjishape{#2\ek@block}\kanjiseries{m}%
+ \fi%
+ \selectfont\char\kuten"\ek@Ku\ek@Ten\relax}%
+}
+
+\newcommand{\ek@@char}[1]{%
+\begingroup%
+\@tempcnta#1\relax\divide\@tempcnta94\relax%
+\@tempcntb\@tempcnta%
+\multiply\@tempcntb94\relax\@tempcntb-\@tempcntb\advance\@tempcntb#1%
+\ifnum\@tempcnta<30%
+ \advance\@tempcnta16\relax%
+\else%
+ \advance\@tempcnta18\relax%
+\fi%
+\advance\@tempcntb1\relax%
+%\typeout{Font \ek@block, Row \the\@tempcnta, Cell \the\@tempcntb}%
+\ek@dtoh{\the\@tempcnta}\xdef\ek@Ku{\ek@hexH\ek@hexL}%
+\ek@dtoh{\the\@tempcntb}\xdef\ek@Ten{\ek@hexH\ek@hexL}%
+\endgroup}
+
+\newcommand{\ek@dtoh}[1]{%
+\begingroup%
+\@tempcnta#1\relax\@tempcntb#1\relax%
+\divide\@tempcntb16\relax%
+\xdef\ek@hexH{\ek@@dtoh{\the\@tempcntb}}%
+\multiply\@tempcntb16\relax\@tempcntb-\@tempcntb\advance\@tempcntb\@tempcnta%
+\xdef\ek@hexL{\ek@@dtoh{\the\@tempcntb}}%
+\endgroup}
+
+\newcommand{\ek@@dtoh}[1]{%
+\ifcase#1
+ 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or%
+ 8\or 9\or A\or B\or C\or D\or E\or F%
+\fi}
+
+
+%% EOF
+\endinput
+%% end of ekanji.sty.

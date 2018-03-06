@@ -1,0 +1,41 @@
+#
+# Makefile.in for vfl2bdf
+#  by H.Kakugawa
+#
+
+# -----------------------------------------------------------------------
+default: all
+
+PROGRAM = vfl2bdf
+
+LIBTOOL = ../../libtool
+include   ../../make-sub
+
+
+ VFLIB_DIR = ../../src
+  PROGRAMS = vfl2bdf
+      SRCS = vfl2bdf.c
+      OBJS = vfl2bdf.o
+
+all: $(PROGRAMS)
+
+vfl2bdf: $(OBJS) $(VFLIB_DIR)/libVFlib3.la
+	$(LIBTOOL) --mode=link \
+		$(CC) $(VFCFLAGS) -o $@ vfl2bdf.o \
+		  $(VFLIB_DIR)/libVFlib3.la
+
+vfl2bdf.o: vfl2bdf.c
+	$(CC) $(VFCFLAGS) -I$(VFLIB_DIR) -c vfl2bdf.c
+
+install: $(PROGRAM)
+	@$(LIBTOOL) --mode=install \
+	   ../../$(INSTALL_PROGRAM) vfl2bdf $(bindir)/vfl2bdf
+uninstall: 
+	@$(LIBTOOL) --mode=uninstall $(RM) $(bindir)/vfl2bdf
+
+clean::
+	-$(RM) $(PROGRAM)
+veryclean:: clean
+distclean:: clean
+
+# -----------------------------------------------------------------------

@@ -1,0 +1,1338 @@
+/* vfsexp.c - a module for handling s-expressions
+ * by Hirotsugu Kakugawa
+ *
+ *  Edition History
+ *   7 Jan 1998  First implementation
+ *   2 May 1998  Fix a bug to fail reading a string ""
+ *  24 Jun 1998  Added a function to read an s-exp from string stream.
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#include "config.h"
+#include  <stdio.h>
+#include  <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#if defined(HAVE_STRING_H) || defined(STDC_HEADERS)
+#  include  <string.h>
+#else
+#  include  <strings.h>
+#endif
+#include  <ctype.h>
+
+#include "sexp.h"
+#include "mem.h"
+
+#define TRUE   (1==1)
+#define FALSE  (1==0)
+
+static SEXP   vf_sexp_alloc(int tag);
+static void   vf_sexp_obj_validate(SEXP s1);
+static void   vf_sexp_obj_validate2(SEXP s1, SEXP s2);
+
+
+
+/*
+ * Basic Functions 
+ */
+
+SEXP
+vf_sexp_cons(SEXP car, SEXP cdr)
+{
+  SEXP  cell;
+
+  vf_sexp_obj_validate2(car, cdr);
+
+  cell = vf_sexp_alloc(VF_SEXP_TAG_CONS);
+  if (cell == NULL)
+    return NULL;
+
+  cell->t.cons.car = car;
+  cell->t.cons.cdr = cdr;
+
+  return cell;
+}
+
+SEXP
+vf_sexp_car(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if (s->tag != VF_SEXP_TAG_CONS){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_car()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+
+  return s->t.cons.car;
+}
+
+SEXP
+vf_sexp_cdr(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if (s->tag != VF_SEXP_TAG_CONS){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_cdr()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+
+  return s->t.cons.cdr;
+}
+
+SEXP
+vf_sexp_caar(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if ((s->tag != VF_SEXP_TAG_CONS)
+      || ((s->t.cons.car)->tag != VF_SEXP_TAG_CONS)){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_caar()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+  vf_sexp_obj_validate(s->t.cons.car);
+
+  return (s->t.cons.car)->t.cons.car;
+}
+
+SEXP
+vf_sexp_cadr(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if ((s->tag != VF_SEXP_TAG_CONS)
+      || ((s->t.cons.cdr)->tag != VF_SEXP_TAG_CONS)){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_cadr()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+  vf_sexp_obj_validate(s->t.cons.cdr);
+
+  return (s->t.cons.cdr)->t.cons.car;
+}
+
+SEXP
+vf_sexp_cdar(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if ((s->tag != VF_SEXP_TAG_CONS)
+      || ((s->t.cons.car)->tag != VF_SEXP_TAG_CONS)){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_cdar()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+  vf_sexp_obj_validate(s->t.cons.car);
+
+  return (s->t.cons.car)->t.cons.cdr;
+}
+
+SEXP
+vf_sexp_cddr(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if ((s->tag != VF_SEXP_TAG_CONS)
+      || ((s->t.cons.cdr)->tag != VF_SEXP_TAG_CONS)){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_cddr()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+  vf_sexp_obj_validate(s->t.cons.cdr);
+
+  return (s->t.cons.cdr)->t.cons.cdr;
+}
+
+SEXP
+vf_sexp_caddr(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if ((s->tag != VF_SEXP_TAG_CONS)
+      || ((s->t.cons.cdr)->tag != VF_SEXP_TAG_CONS)
+      || (((s->t.cons.cdr)->t.cons.cdr)->tag != VF_SEXP_TAG_CONS)){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_caddr()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+  vf_sexp_obj_validate(s->t.cons.cdr);
+  vf_sexp_obj_validate((s->t.cons.cdr)->t.cons.cdr);
+
+  return ((s->t.cons.cdr)->t.cons.cdr)->t.cons.car;
+}
+
+void
+vf_sexp_rplaca(SEXP s, SEXP val)
+{
+  vf_sexp_obj_validate2(s, val);
+  if (s->tag != VF_SEXP_TAG_CONS){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_rplaca()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+
+  s->t.cons.car = val;
+}
+
+void
+vf_sexp_rplacd(SEXP s, SEXP val)
+{
+  vf_sexp_obj_validate2(s, val);
+  if (s->tag != VF_SEXP_TAG_CONS){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_rplacd()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+
+  s->t.cons.cdr = val;
+}
+
+int
+vf_sexp_atom(SEXP s)
+{
+  if (s == NULL)
+    return FALSE;
+  vf_sexp_obj_validate(s);
+
+  return (s->tag != VF_SEXP_TAG_CONS);
+}
+
+int
+vf_sexp_null(SEXP s)
+{
+  if (s == NULL)
+    return FALSE;
+  vf_sexp_obj_validate(s);
+
+  return (s->tag == VF_SEXP_TAG_NIL);
+}
+
+int
+vf_sexp_consp(SEXP s)
+{
+  if (s == NULL)
+    return FALSE;
+  vf_sexp_obj_validate(s);
+
+  return (s->tag == VF_SEXP_TAG_CONS);
+}
+
+int
+vf_sexp_stringp(SEXP s)
+{
+  if (s == NULL)
+    return FALSE;
+
+  vf_sexp_obj_validate(s);
+  return (((s->tag == VF_SEXP_TAG_STRING) || (s->tag == VF_SEXP_TAG_SYMBOL))
+	  && (s->t.str != NULL));
+}
+
+char*
+vf_sexp_get_cstring(SEXP s)
+{
+  vf_sexp_obj_validate(s);
+  if (!vf_sexp_stringp(s)){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_get_cstring()]: %s\n",
+	    "arg type error");
+    abort();
+  }
+
+  return s->t.str;
+}
+
+int
+vf_sexp_listp(SEXP s)
+{
+  if (s == NULL)
+    return FALSE;
+  vf_sexp_obj_validate(s);
+
+  if (vf_sexp_null(s))
+    return TRUE;
+
+  return (s->tag == VF_SEXP_TAG_CONS);
+  /* Since our s-exp reader does not support 'dot-notation',
+     all cons data forms a list. */
+}
+
+int
+vf_sexp_alistp(SEXP_ALIST s)
+{
+  SEXP  t;
+
+  if (vf_sexp_null(s))
+    return TRUE;
+  if (!vf_sexp_listp(s))
+    return FALSE;
+
+  for (t = s; t->tag == VF_SEXP_TAG_CONS; t = t->t.cons.cdr){
+    if (!vf_sexp_listp(t->t.cons.car))
+      return FALSE;
+  }    
+  return (t->tag == VF_SEXP_TAG_NIL);
+}
+
+int
+vf_sexp_member(char* key, SEXP_LIST s)
+{
+  SEXP  t;
+
+  /* vf_sexp_member[(a b c ...), x] => True/False */
+
+  if (!vf_sexp_listp(s))
+    return FALSE;
+  for (t = s; t->tag == VF_SEXP_TAG_CONS; t = t->t.cons.cdr){
+    if (((t->tag == VF_SEXP_TAG_STRING) || (t->tag == VF_SEXP_TAG_SYMBOL))
+	&& (t->t.str != NULL) && (strcmp(key, t->t.str) == 0))
+      return TRUE;
+  }    
+  return FALSE;
+}
+
+SEXP
+vf_sexp_alist_put(char *key, char *val, SEXP_ALIST alist)
+{
+  SEXP  sk, sv, t, v;
+
+  if (!vf_sexp_alistp(alist))
+    return NULL;
+  if (key == NULL)
+    key = ""; 
+  if (val == NULL)
+    val = ""; 
+
+  sk = vf_sexp_cstring2string(key);
+  sv = vf_sexp_cstring2string(val);
+  t = vf_sexp_list2(sk, sv);
+  v =  vf_sexp_cons(t, alist);
+
+  return v;
+}
+
+SEXP
+vf_sexp_assoc(char* key, SEXP s)
+{
+  SEXP  t, pair;
+
+  /* vf_sexp_assoc[((p1 v1 ...) (p2 v2 ...)  ...), pi] => (pi vi ...) */
+
+  if ((key == NULL) || (s == NULL))
+    return NULL;
+  if (!vf_sexp_alistp(s))
+    return NULL;
+
+  for (t = s; (t != NULL) && (t->tag == VF_SEXP_TAG_CONS); t = t->t.cons.cdr){
+    if (t->t.cons.car == NULL)
+      continue;
+    pair = t->t.cons.car;
+    if (vf_sexp_stringp(vf_sexp_car(pair))
+	&& (strcmp(key, vf_sexp_get_cstring(vf_sexp_car(pair))) == 0))
+      return pair;
+  }
+
+  return NULL;
+}
+
+int
+vf_sexp_length(SEXP s)
+{
+  int   len;
+  SEXP  t;
+
+  if (!vf_sexp_listp(s))
+    return 0;
+  len = 0;
+  for (t = s; t->tag == VF_SEXP_TAG_CONS; t = t->t.cons.cdr)
+    len++;
+  return len;
+}
+
+SEXP
+vf_sexp_list1(SEXP s)
+{
+  return vf_sexp_cons(s, vf_sexp_empty_list());
+}
+
+SEXP
+vf_sexp_list2(SEXP s1, SEXP s2)
+{
+  return vf_sexp_cons(s1, vf_sexp_cons(s2, vf_sexp_empty_list()));
+}
+
+SEXP
+vf_sexp_copy(SEXP s)
+{
+  SEXP  cp, car, cdr;
+
+  if (s == NULL)
+    return NULL;
+  vf_sexp_obj_validate(s);
+
+  cp = vf_sexp_alloc(s->tag);
+  if (cp == NULL)
+    return NULL;
+
+  switch (s->tag){
+  default:
+    return NULL;
+  case VF_SEXP_TAG_NIL:
+    break;
+  case VF_SEXP_TAG_CONS:
+    car = vf_sexp_copy(s->t.cons.car);
+    cdr = vf_sexp_copy(s->t.cons.cdr);
+    if ((car == NULL) || (cdr == NULL)){
+      if (car != NULL)
+	vf_sexp_free(&car);
+      if (cdr != NULL)
+	vf_sexp_free(&cdr);
+      return NULL;
+    }
+    cp->t.cons.car = car;
+    cp->t.cons.cdr = cdr;
+    break;
+  case VF_SEXP_TAG_STRING:
+  case VF_SEXP_TAG_SYMBOL:
+    if (s->t.str == NULL)
+      goto Error;
+    if ((cp->t.str = (char*)malloc(strlen(s->t.str)+1)) == NULL)
+      goto Error;
+    strcpy(cp->t.str, s->t.str);
+    break;
+  }
+  return cp;
+
+ Error:
+  vf_sexp_free(&cp);
+  return NULL;
+}
+
+void
+vf_sexp_nconc(SEXP s1, SEXP s2)
+{
+  SEXP  t, tt;
+
+  if (s2 == NULL)
+    return;
+  if (s1 == NULL)
+    return;
+
+  if (!vf_sexp_listp(s1) && !vf_sexp_listp(s2)){
+    fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_nconc()]: %s\n",
+	    "args type");
+    return;
+  }
+
+  if (vf_sexp_null(s2))
+    return;
+
+  t = s1;
+  while (vf_sexp_consp(vf_sexp_cdr(t)))
+    t = vf_sexp_cdr(t);
+  tt = vf_sexp_cdr(t);
+  vf_sexp_free(&tt);
+  vf_sexp_rplacd(t, s2);
+}
+
+SEXP
+vf_sexp_empty_list(void)
+{
+  return vf_sexp_alloc(VF_SEXP_TAG_NIL);
+}
+
+SEXP
+vf_sexp_getf(SEXP s, char *key) 
+{
+  SEXP t;
+
+  for (t = s; t->tag == VF_SEXP_TAG_CONS; t = t->t.cons.cdr){
+    if (vf_sexp_stringp(t->t.cons.car) && 
+	strcmp (key, vf_sexp_get_cstring (t->t.cons.car)) == 0){
+      return t->t.cons.cdr;
+    }
+  }
+  return NULL;
+}
+
+
+
+/* 
+ * Pretty Print
+ */
+static void  vf_sexp_pp2(FILE *fp, SEXP s, int depth, int need_indent, 
+			 int vflibcap_entry_flag);
+
+void
+vf_sexp_pp(SEXP s)
+{
+  vf_sexp_pp2(stdout, s, 0, 1, 0);
+  fprintf(stdout, "\n");
+}
+
+void
+vf_sexp_pp_fp(SEXP s, FILE *fp)
+{
+  vf_sexp_pp2(fp, s, 0, 1, 0);
+  fprintf(fp, "\n");
+}
+
+void
+vf_sexp_pp_entry(SEXP s)
+{
+  vf_sexp_pp2(stdout, s, 0, 1, 1);
+  fprintf(stdout, "\n");
+}
+
+void
+vf_sexp_pp_entry_fp(SEXP s, FILE *fp)
+{
+  vf_sexp_pp2(fp, s, 0, 1, 1);
+  fprintf(fp, "\n");
+}
+
+
+static void
+vf_sexp_pp2(FILE *fp, SEXP s, int depth, int need_indent,
+	    int vflibcap_entry_flag)
+{
+  SEXP  t, u;
+  char  *p;
+  int   i;
+
+  vf_sexp_obj_validate(s);
+  if ((need_indent == 1) && (depth > 0)){
+    fprintf(fp, "\n");
+    for (i = 0; i < depth; i++) 
+      fprintf(fp, "    ");
+  }
+
+  switch (s->tag){
+  default:
+    fprintf(stderr, "VFlib: Unknown sexp object %p", (void*)s);
+    abort();
+  case VF_SEXP_TAG_NIL:
+    fprintf(fp, "()");
+    break;
+  case VF_SEXP_TAG_STRING:
+  case VF_SEXP_TAG_SYMBOL:
+    if (s->tag == VF_SEXP_TAG_STRING)
+      fprintf(fp, "\"");
+    for (p = s->t.str; *p != '\0'; p++){
+      if (*p == '"'){
+	fprintf(fp, "\\\"");
+      } else if (!iscntrl((int)(*p))){
+	fprintf(fp, "%c", *p);
+      } else {
+	switch (*p){
+	case '\a':  fprintf(fp, "\\a"); break;
+	case '\b':  fprintf(fp, "\\b"); break;
+	case '\f':  fprintf(fp, "\\f"); break;
+	case '\n':  fprintf(fp, "\\n"); break;
+	case '\r':  fprintf(fp, "\\r"); break;
+	case '\t':  fprintf(fp, "\\t"); break;
+	case '\v':  fprintf(fp, "\\v"); break;
+	default:    fprintf(fp, "\\x%02x", *p);
+	}
+      }
+    }
+    if (s->tag == VF_SEXP_TAG_STRING)
+      fprintf(fp, "\"");
+    break;
+  case VF_SEXP_TAG_CONS:
+#if 1
+    fprintf(fp, "(");
+    if ((depth == 0) && (vf_sexp_length(s) > 2)
+	&& (vflibcap_entry_flag == 1)
+	&& (vf_sexp_stringp(vf_sexp_car(s)))
+	&& (vf_sexp_stringp(vf_sexp_car(vf_sexp_cdr(s)))) ){
+      vf_sexp_pp2(fp, vf_sexp_car(s), depth+1, 0, vflibcap_entry_flag);
+      fprintf(fp, " ");
+      vf_sexp_pp2(fp, vf_sexp_car(vf_sexp_cdr(s)), depth+1, 0, 
+		  vflibcap_entry_flag);
+      for (t = vf_sexp_cdr(vf_sexp_cdr(s));
+	   vf_sexp_consp(t); 
+	   t = vf_sexp_cdr(t)){
+	if (vf_sexp_stringp(vf_sexp_car(t))){
+	  vf_sexp_pp2(fp, vf_sexp_car(t), depth+1, 1, 0);
+	} else {
+	  fprintf(fp, "\n    (%s", vf_sexp_get_cstring(vf_sexp_caar(t)));
+	  for (u = vf_sexp_cdar(t); vf_sexp_consp(u); u = vf_sexp_cdr(u)){
+	    vf_sexp_pp2(fp, vf_sexp_car(u), depth+2, 1, 0);
+	  }
+	  fprintf(fp, ")");
+	}
+      }
+    } else {
+      vf_sexp_pp2(fp, vf_sexp_car(s), depth+1, 0, vflibcap_entry_flag);
+      for (t = vf_sexp_cdr(s); vf_sexp_consp(t); t = vf_sexp_cdr(t)){
+	fprintf(fp, " ");
+	vf_sexp_pp2(fp, vf_sexp_car(t), depth+1, 0, vflibcap_entry_flag);
+      }
+    }
+    fprintf(fp, ")");
+#else
+    fprintf(fp, "(");
+      vf_sexp_pp2(fp, vf_sexp_car(s), depth+1, vflibcap_entry_flag);
+      for (t = vf_sexp_cdr(s); vf_sexp_consp(t); t = vf_sexp_cdr(t)){
+	fprintf(fp, " ");
+	vf_sexp_pp2(fp, vf_sexp_car(t), depth+1, 0, vflibcap_entry_flag);
+      }
+    fprintf(fp, ")");
+#endif
+    break;
+  }
+}
+
+
+/*
+ * S-Expression Reader
+ */
+
+typedef struct s_sexp_stream  *SEXP_STREAM;
+struct s_sexp_stream {
+  int   ungetc_buff;
+  void  *obj;
+  void  *data1;
+  void  *data2;
+  int   (*get_char)(SEXP_STREAM stream);
+  void  (*unget_char)(SEXP_STREAM stream, int ch);
+};
+#define SEXP_STREAM_GETC(stream)          (stream->get_char)(stream)
+#define SEXP_STREAM_UNGETC(stream,ch)     (stream->unget_char)(stream,ch)
+
+static SEXP  vf_sexp_read_from_stream(SEXP_STREAM);
+
+
+static int   string_stream_get_char(SEXP_STREAM);
+static void  string_stream_unget_char(SEXP_STREAM,int);
+
+SEXP
+vf_sexp_read_from_string_stream(char *str)
+{
+  struct s_sexp_stream   stream_obj;
+
+  stream_obj.ungetc_buff = -1;
+  stream_obj.obj         = str;
+  stream_obj.data1       = str;
+  stream_obj.get_char    = string_stream_get_char;
+  stream_obj.unget_char  = string_stream_unget_char;
+  return vf_sexp_read_from_stream(&stream_obj);
+}
+
+static int
+string_stream_get_char(SEXP_STREAM stream)
+{
+  int   ch;
+  char *p;
+
+  if (stream->ungetc_buff >= 0){
+    ch = stream->ungetc_buff;
+    stream->ungetc_buff = -1;
+    return ch;
+  }
+
+  stream->ungetc_buff = -1;
+  p = stream->data1;
+  if ((ch = *p) == '\0')
+    return EOF;
+  p++;
+  stream->data1 = p;
+  return ch;
+}
+
+static void
+string_stream_unget_char(SEXP_STREAM stream, int ch)
+{
+  stream->ungetc_buff = ch;
+}
+
+
+static int   file_stream_get_char(SEXP_STREAM);
+static void  file_stream_unget_char(SEXP_STREAM,int);
+
+SEXP
+vf_sexp_read_from_file_stream(FILE *fp)
+{
+  struct s_sexp_stream   stream_obj;
+
+  stream_obj.ungetc_buff = -1;
+  stream_obj.obj         = fp;
+  stream_obj.get_char    = file_stream_get_char;
+  stream_obj.unget_char  = file_stream_unget_char;
+  return vf_sexp_read_from_stream(&stream_obj);
+}
+
+SEXP
+vf_sexp_read(FILE *fp)
+{
+  return vf_sexp_read_from_file_stream(fp);
+}
+
+static int
+file_stream_get_char(SEXP_STREAM stream)
+{
+  int   ch;
+  FILE  *fp;
+
+  if (stream->ungetc_buff >= 0){
+    ch = stream->ungetc_buff;
+    stream->ungetc_buff = -1;
+    return ch;
+  }
+
+  stream->ungetc_buff = -1;
+  fp = stream->obj;
+  return getc(fp);
+}
+
+static void
+file_stream_unget_char(SEXP_STREAM stream, int ch)
+{
+  stream->ungetc_buff = ch;
+}
+
+
+
+static int  vf_sexp_do_read_from_stream(SEXP_STREAM stream, SEXP sexp);
+static int  vf_sexp_read_str(SEXP_STREAM stream, char ch, SEXP sexp);
+static int  vf_sexp_skip(SEXP_STREAM stream);
+static char vf_get_char_esc(char **pp, SEXP_STREAM stream);
+#define  NBUFFER_MIN    2*1024
+#define  NBUFFER_MED    4*1024
+#define  NBUFFER_MAX   16*1024
+
+static SEXP
+vf_sexp_read_from_stream(SEXP_STREAM stream)
+{
+  SEXP  s;
+
+  if ((s = vf_sexp_alloc(VF_SEXP_TAG_NIL)) == NULL)
+    return NULL;
+  if (vf_sexp_do_read_from_stream(stream, s) < 0){
+    vf_sexp_free(&s);
+    return NULL;
+  }
+  return s; 
+}
+
+static int
+vf_sexp_do_read_from_stream(SEXP_STREAM stream, SEXP s)
+{
+  int   ch;
+  
+  ch = vf_sexp_skip(stream);
+  if (ch < 0)
+    return -1;
+  
+  if (ch == '('){                   /* cons or nil */
+    s->tag = VF_SEXP_TAG_NIL;
+    for (;;){
+      ch = vf_sexp_skip(stream);
+      if (ch < 0)
+	return -1;
+      if (ch == ')')    /* nil */
+	break;
+      SEXP_STREAM_UNGETC(stream, ch);   /* cons */
+
+      s->tag = VF_SEXP_TAG_CONS;
+      s->t.cons.car = NULL;
+      s->t.cons.cdr = NULL;
+      if ((s->t.cons.car = vf_sexp_alloc(VF_SEXP_TAG_NIL)) == NULL)
+	return -1;
+      if ((s->t.cons.cdr = vf_sexp_alloc(VF_SEXP_TAG_NIL)) == NULL)
+	return -1;
+      if (vf_sexp_do_read_from_stream(stream, s->t.cons.car) < 0){
+	fprintf(stderr, "VFlib: Broken vflibcap file - unexpected EOF\n");
+	return -1;
+      }
+      s = s->t.cons.cdr;
+      ch = vf_sexp_skip(stream);
+      if (ch < 0){
+	fprintf(stderr, "VFlib: Broken vflibcap file - unexpected EOF\n");
+	return -1;
+      }
+      if (ch == ')')
+	break;
+      SEXP_STREAM_UNGETC(stream, ch);
+    }
+    return 0;
+  } else if (ch == ')'){            /* broken s-exp */
+    fprintf(stderr, "VFlib: Broken vflibcap file - unexpected ')'\n");
+    return -1;
+  } else if (ch == '"'){            /* string */
+    s->tag = VF_SEXP_TAG_STRING;
+    return vf_sexp_read_str(stream, ch, s);
+  } else {                          /* symbol */
+    s->tag = VF_SEXP_TAG_SYMBOL;
+    return vf_sexp_read_str(stream, ch, s);
+  }
+
+  fprintf(stderr, "VFlib Error [sexp.c:vf_sexp_read2()]: %s\n",
+	  "Cannot Happen");
+  abort();
+  return -1;
+}
+
+static int
+vf_sexp_read_str(SEXP_STREAM stream, char ch, SEXP s)
+{
+  char         tmp[8];
+  int          ch1, dq_str; 
+  int          bindex, i;
+  unsigned int n;
+  static char *buff = NULL;
+  static int   nbuff = 0; 
+
+  bindex = 0;
+  s->t.str = NULL;
+
+  /* alloc read buffer if not exist */
+  if (buff == NULL){
+    nbuff = NBUFFER_MIN;
+    if ((buff = (char*)malloc(nbuff)) == NULL){
+      nbuff = 0;
+      return -1;
+    }
+  }
+
+  /* enclosed by double quote? */
+  dq_str = 0;
+  if (ch == '"'){
+    dq_str = 1;
+    if ((ch = SEXP_STREAM_GETC(stream)) < 0){
+      fprintf(stderr, "VFlib: Broken vflibcap file - unexpected EOF\n");
+      return -1;
+    }
+    if (ch == '"')
+      goto STR_END;
+  }
+
+
+  for (;;){
+
+    /* realloc read buffer if strng is larger than buffer size */
+    if (bindex >= nbuff-1){
+      if ((nbuff = nbuff + NBUFFER_MIN) > NBUFFER_MAX){
+	fprintf(stderr, "VFlib: vflibcap too large. Fogotten parentheses?\n");
+	exit(1);
+      }
+      if ((buff = realloc(buff, nbuff)) == NULL)
+	nbuff = 0;
+    }
+
+    if (ch == '\\'){   /* escape syntax */
+      ch1 = SEXP_STREAM_GETC(stream);
+      if (isdigit((int)ch1)){            /* '\123'    - octal (3 digits) */
+	tmp[0] = SEXP_STREAM_GETC(stream); 
+	tmp[1] = SEXP_STREAM_GETC(stream); 
+	tmp[2] = SEXP_STREAM_GETC(stream); 
+	tmp[3] = '\0';
+	sscanf(tmp, "%o", &n);
+	ch = n;
+      } else if (ch1 == 'x'){            /* '\x12'    - hex (2 digits) */
+	tmp[0] = SEXP_STREAM_GETC(stream); 
+	tmp[1] = SEXP_STREAM_GETC(stream); 
+	tmp[2] = '\0';
+	sscanf(tmp, "%x", &n);
+	ch = n;
+      } else {                              /* '\n', '\t', '\:' etc. */
+	switch (ch1){
+	case 'a':   ch = '\a'; break;
+	case 'b':   ch = '\b'; break;
+	case 'f':   ch = '\f'; break;
+	case 'n':   ch = '\n'; break;
+	case 'r':   ch = '\r'; break;
+	case 't':   ch = '\t'; break;
+	case 'v':   ch = '\v'; break;
+	default:    ch = ch1;  break;
+	}
+      }
+    }
+
+    /* put a char into read buffer */
+    buff[bindex++] = ch;
+
+    /* get next char */
+    ch = SEXP_STREAM_GETC(stream);
+    if ((dq_str == 0) && (ch < 0)){
+      break;
+    } else if ((dq_str == 1) && (ch < 0)){
+      fprintf(stderr, "VFlib: Broken vflibcap file - unexpected EOF: \"");
+      for (i = 0; i < bindex; i++){
+	if ((buff[i] == '\0') || (buff[i] == '\n') || (buff[i] == '\f'))
+	  break;
+	fprintf(stderr, "%c", buff[i]);
+      }
+      fprintf(stderr, "...\n");
+      return -1;
+    }
+
+    if ((dq_str == 1) && (ch == '"')){
+      break;
+    } else if (dq_str == 0){
+      if (isspace((int)ch))
+	break;
+      if ((ch == '(') || (ch == ')') || (ch == ';')){
+	SEXP_STREAM_UNGETC(stream, ch);
+	break;
+      }
+    }
+
+  }
+
+STR_END:
+  buff[bindex++] = '\0';
+
+  /* copy into sexp */
+  if ((s->t.str = malloc(bindex)) == NULL)
+    return -1;
+  memcpy(s->t.str, buff, bindex);
+
+  if (nbuff > NBUFFER_MED){   /* read buffer became large. release it. */ 
+    nbuff = NBUFFER_MED;
+    if ((buff = realloc(buff, nbuff)) == NULL)
+      nbuff = 0;
+  }
+
+  return 0;
+}
+
+
+static int
+vf_sexp_skip(SEXP_STREAM stream)
+{
+  int  ch;
+
+  for (;;){
+    /* read a char from stream */
+    if ((ch = SEXP_STREAM_GETC(stream)) < 0)
+      return -1;  /* eof */
+    /* skip white space */
+    if (isspace((int)ch))
+      continue;
+    if (ch != ';')
+      break;
+    /* skip comment */
+    if (ch == ';'){
+      for (;;){  /* skip until the end of line */
+	if ((ch = SEXP_STREAM_GETC(stream)) < 0)
+	  return -1;
+	if (ch == '\n')
+	  break;
+      }
+      continue;
+    }
+  }
+
+  return ch;
+}
+
+
+/*
+ * Parse C String to String/List/AList
+ */
+
+SEXP
+vf_sexp_cstring2string(char *str)
+{
+  SEXP  s;
+
+  if ((s = vf_sexp_alloc(VF_SEXP_TAG_STRING)) == NULL)
+    return NULL;
+  if (str == NULL)
+    str = "";
+  if ((s->t.str = (char*)malloc(strlen(str)+1)) == NULL){
+    vf_sexp_free(&s);
+    return NULL;
+  }
+  strcpy(s->t.str, str);
+  
+  return s;
+}
+
+SEXP
+vf_sexp_cstring2list(char *cstr)
+     /*  C-str "xxx, yyy, zzz, ..."   ==>  SEXP ("xxx" "yyy" "zzz" ...) */
+{
+  SEXP  head, tail, last, cell, str, val;
+  char  c, *start, *p, *q;
+  int   len, i;
+
+  head = vf_sexp_alloc(VF_SEXP_TAG_CONS);
+  tail = vf_sexp_alloc(VF_SEXP_TAG_NIL);
+  vf_sexp_rplacd(head, tail);
+
+  if (cstr == NULL)
+    goto End;
+
+  p = cstr;
+  last = head;
+  for (;;){
+    /* skip spaces */
+    for (c = *p; 
+	 (!isprint((int)c)||isspace((int)c)) && (c != '\0') ; 
+	 p++, c = *p)
+      ;
+    if (c == '\0')
+      break;
+
+    /* an element starts */
+    start = p;
+    len = 0;
+
+    /* go to end of an element */
+    for (c = *p; 
+	 (isprint((int)c)&&!isspace((int)c)) && (c != ',') && (c != '\0');
+	 len++, p++, c = *p){
+      (void) vf_get_char_esc(&p, NULL);
+    }
+
+    /* copy string */
+    str = vf_sexp_alloc(VF_SEXP_TAG_STRING);
+    str->t.str = (char*)malloc(len+1);
+    for (i = 0, q = start; i < len; i++){
+      str->t.str[i] = vf_get_char_esc(&q, NULL);
+      q++;
+    }
+    str->t.str[len] = '\0';
+    cell = vf_sexp_cons(str, last);
+    vf_sexp_rplacd(last, cell);
+    vf_sexp_rplacd(cell, tail);
+    last = cell;
+
+    if (c == '\0')
+      break;
+
+    /* skip spaces */
+    for (c = *p;
+	 (!isprint((int)c)||isspace((int)c)) && (c != ',') && (c != '\0');
+	 p++, c = *p)
+      ;
+    if (c == '\0')
+      break;
+
+    if (c == ',')
+      p++;
+  }
+
+ End:
+  val = vf_sexp_cdr(head);
+  head->t.cons.cdr = NULL;
+  vf_sexp_free(&head);
+
+  return val;
+}
+
+SEXP
+vf_sexp_cstring2alist(char *cstr)
+     /*  C-str "x1=y1, x2=y2, ..."   ==>  SEXP (("x1" "y1") ("x2" "y2") ...) */
+{
+  SEXP  head, tail, last, cell_list1, cell_list2, cell, nil;
+  SEXP  str_key, str_val, val;
+  char  c, *start_key, *start_val, *p, *q;
+  int   len_key, len_val, i;
+
+  head = vf_sexp_alloc(VF_SEXP_TAG_CONS);
+  tail = vf_sexp_alloc(VF_SEXP_TAG_NIL);
+  vf_sexp_rplacd(head, tail);
+
+  if (cstr == NULL)
+    goto End;
+
+  p = cstr;
+  last = head;
+  for (;;){
+    /* skip spaces */
+    for (c = *p;
+	 (!isprint((int)c)||isspace((int)c)) && (c != '\0');
+	 p++, c = *p)
+      ;
+    if (c == '\0')
+      break;
+
+    /* an key starts */                  /* "^..." */
+    start_key = p;
+    len_key = 0;
+
+    /* go to end of an key */
+    for (c = *p; 
+	 (isprint((int)c)&&!isspace((int)c))
+	 && (c != '=') && (c != ',') && (c != '\0');
+	 len_key++, p++, c = *p)
+      ;
+
+    /* skip spaces */
+    for (c = *p;
+	 (!isprint((int)c)||isspace((int)c)) && (c != '\0');
+	 p++, c = *p)
+      ;
+    if ((c == ',') || (c == '\0')){     /* "KEY ^, ..." or "KEY  ^" */
+      start_val = NULL;
+      len_val = 0;
+      goto Found;
+    }
+    if ((c != '=') && isprint((int)c)){ /* "KEY ^foo" */
+      start_val = NULL;
+      len_val = 0;
+      goto Found;
+    }
+    
+    p++;                                /* "KEY ^= ..." */
+
+    /* skip spaces */                   /* "KEY =^ ..." */
+    for (c = *p;
+	 (!isprint((int)c)||isspace((int)c)) && (c != '\0');
+	 p++, c = *p)
+      ;
+    if ((c == ',') || (c == '\0')){     /* "KEY = ^, ..." or "KEY =^" */
+      start_val = NULL;
+      len_val = 0;
+      goto Found;
+    }
+
+    /* a value starts */                 /* "KEY = ^..." */
+    start_val = p;
+    len_val = 0;
+
+    /* go to end of an value */
+    for (c = *p; 
+	 (isprint((int)c)&&!isspace((int)c))
+	 && (c != ',') && (c != '\0'); 
+	 len_val++, p++, c = *p)
+      (void) vf_get_char_esc(&p, NULL);
+                                         /* "KEY = VALUE^... " */
+Found:
+    /* copy string */
+    str_key = vf_sexp_alloc(VF_SEXP_TAG_STRING);
+    str_key->t.str = (char*)malloc(len_key+1);
+    for (i = 0; i < len_key; i++)
+      str_key->t.str[i] = start_key[i];
+    str_key->t.str[len_key] = '\0';
+
+    str_val = vf_sexp_alloc(VF_SEXP_TAG_STRING);
+    str_val->t.str = (char*)malloc(len_val+1);
+    for (i = 0, q = start_val; i < len_val; i++){
+      str_val->t.str[i] = vf_get_char_esc(&q, NULL);
+      q++;
+    }
+    str_val->t.str[len_val] = '\0';
+
+    nil = vf_sexp_alloc(VF_SEXP_TAG_NIL);
+    cell_list2 = vf_sexp_cons(str_val, nil);
+    cell_list1 = vf_sexp_cons(str_key, cell_list2);
+    cell = vf_sexp_cons(cell_list1, last);
+    vf_sexp_rplacd(last, cell);
+    vf_sexp_rplacd(cell, tail);
+    last = cell;
+
+    if (c == '\0')
+      break;
+
+    /* skip spaces */
+    for (c = *p;
+	 (!isprint((int)c)||isspace((int)c)) && (c != ',') && (c != '\0');
+	 p++, c = *p)
+      ;
+    if (c == '\0')
+      break;
+
+    if (c == ',')
+      p++;
+  }
+
+ End:
+  val = vf_sexp_cdr(head);
+  head->t.cons.cdr = NULL;
+  vf_sexp_free(&head);
+
+  return val;
+}
+
+static char 
+vf_get_char_esc(char **pp, SEXP_STREAM stream)
+{
+  char          c, *p, tmp[8];
+  unsigned int  n;
+
+  p = NULL;
+  if (pp != NULL)
+    p = *pp;
+
+  c = *p;
+  if (c == '\\'){
+    c = *(++p);
+    if (isdigit((int)c)){
+      tmp[0] = c;
+      tmp[1] = *(++p); 
+      tmp[2] = *(++p);
+      tmp[3] = '\0';
+      sscanf(tmp, "%o", &n);
+      c = n;
+    } else if (c == 'x'){
+      tmp[0] = *(++p);
+      tmp[1] = *(++p);
+      tmp[2] = '\0';
+      sscanf(tmp, "%x", &n);
+      c = n;
+    } else {
+      switch (c){
+      case 'a':   c = '\a'; break;
+      case 'b':   c = '\b'; break;
+      case 'f':   c = '\f'; break;
+      case 'n':   c = '\n'; break;
+      case 'r':   c = '\r'; break;
+      case 't':   c = '\t'; break;
+      case 'v':   c = '\v'; break;
+      }
+    }
+  }
+
+  if (pp != NULL)
+    *pp = p;
+
+  return c;
+}
+
+
+
+/* 
+ * Alloc/Release an S-Expression Object 
+ */
+
+static SEXP
+vf_sexp_alloc(int tag)
+{
+  SEXP  s;
+
+  if ((s = calloc(1, sizeof(struct s_sexp))) != NULL)
+    s->tag = tag;
+  switch (tag){
+  case VF_SEXP_TAG_NIL:
+    break;
+  case VF_SEXP_TAG_CONS:
+    s->t.cons.car = NULL;
+    s->t.cons.cdr = NULL;
+    break;
+  case VF_SEXP_TAG_STRING:
+  case VF_SEXP_TAG_SYMBOL:
+    s->t.str = NULL;
+  }
+  return s;
+}
+
+void
+vf_sexp_free4(SEXP *s1, SEXP *s2, SEXP *s3, SEXP *s4)
+{
+  vf_sexp_free(s1);  vf_sexp_free(s2);
+  vf_sexp_free(s3);  vf_sexp_free(s4);
+}
+
+void
+vf_sexp_free3(SEXP *s1, SEXP *s2, SEXP *s3)
+{
+  vf_sexp_free(s1); vf_sexp_free(s2); vf_sexp_free(s3);
+}
+
+void
+vf_sexp_free2(SEXP *s1, SEXP *s2)
+{
+  vf_sexp_free(s1); vf_sexp_free(s2);
+}
+
+void
+vf_sexp_free1(SEXP *s1)
+{
+  vf_sexp_free(s1);
+}
+
+void
+vf_sexp_free(SEXP *var_ptr)
+{
+  SEXP   s, scar, scdr;
+
+  if (var_ptr == NULL)
+    return;
+  if ((s = *var_ptr) == NULL)
+    return;
+  *var_ptr = NULL;
+
+  vf_sexp_obj_validate(s);
+
+  while (s != NULL){
+    switch (s->tag){
+    case VF_SEXP_TAG_CONS:
+      scar = s->t.cons.car;
+      scdr = s->t.cons.cdr;
+      vf_sexp_free(&scar);
+      s->tag = VF_SEXP_TAG_RELEASED;
+      vf_free(s);
+      s = scdr;
+      break;
+
+    case VF_SEXP_TAG_STRING:
+    case VF_SEXP_TAG_SYMBOL:
+      if (s->t.str != NULL)
+	vf_free(s->t.str);
+      /*FALLTHROUGHT*/
+    case VF_SEXP_TAG_NIL:
+      s->tag = VF_SEXP_TAG_RELEASED;
+      vf_free(s);
+      return;
+
+    case VF_SEXP_TAG_RELEASED:
+      fprintf(stderr, "VFlib internal error: releasing released s-sexp obj\n");
+      abort();
+    default:
+      fprintf(stderr, "VFlib internal error: cannot happen vf_sexp_free()\n");
+      abort();
+    }
+  }
+}
+
+
+static void
+vf_sexp_obj_validate2(SEXP s1, SEXP s2)
+{
+  vf_sexp_obj_validate(s1);
+  vf_sexp_obj_validate(s2);
+}
+
+static void
+vf_sexp_obj_validate(SEXP s)
+{
+  if ((s == NULL) || (s->tag == VF_SEXP_TAG_RELEASED)){
+    fprintf(stderr, "VFlib internal error: Invalid s-exp object\n");
+    abort();
+  }
+}
+
+
+#ifdef DEBUG
+
+/*
+ * example 1 (file stream) :     echo '( abcfdf 123 (3 4 5 ) )' | ./dbg-sexp 
+ * example 2 (string stream) :  ./dbg-sexp '( abcfdf 123 (3 4 5 ) )'
+ */
+
+int
+main(int argc, char **argv)
+{
+  char   *str;
+  SEXP   s;
+
+  if (argc > 1){
+    str = argv[1];
+    s = vf_sexp_read_from_string_stream(str);
+  } else {
+    s = vf_sexp_read_from_file_stream(stdin);    
+  }
+  vf_sexp_pp(s);
+
+  return 0;
+}
+
+#endif
+
+/*EOF*/

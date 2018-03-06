@@ -1,0 +1,15 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vfserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  cmr10.pk -1 1 1 300 300 
+
+bitmap1 !0 0x67 
+bitmap1 !0 0x67 2 1
+bitmap1 !0 0x67 1 2
+bitmap1 !0 0x67 -1  1
+bitmap1 !0 0x67  1 -1
+
+quit

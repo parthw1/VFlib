@@ -1,0 +1,4 @@
+こんにちは
+日本語 EUC コード
+ﾆﾎﾝｺﾞ EUC ｺｰﾄﾞ
+Japanese EUC code

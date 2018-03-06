@@ -1,0 +1,63 @@
+#!/bin/sh
+
+PROG="../ctext2pgm -v ../vflibcap-ctext2pgm -16"
+TEXT="../Samples/CTEXT/DOC1.txt"
+
+# TEST 1:  Output Formats
+${PROG} -pbm         ${TEXT}  > OUT1-1.pbm
+${PROG} -pgm         ${TEXT}  > OUT1-2a.pgm
+${PROG} -pgm-ascii   ${TEXT}  > OUT1-2b.pgm
+${PROG} -eps         ${TEXT}  > OUT1-3.eps
+${PROG} -ascii-art   ${TEXT}  > OUT1-4a.aa
+${PROG} -ascii-art-v ${TEXT}  > OUT1-4b.aa
+${PROG} -ascii-art-h ${TEXT}  > OUT1-4c.aa
+
+# TEST 2:  Margin
+${PROG} -pgm -g  0  ${TEXT}  > OUT2-1a.pgm
+${PROG} -pgm -g 10  ${TEXT}  > OUT2-1b.pgm
+${PROG} -pgm -g 20  ${TEXT}  > OUT2-1c.pgm
+${PROG} -pgm -gx 20 ${TEXT}  > OUT2-2a.pgm
+${PROG} -pgm -gy 20 ${TEXT}  > OUT2-2b.pgm
+
+# TEST 3:  Bitmap Size
+${PROG} -pgm                  ${TEXT}  > OUT3-1.pgm
+${PROG} -pgm -ph 300          ${TEXT}  > OUT3-2.pgm
+${PROG} -pgm -pw 300          ${TEXT}  > OUT3-3.pgm
+${PROG} -pgm -ph 300 -pw 300  ${TEXT}  > OUT3-4.pgm
+
+# TEST 4:  Left/Center/Right
+${PROG} -pgm -pw 300                      ${TEXT}  > OUT4-1a.pgm
+${PROG} -pgm -pw 300 -flush-left          ${TEXT}  > OUT4-1b.pgm
+${PROG} -pgm -pw 300 -center              ${TEXT}  > OUT4-1c.pgm
+${PROG} -pgm -pw 300 -flush-right         ${TEXT}  > OUT4-1d.pgm
+${PROG} -pgm -ph 300 -pw 300              ${TEXT}  > OUT4-3a.pgm
+${PROG} -pgm -ph 300 -pw 300 -flush-left  ${TEXT}  > OUT4-3b.pgm
+${PROG} -pgm -ph 300 -pw 300 -center      ${TEXT}  > OUT4-3c.pgm
+${PROG} -pgm -ph 300 -pw 300 -flush-right ${TEXT}  > OUT4-3d.pgm
+
+# TEST 5:  Reverse
+${PROG} -r -pbm       -g  0  ${TEXT}  > OUT5-1a.pbm
+${PROG} -r -pbm       -g 10  ${TEXT}  > OUT5-1b.pbm
+${PROG} -r -pgm       -g 10  ${TEXT}  > OUT5-2.pgm
+${PROG} -r -eps       -g 10  ${TEXT}  > OUT5-3.eps
+${PROG} -r -ascii-art -g 10  ${TEXT}  > OUT5-4.aa
+
+# TEST 6:  Shrink
+${PROG} -pgm -s 1  ${TEXT}  > OUT6-1a.pgm
+${PROG} -pgm -s 2  ${TEXT}  > OUT6-1b.pgm
+${PROG} -pgm -s 3  ${TEXT}  > OUT6-1c.pgm
+${PROG} -pbm -s 1  ${TEXT}  > OUT6-2a.pbm
+${PROG} -pbm -s 2  ${TEXT}  > OUT6-2b.pbm
+${PROG} -pbm -s 3  ${TEXT}  > OUT6-2c.pbm
+${PROG} -pgm -s 1 -pw 300 -ph 300  ${TEXT}  > OUT6-3a.pgm
+${PROG} -pgm -s 2 -pw 300 -ph 300  ${TEXT}  > OUT6-3b.pgm
+${PROG} -pgm -s 3 -pw 300 -ph 300  ${TEXT}  > OUT6-3c.pgm
+echo "Hello" | ${PROG} -ascii-art   -s 1   > OUT6-4a.aa
+echo "Hello" | ${PROG} -ascii-art   -s 2   > OUT6-4b.aa
+echo "Hello" | ${PROG} -ascii-art   -s 3   > OUT6-4c.aa
+echo "Hello" | ${PROG} -ascii-art-v -s 1   > OUT6-5a.aa
+echo "Hello" | ${PROG} -ascii-art-v -s 2   > OUT6-5b.aa
+echo "Hello" | ${PROG} -ascii-art-v -s 3   > OUT6-5c.aa
+echo "Hello" | ${PROG} -eps -s 1    > OUT6-6a.eps
+echo "Hello" | ${PROG} -eps -s 2    > OUT6-6b.eps
+echo "Hello" | ${PROG} -eps -s 3    > OUT6-6c.eps

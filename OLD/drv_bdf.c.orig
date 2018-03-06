@@ -1,0 +1,989 @@
+/*
+ * drv_bdf.c -  A font driver for BDF format fonts.
+ * by Hirotsugu Kakugawa
+ *
+ *  2 Sep 1996  First version.
+ * 13 Dec 1996  for VFlib 3.1
+ * 16 Jan 1997  Added font directory customizing feature.
+ * 28 Jan 1997  Added debug feature.
+ * 26 Feb 1997  Added 'query_font_type'.
+ * 25 Apr 1997  Added multiple file extension feature.
+ *  4 Aug 1997  VFlib 3.3  Changed API.
+ * 20 Jan 1998  VFlib 3.4  Changed API.
+ * 22 Apr 1998  Improved get_font_property()
+ * 10 Jun 1998  Added multiple font files in 'font-file' capability.
+ * 17 Jun 1998  Support for CCV system. Support for 'font-directory'
+ *              capability in font definition. 
+ * 24 Nov 1998  Added get_fontbbx1() and get_fontbbx2().
+ * 26 Nov 1998  Added debug flag control by environment variable.
+ */
+/*
+ * Copyright (C) 1996-1998  Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * This file is part of the VFlib Library.  This library is free
+ * software; you can redistribute it and/or modify it under the terms of
+ * the GNU Library General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  This library is distributed in the hope
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Library General Public License for more details.
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
+
+
+#include  "config.h"
+#include  <stdio.h>
+#include  <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#include  <ctype.h>
+#include  <math.h>
+#include  "VFlib-3_6.h"
+#include  "VFsys.h"
+#include  "vflibcap.h"
+#include  "ccv.h"
+#include  "sexp.h"
+#include  "str.h"
+#include  "path.h"
+#include  "fsearch.h"
+#include  "cache.h"
+#include  "bdf.h"
+
+#define   POINTS_PER_INCH      72.27
+#define   DEFAULT_POINT_SIZE   10.0
+#define   DEFAULT_PIXEL_SIZE     16
+#define   DEFAULT_DPI            75
+
+struct s_font_bdf {
+  char     *font_name;
+  char     *font_file;
+  double   point_size;
+  int      pixel_size;
+  double   dpi_x, dpi_y;
+  double   mag;
+  double   aspect;
+  int      bdf_id;
+  int      ccv_id;
+  SEXP_ALIST  props;
+};
+typedef struct s_font_bdf  *FONT_BDF;
+
+Private SEXP_LIST    default_fontdirs;
+Private SEXP_LIST    default_compressed_ext;
+Private SEXP_STRING  default_dpi, default_dpi_x, default_dpi_y;
+Private double       v_default_dpi_x, v_default_dpi_y;
+Private SEXP_STRING  default_aspect;
+Private double       v_default_aspect;
+Private SEXP_ALIST   default_properties;
+Private SEXP_ALIST   default_variables;
+Private SEXP_STRING  default_debug_mode;
+Private char         *env_debug_mode = NULL;
+#define DEBUG_ENV_NAME   "VFLIB_BDF_DEBUG"
+
+
+Private int          bdf_create(VF_FONT font, char *font_class, 
+				char *font_name, int implicit, SEXP entry);
+Private int          bdf_close(VF_FONT font);
+Private int          bdf_get_metric1(VF_FONT font, long code_point,
+				     VF_METRIC1 metric1, double,double);
+Private int          bdf_get_metric2(VF_FONT font, long code_point,
+				     VF_METRIC2 metric2, double,double);
+Private int          bdf_get_fontbbx1(VF_FONT font,double,double,
+				      double*,double*,double*,double*);
+Private int          bdf_get_fontbbx2(VF_FONT font, double,double,
+				      int*,int*,int*,int*);
+Private VF_BITMAP    bdf_get_bitmap1(VF_FONT,long,double,double);
+Private VF_BITMAP    bdf_get_bitmap2(VF_FONT,long,double,double);
+Private VF_BITMAP      bdf_get_bitmap(FONT_BDF,long);
+Private VF_OUTLINE   bdf_get_outline(VF_FONT,long,double,double);
+Private char*        bdf_get_font_prop(VF_FONT,char*);
+
+Private void mag_mode_1(double font_size, int size, 
+			double font_dpi_x, double font_dpi_y,
+			FONT_BDF font_bdf, VF_FONT font, 
+			double mag_x, double mag_y,
+			double *ret_mag_x, double *ret_mag_y,
+			double *ret_point_size, 
+			double *ret_dpix, double *ret_dpiy);
+Private void mag_mode_2(int font_size, int size,
+			FONT_BDF font_bdf, VF_FONT font, 
+			double mag_x, double mag_y,
+			double *ret_mag_x, double *ret_mag_y, 
+			double *ret_pixel_size);
+Private int    bdf_debug(char);
+
+Private BDF       BDF_GetBDF(int bdf_id);
+Private void      BDF_SetBDF(int bdf_id, BDF bdf);
+
+Private int       BDF_Init(void);
+Private int       BDF_Open(char*,SEXP);
+Private void      BDF_Close(int);
+Private BDF_CHAR  BDF_GetBitmap(int,long);
+Private BDF_CHAR  BDF_GetBDFChar(BDF,long);
+Private char     *BDF_GetProp(BDF,char*);
+
+
+
+Public int
+VF_Init_Driver_BDF(void)
+{
+  int z;
+  struct s_capability_table  ct[20];
+
+  z = 0;
+  /* VF_CAPE_FONT_DIRECTORIES */
+  ct[z].cap = VF_CAPE_FONT_DIRECTORIES;  ct[z].type = CAPABILITY_STRING_LIST0;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_fontdirs;
+  /* VF_CAPE_COMPRESSION_EXT */
+  ct[z].cap = VF_CAPE_COMPRESSION_EXT;   ct[z].type = CAPABILITY_STRING_LIST0;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_compressed_ext;
+  /* VF_CAPE_DPI */  
+  ct[z].cap = VF_CAPE_DPI;               ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_dpi;
+  /* VF_CAPE_DPI_X */
+  ct[z].cap = VF_CAPE_DPI_X;             ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_dpi_x;
+  /* VF_CAPE_DPI_Y */
+  ct[z].cap = VF_CAPE_DPI_Y;             ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_dpi_y;
+  /* VF_CAPE_ASPECT_RATIO */
+  ct[z].cap = VF_CAPE_ASPECT_RATIO;      ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_aspect;
+  /* VF_CAPE_PROPERTIES */
+  ct[z].cap = VF_CAPE_PROPERTIES;        ct[z].type = CAPABILITY_ALIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_properties;
+  /* VF_CAPE_VARIABLE_VALUES */
+  ct[z].cap = VF_CAPE_VARIABLE_VALUES;   ct[z].type = CAPABILITY_ALIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_variables;
+  /* VF_CAPE_DEBUG */
+  ct[z].cap = VF_CAPE_DEBUG;             ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;       ct[z++].val = &default_debug_mode;
+  /* end */
+  ct[z].cap = NULL; ct[z].type = 0; ct[z].ess = 0; ct[z++].val = NULL;
+
+  if (vf_cap_GetParsedClassDefault(FONTCLASS_NAME, ct, NULL, NULL) 
+      == VFLIBCAP_PARSED_ERROR)
+    return -1;
+
+  v_default_dpi_x  = -1;
+  v_default_dpi_y  = -1;
+  if (default_dpi != NULL)
+    v_default_dpi_x = v_default_dpi_y = atof(vf_sexp_get_cstring(default_dpi));
+  if (default_dpi_x != NULL)
+    v_default_dpi_x = atof(vf_sexp_get_cstring(default_dpi_x));
+  if (default_dpi_y != NULL)
+    v_default_dpi_y = atof(vf_sexp_get_cstring(default_dpi_y));
+
+  v_default_aspect = 1.0;
+  if (default_aspect != NULL)
+    v_default_aspect = atof(vf_sexp_get_cstring(default_aspect));
+
+  if (BDF_Init() < 0)
+    return -1;
+
+  env_debug_mode = getenv(DEBUG_ENV_NAME);
+
+  VF_InstallFontDriver(FONTCLASS_NAME, (DRIVER_FUNC_TYPE)bdf_create);
+
+  return 0;
+}
+
+
+Private int
+bdf_create(VF_FONT font, char *font_class, 
+	   char *font_name, int implicit, SEXP entry)
+{
+  FONT_BDF  font_bdf;
+  BDF       bdf;
+  int       bdf_id, val;
+  char      *font_file;
+  SEXP      cap_font, cap_point, cap_pixel;
+  SEXP      cap_dpi, cap_dpi_x, cap_dpi_y, cap_mag, cap_aspect;
+  SEXP      cap_charset, cap_encoding, cap_font_charset, cap_font_encoding;
+  SEXP      cap_fontdirs, cap_props;
+  SEXP      font_file_list, s;
+  SEXP      fontdirs;
+  char      *charset, *encoding, *font_charset, *font_encoding;
+  char      *s1, *s2, s_font_charset[1024];
+  int       z;
+  struct s_capability_table  ct[24];
+
+  z = 0;
+  /* VF_CAPE_FONT_CLASS */
+  ct[z].cap = VF_CAPE_FONT_CLASS;       ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_ESSENTIAL;     ct[z++].val = NULL;
+  /* VF_CAPE_FONT_DIRECTORIES */
+  ct[z].cap = VF_CAPE_FONT_DIRECTORIES; ct[z].type = CAPABILITY_STRING_LIST0;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_fontdirs;
+  /* VF_CAPE_FONT_FILE */
+  ct[z].cap = VF_CAPE_FONT_FILE;        ct[z].type = CAPABILITY_STRING_LIST1;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_font;
+  /* VF_CAPE_POINT_SIZE */
+  ct[z].cap = VF_CAPE_POINT_SIZE;       ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_point;
+  /* VF_CAPE_PIXEL_SIZE */
+  ct[z].cap = VF_CAPE_PIXEL_SIZE;       ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_pixel;
+  /* VF_CAPE_DPI */
+  ct[z].cap = VF_CAPE_DPI;              ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_dpi;
+  /* VF_CAPE_DPI_X */
+  ct[z].cap = VF_CAPE_DPI_X;            ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_dpi_x;
+  /* VF_CAPE_DPI_Y */
+  ct[z].cap = VF_CAPE_DPI_Y;            ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_dpi_y;
+  /* VF_CAPE_MAG */
+  ct[z].cap = VF_CAPE_MAG;              ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_mag;
+  /* VF_CAPE_ASPECT_RATIO */
+  ct[z].cap = VF_CAPE_ASPECT_RATIO;     ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;      ct[z++].val = &cap_aspect;
+  /* VF_CAPE_CHARSET */
+  ct[z].cap = VF_CAPE_CHARSET;         ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;     ct[z++].val = &cap_charset;
+  /* VF_CAPE_ENCODING */
+  ct[z].cap = VF_CAPE_ENCODING;        ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;     ct[z++].val = &cap_encoding;
+  /* VF_CAPE_FONT_CHARSET */
+  ct[z].cap = VF_CAPE_FONT_CHARSET;    ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;     ct[z++].val = &cap_font_charset;
+  /* VF_CAPE_FONT_ENCODING */
+  ct[z].cap = VF_CAPE_FONT_ENCODING;   ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;     ct[z++].val = &cap_font_encoding;
+  /* VF_CAPE_PROPERTIES */
+  ct[z].cap = VF_CAPE_PROPERTIES;      ct[z].type = CAPABILITY_ALIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;     ct[z++].val = &cap_props;
+  /* end */
+  ct[z].cap = NULL; ct[z].type = 0; ct[z].ess = 0; ct[z++].val  = NULL;
+
+
+  val = -1;
+
+  fontdirs = default_fontdirs;
+  font_bdf = NULL;
+  font_file_list = NULL;
+  font_file = font_name;
+  bdf_id = -1;
+
+  if (implicit == 1){   /* implicit font */
+    font_file = font_name;
+  } else {              /* explicit font */
+    if (vf_cap_GetParsedFontEntry(entry, font_name, ct, 
+				  default_variables, NULL) 
+	== VFLIBCAP_PARSED_ERROR)
+      return -1;
+    if (cap_fontdirs != NULL)
+      fontdirs = cap_fontdirs;
+    if (cap_font == NULL){
+      /* Use font name as font file name if font file name is not given. */
+      font_file = font_name;
+    } else {
+      if (vf_sexp_listp(cap_font)){
+	switch (vf_sexp_length(cap_font)){
+	case 0:
+	  goto End;
+	default:
+	  font_file_list = cap_font;
+	  break;
+	}
+      } else {
+	goto End;
+      }
+    }
+  }
+
+  bdf_id = -1;
+  if (font_file_list == NULL){
+    bdf_id = BDF_Open(font_file, fontdirs);
+  } else {
+    for (s = font_file_list; vf_sexp_consp(s); s = vf_sexp_cdr(s)){
+      if (vf_sexp_stringp(vf_sexp_car(s))){
+	font_file = vf_sexp_get_cstring(vf_sexp_car(s));
+	bdf_id = BDF_Open(font_file, fontdirs);
+	if (bdf_id >= 0){
+	  break;
+	}
+      }
+    }
+  }
+  if (bdf_id < 0)
+    goto End; 
+
+  font->font_type       = VF_FONT_TYPE_BITMAP;
+  font->get_metric1     = bdf_get_metric1;
+  font->get_metric2     = bdf_get_metric2;
+  font->get_fontbbx1    = bdf_get_fontbbx1;
+  font->get_fontbbx2    = bdf_get_fontbbx2;
+  font->get_bitmap1     = bdf_get_bitmap1;
+  font->get_bitmap2     = bdf_get_bitmap2;
+  font->get_outline     = bdf_get_outline;
+  font->get_font_prop   = bdf_get_font_prop;
+  font->query_font_type = NULL;
+  font->close           = bdf_close;
+
+  ALLOC_IF_ERR(font_bdf, struct s_font_bdf){
+    vf_error = VF_ERR_NO_MEMORY;
+    goto End; 
+  }
+
+  font_bdf->bdf_id     = bdf_id;
+  font_bdf->font_name = NULL; 
+  font_bdf->font_file = NULL; 
+  font_bdf->point_size = -1;
+  font_bdf->pixel_size = -1;
+  font_bdf->dpi_x      = -1;
+  font_bdf->dpi_y      = -1;
+  font_bdf->mag        = 1.0;
+  font_bdf->aspect     = 1.0;
+  font_bdf->ccv_id     = -1;
+  font_bdf->props      = NULL;
+
+  charset       = NULL;
+  encoding      = NULL;
+  font_charset  = NULL;
+  font_encoding = NULL;
+
+  if (implicit == 0){
+    if (cap_point != NULL)
+      font_bdf->point_size = atof(vf_sexp_get_cstring(cap_point));
+    if (cap_pixel != NULL)
+      font_bdf->pixel_size = atof(vf_sexp_get_cstring(cap_pixel));
+    if (cap_dpi != NULL)
+      font_bdf->dpi_x = font_bdf->dpi_y = atof(vf_sexp_get_cstring(cap_dpi));
+    if (cap_dpi_x != NULL)
+      font_bdf->dpi_x = atof(vf_sexp_get_cstring(cap_dpi_x));
+    if (cap_dpi_y != NULL)
+      font_bdf->dpi_y = atof(vf_sexp_get_cstring(cap_dpi_y));
+    if (cap_mag != NULL)
+      font_bdf->mag = atof(vf_sexp_get_cstring(cap_mag));
+    if (cap_aspect != NULL)
+      font_bdf->aspect = atof(vf_sexp_get_cstring(cap_aspect));
+    if (cap_charset != NULL)
+      charset = vf_sexp_get_cstring(cap_charset);
+    if (cap_encoding != NULL)
+      font_encoding = vf_sexp_get_cstring(cap_encoding);
+    if (cap_font_charset != NULL)
+      font_charset = vf_sexp_get_cstring(cap_font_charset);
+    if (cap_font_encoding != NULL)
+      font_encoding = vf_sexp_get_cstring(cap_font_encoding);
+    if (cap_props != NULL)
+      font_bdf->props = cap_props;
+  }
+
+  if ((font_bdf->font_file = vf_strdup(font_file)) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    goto End;
+  }
+  if ((font_bdf->font_name = vf_strdup(font_name)) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    goto End;
+  }
+
+  if ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL){
+    fprintf(stderr, "VFlib internal error: in bdf_create()\n");
+    vf_error = VF_ERR_INTERNAL;
+    goto End;
+  }
+
+  font_bdf->ccv_id = -1;
+  if ((charset != NULL) || (encoding != NULL)){
+    if (font_charset == NULL){
+      s1 = bdf_get_font_prop(font, "CHARSET_REGISTRY");
+      s2 = bdf_get_font_prop(font, "CHARSET_ENCODING");
+      if (s1 == NULL)
+	goto no_ccv;
+      if (s2 == NULL)
+	s2 = "";
+      sprintf(s_font_charset, "%s%s", s1, s2);
+      font_charset = s_font_charset;
+    }
+    font_bdf->ccv_id 
+      = vf_ccv_require(charset, encoding, font_charset, font_encoding);
+  }
+no_ccv:
+
+  font->private = font_bdf;
+  val = 0;
+
+
+End:
+  if (implicit == 0){ /* explicit font */
+    vf_sexp_free3(&cap_font, &cap_point, &cap_pixel);
+    vf_sexp_free3(&cap_dpi, &cap_dpi_x, &cap_dpi_y);
+    vf_sexp_free2(&cap_mag, &cap_aspect);
+    vf_sexp_free2(&cap_charset, &cap_encoding);
+    vf_sexp_free2(&cap_font_charset, &cap_font_encoding);
+    vf_sexp_free1(&cap_fontdirs);
+  }
+  if (val < 0){
+    if (implicit == 0)
+      vf_sexp_free1(&cap_props);
+    if (bdf_id >= 0)
+      BDF_Close(bdf_id);
+    if (font_bdf != NULL){
+      vf_free(font_bdf->font_name); 
+      vf_free(font_bdf->font_file); 
+    }
+    vf_free(font_bdf); 
+  }
+
+  return val;
+}
+
+
+Private int
+bdf_close(VF_FONT font)
+{
+  FONT_BDF  font_bdf;
+
+  font_bdf = (FONT_BDF)font->private;
+
+  if (font_bdf->bdf_id >= 0)
+    BDF_Close(font_bdf->bdf_id);
+
+  vf_sexp_free1(&font_bdf->props);
+  vf_free(font_bdf->font_name); 
+  vf_free(font_bdf->font_file); 
+  vf_free(font_bdf); 
+
+  return 0; 
+}
+
+
+Private int
+bdf_get_metric1(VF_FONT font, long code_point, VF_METRIC1 metric, 
+		double mag_x, double mag_y)
+{
+  long        cp;
+  FONT_BDF    font_bdf;
+  BDF         bdf;
+  BDF_CHAR    bdf_char;
+  double      mx, my;
+
+  if (metric == NULL){
+    fprintf(stderr, "VFlib internal error: in bdf_get_metric1()\n");
+    abort();
+  }
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib internal error: in bdf_get_metric1()\n");
+    abort();
+  }
+
+  cp = code_point;
+  if (font_bdf->ccv_id >= 0)
+    cp = vf_ccv_conv(font_bdf->ccv_id, code_point);
+  if (bdf_debug('c')) 
+    printf("VFlib BDF: CCV  0x%lx => 0x%lx\n", code_point, cp);
+
+  if ((bdf_char = BDF_GetBDFChar(bdf, cp)) == NULL)
+    return -1;
+
+  mag_mode_1(bdf->point_size, bdf->size, bdf->dpi_x, bdf->dpi_y, 
+	     font_bdf, font, mag_x, mag_y, &mx, &my, NULL, NULL, NULL);
+
+  /* 72*pix/dpi = 72*pix/(pix/inch) = 72*inch = 72*(pt/72) = pt  */
+  /* 1inch = 72pt */
+
+  metric->bbx_width
+    = 72.0 * mx * bdf_char->bbx_width / bdf->dpi_x;
+  metric->bbx_height
+    = 72.0 * my * bdf_char->bbx_height  / bdf->dpi_y;
+  metric->off_x 
+    = 72.0 * mx * (bdf_char->off_x / bdf->dpi_x) / bdf->dpi_x;
+  metric->off_y 
+    = 72.0 * my * (bdf_char->bbx_height + bdf_char->off_y) / bdf->dpi_y;
+  metric->mv_x
+    = 72.0 * mx * bdf_char->mv_x / bdf->dpi_x;
+  metric->mv_y
+    = 72.0 * my * bdf_char->mv_y / bdf->dpi_y;
+
+  return 0;
+}
+
+Private int
+bdf_get_fontbbx1(VF_FONT font, double mag_x, double mag_y,
+		 double *w_p, double *h_p, double *xoff_p, double *yoff_p)
+{
+  FONT_BDF    font_bdf;
+  BDF         bdf;
+  double      mx, my;
+
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib internal error: in bdf_get_fontbbx1()\n");
+    abort();
+  }
+  
+  mag_mode_1(bdf->point_size, bdf->size, bdf->dpi_x, bdf->dpi_y, 
+	     font_bdf, font, mag_x, mag_y, &mx, &my, NULL, NULL, NULL);
+
+  *w_p    = 72.0 * mx * bdf->font_bbx_width / bdf->dpi_x;
+  *h_p    = 72.0 * my * bdf->font_bbx_height / bdf->dpi_y;
+  *xoff_p = 72.0 * mx * bdf->font_bbx_xoff / bdf->dpi_x;
+  *yoff_p = 72.0 * my * bdf->font_bbx_yoff / bdf->dpi_y;
+
+  return 0;
+}
+
+
+Private VF_BITMAP
+bdf_get_bitmap1(VF_FONT font, long code_point, 
+		double mag_x, double mag_y)
+{
+  long       cp;
+  BDF        bdf;
+  FONT_BDF   font_bdf;
+  double     mx, my;
+  VF_BITMAP  bm;
+
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib internal error: in bdf_get_bitmap1()\n");
+    abort();
+  }
+
+  cp = code_point;
+  if (font_bdf->ccv_id >= 0)
+    cp = vf_ccv_conv(font_bdf->ccv_id, code_point);
+  if (bdf_debug('c')) 
+    printf("VFlib BDF: CCV  0x%lx => 0x%lx\n", code_point, cp);
+
+  if ((bm = bdf_get_bitmap(font_bdf, cp)) == NULL)
+    return NULL;
+
+  mag_mode_1(bdf->point_size, bdf->size, bdf->dpi_x, bdf->dpi_y, 
+	     font_bdf, font, mag_x, mag_y, &mx, &my, NULL, NULL, NULL);
+
+  return VF_MakeScaledBitmap(bm, mx, my);
+  /* WE SOULD NOT RELEASE "bm". See bdf_get_bitmap(). */
+}
+
+Private VF_OUTLINE
+bdf_get_outline(VF_FONT font, long code_point,
+		double mag_x, double mag_y)
+{
+  long          cp;
+  FONT_BDF      font_bdf;
+  BDF           bdf;
+  VF_BITMAP     bm;
+  VF_OUTLINE    ol;
+  double        mx, my, ps, dpi_x, dpi_y, f_bbx_w, f_bbx_h;
+
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib internal error: in bdf_get_outline()\n");
+    abort();
+  }
+
+  cp = code_point;
+  if (font_bdf->ccv_id >= 0)
+    cp = vf_ccv_conv(font_bdf->ccv_id, code_point);
+  if (bdf_debug('c')) 
+    printf("VFlib BDF: CCV  0x%lx => 0x%lx\n", code_point, cp);
+
+  if ((bm = bdf_get_bitmap1(font, cp, mag_x, mag_y)) == NULL)
+    return NULL;
+
+  mag_mode_1(bdf->point_size, bdf->size, bdf->dpi_x, bdf->dpi_y, 
+	     font_bdf, font, mag_x, mag_y, &mx, &my, &ps, &dpi_x, &dpi_y);
+
+  f_bbx_w = bdf->font_bbx_width  * mx;
+  f_bbx_h = bdf->font_bbx_height * my;
+
+  ol = vf_bitmap_to_outline(bm, f_bbx_w, f_bbx_h, dpi_x, dpi_y, ps, 1, 1);
+  VF_FreeBitmap(bm);
+
+  return ol;
+}
+
+
+Private int
+bdf_get_metric2(VF_FONT font, long code_point, VF_METRIC2 metric,
+		double mag_x, double mag_y)
+{
+  long        cp;
+  FONT_BDF    font_bdf;
+  BDF         bdf;
+  BDF_CHAR    bdf_char;
+  double      mx, my;
+
+  if (metric == NULL){
+    fprintf(stderr, "VFlib internal error: in bdf_get_metric2()\n");
+    abort();
+  }
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib internal error: in bdf_get_metric2()\n");
+    abort();
+  }
+
+  cp = code_point;
+  if (font_bdf->ccv_id >= 0)
+    cp = vf_ccv_conv(font_bdf->ccv_id, code_point);
+  if (bdf_debug('c')) 
+    printf("VFlib BDF: CCV  0x%lx => 0x%lx\n", code_point, cp);
+
+  if ((bdf_char = BDF_GetBDFChar(bdf, cp)) == NULL)
+    return -1;
+
+  mag_mode_2(bdf->pixel_size, bdf->size, 
+	     font_bdf, font, mag_x, mag_y, &mx, &my, NULL);
+
+  metric->bbx_width  = toint(mx * bdf_char->bbx_width);
+  metric->bbx_height = toint(my * bdf_char->bbx_height);
+  metric->off_x   = toint(mx * bdf_char->off_x);
+  metric->off_y   = toint(my * (bdf_char->bbx_height + bdf_char->off_y));
+  metric->mv_x    = toint(mx * bdf_char->mv_x);
+  metric->mv_y    = toint(my * bdf_char->mv_y);
+
+  return 0;
+}
+
+Private int
+bdf_get_fontbbx2(VF_FONT font, double mag_x, double mag_y,
+		 int *w_p, int *h_p, int *xoff_p, int *yoff_p)
+{
+  FONT_BDF    font_bdf;
+  BDF         bdf;
+  double      mx, my;
+
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib internal error: in bdf_get_fontbbx1()\n");
+    abort();
+  }
+  
+  mag_mode_2(bdf->pixel_size, bdf->size, 
+	     font_bdf, font, mag_x, mag_y, &mx, &my, NULL);
+  *w_p    = toint(mx * bdf->font_bbx_width);
+  *h_p    = toint(my * bdf->font_bbx_height);
+  *xoff_p = toint(mx * bdf->font_bbx_xoff);
+  *yoff_p = toint(my * bdf->font_bbx_yoff);
+
+  return 0;
+}
+
+
+Private VF_BITMAP
+bdf_get_bitmap2(VF_FONT font, long code_point, 
+		double mag_x, double mag_y)
+{
+  long       cp;
+  BDF        bdf;
+  FONT_BDF   font_bdf;
+  VF_BITMAP  bm;
+  double     mx, my;
+
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib internal error: in bdf_get_bitmap2()\n");
+    abort();
+  }
+
+  cp = code_point;
+  if (font_bdf->ccv_id >= 0)
+    cp = vf_ccv_conv(font_bdf->ccv_id, code_point);
+  if (bdf_debug('c')) 
+    printf("VFlib BDF: CCV  0x%lx => 0x%lx\n", code_point, cp);
+
+  if ((bm = bdf_get_bitmap(font_bdf, cp)) == NULL)
+    return NULL;
+
+  /* WE SOULD NOT RELEASE "bm". See bdf_get_bitmap(). */
+
+  mag_mode_2(bdf->pixel_size, bdf->size,
+	     font_bdf, font, mag_x, mag_y, &mx, &my, NULL);
+
+  return VF_MakeScaledBitmap(bm, mx, my);
+}
+
+
+Private VF_BITMAP
+bdf_get_bitmap(FONT_BDF font_bdf, long code_point)
+{
+  BDF_CHAR  bdf_char;
+  static struct vf_s_bitmap   bitmap;
+
+  bdf_char = BDF_GetBitmap(font_bdf->bdf_id, code_point);
+  if ((bdf_char == NULL) || (bdf_char->bitmap == NULL))
+    return NULL;
+
+  bitmap.bbx_width  = bdf_char->bbx_width;
+  bitmap.bbx_height = bdf_char->bbx_height;
+  bitmap.off_x  = bdf_char->off_x;
+  bitmap.off_y  = bdf_char->bbx_height + bdf_char->off_y;
+  bitmap.mv_x   = bdf_char->mv_x;
+  bitmap.mv_y   = bdf_char->mv_y;
+  bitmap.bitmap = bdf_char->bitmap;
+  bitmap.raster = bdf_char->raster;
+
+  return &bitmap;  
+  /* CALLER MUST *NOT* CALL VF_FreeBitmap()! */
+}
+
+
+Private char*
+bdf_get_font_prop(VF_FONT font, char *prop_name)
+     /* CALLER MUST RELEASE RETURNED STRING */
+{
+  FONT_BDF   font_bdf;
+  BDF        bdf;
+  SEXP       v;
+  double     ps, dpix, dpiy;
+  char       str[512], *r;
+
+  if (   ((font_bdf = (FONT_BDF)font->private) == NULL)
+      || ((bdf = BDF_GetBDF(font_bdf->bdf_id)) == NULL) ){
+    fprintf(stderr, "VFlib: internal error: in bdf_get_font_prop()\n");
+    abort();
+  }
+
+  if ((v = vf_sexp_assoc(prop_name, font_bdf->props)) != NULL){
+    return vf_strdup(vf_sexp_get_cstring(vf_sexp_cadr(v)));
+  } else if ((v = vf_sexp_assoc(prop_name, default_properties)) != NULL){
+    return vf_strdup(vf_sexp_get_cstring(vf_sexp_cadr(v)));
+  } else {
+    if (font->mode == 1){
+      mag_mode_1(bdf->point_size, bdf->size, bdf->dpi_x, bdf->dpi_y, 
+		 font_bdf, font, 1, 1, NULL, NULL, &ps, &dpix, &dpiy);
+      /**printf("** Mode1 %.3f %.3f %.3f   %.3f %.3f\n", ps, dpix, dpiy,
+	     font->point_size, font_bdf->point_size);**/
+      if (strcmp(prop_name, "POINT_SIZE") == 0){
+	sprintf(str, "%d", toint(10.0 * ps));
+	return vf_strdup(str);
+      } else if (strcmp(prop_name, "PIXEL_SIZE") == 0){
+	sprintf(str, "%d", toint(ps * dpiy / POINTS_PER_INCH));
+	return vf_strdup(str);
+      } else if (strcmp(prop_name, "RESOLUTION_X") == 0){
+	sprintf(str, "%d", toint(dpix)); 
+	return vf_strdup(str);
+      } else if (strcmp(prop_name, "RESOLUTION_Y") == 0){
+	sprintf(str, "%d", toint(dpiy)); 
+	return vf_strdup(str);
+      } 
+    } else if (font->mode == 2){
+      mag_mode_2(bdf->pixel_size, bdf->size,
+		 font_bdf, font, 1, 1, NULL, NULL, &ps);
+      /**printf("** Mode2 %.3f\n", ps);**/
+      if (strcmp(prop_name, "POINT_SIZE") == 0){
+	sprintf(str, "%d", toint(10.0 * ps * POINTS_PER_INCH / DEFAULT_DPI)); 
+	return vf_strdup(str);
+      } else if (strcmp(prop_name, "PIXEL_SIZE") == 0){
+	sprintf(str, "%d", toint(ps)); 
+	return vf_strdup(str);
+      } else if (strcmp(prop_name, "RESOLUTION_X") == 0){
+	sprintf(str, "%d", toint(DEFAULT_DPI)); 
+	return vf_strdup(str);
+      } else if (strcmp(prop_name, "RESOLUTION_Y") == 0){
+	sprintf(str, "%d", toint(DEFAULT_DPI)); 
+	return vf_strdup(str);
+#ifndef HAVE_FONT_ASCENT
+      } else if (strcmp(prop_name, "FONT_ASCENT") == 0){
+	sprintf(str, "%d", bdf->ascent); 
+	return vf_strdup(str);
+#endif /*HAVE_FONT_ASCENT*/
+#ifndef HAVE_FONT_DESCENT
+      } else if (strcmp(prop_name, "FONT_DESCENT") == 0){
+	sprintf(str, "%d", bdf->descent); 
+	return vf_strdup(str);
+#endif /*HAVE_FONT_DESCNET*/
+      } 
+    }      
+  }
+
+  if ((r = BDF_GetProp(bdf, prop_name)) != NULL)
+    return vf_strdup(r);
+
+  return NULL;
+}
+
+
+Private int  bdf_debug2(char type, char *str);
+
+Private int
+bdf_debug(char type)
+{
+  int   v;
+  char  *p0;
+
+  v = FALSE;
+  if (env_debug_mode != NULL){
+    if ((v = bdf_debug2(type, env_debug_mode)) == TRUE)
+      return TRUE;
+  }
+
+  if (default_debug_mode == NULL)
+    return FALSE;
+  if ((p0 = vf_sexp_get_cstring(default_debug_mode)) == NULL)
+    return FALSE;
+  return bdf_debug2(type, p0);
+}
+
+Private int
+bdf_debug2(char type, char *p0)
+{
+  char  *p;
+
+  for (p = p0; *p != '\0'; p++){
+    if (*p == type)
+      return TRUE;
+  }
+  for (p = p0; *p != '\0'; p++){
+    if (*p == '*')
+      return TRUE;
+  }
+  return FALSE;
+}
+
+
+Private void
+mag_mode_1(double font_size, int size,
+	   double font_dpi_x, double font_dpi_y,
+	   FONT_BDF font_bdf, VF_FONT font, 
+	   double mag_x, double mag_y,
+	   double *ret_mag_x, double *ret_mag_y, double *ret_point_size,
+	   double *ret_dpix, double *ret_dpiy)
+{
+  double  mx, my, dpix, dpiy, ps, asp;
+
+  if ((ps = font->point_size) < 0)
+    if ((ps = font_bdf->point_size) < 0)
+      if ((ps = font_size) < 0)
+	if ((ps = size) < 0)
+	  ps = DEFAULT_PIXEL_SIZE;
+  
+  asp = (v_default_aspect * font_bdf->aspect);
+
+  mx = mag_x * font_bdf->mag * font->mag_x * asp * ps / (double)font_size;
+  my = mag_y * font_bdf->mag * font->mag_y       * ps / (double)font_size;
+
+  ps = mag_y * font_bdf->mag * font->mag_y * ps;
+
+  if ((font->dpi_x > 0) && (font->dpi_y > 0)){
+    dpix = font->dpi_x;
+    dpiy = font->dpi_y;
+  } else if ((font_bdf->dpi_x > 0) && (font_bdf->dpi_y > 0)){
+    dpix = font_bdf->dpi_x;
+    dpiy = font_bdf->dpi_y;
+  } else if ((v_default_dpi_x > 0) && (v_default_dpi_y > 0)){
+    dpix = v_default_dpi_x;
+    dpiy = v_default_dpi_y;
+  } else {
+    dpix = font_dpi_x;
+    dpiy = font_dpi_y;
+  }
+
+  if (ret_mag_x != NULL)
+    *ret_mag_x = mx * (dpix / font_dpi_x);
+  if (ret_mag_y != NULL)
+    *ret_mag_y = my * (dpiy / font_dpi_y);
+
+#if 0
+  printf("*** %.3f %.3f %.3f\n", mag_x, font_bdf->mag, font->mag_x);
+  printf("    %.3f %.3f %.3f\n", mag_y, font_bdf->mag, font->mag_y);
+  printf("    dpix=%.3f  font_dpi_x=%.3f\n", dpix, font_dpi_x);
+  printf("    dpiy=%.3f  font_dpi_y=%.3f\n", dpiy, font_dpi_y);
+  printf("    asp=%.3f\n", asp);
+  printf("    mx=%.3f, my=%.3f\n", mx, my);
+  if (ret_mag_x != NULL)
+    printf("    mag_x=%.3f, mag_y=%.3f\n", *ret_mag_x, *ret_mag_y);
+#endif
+
+  if (ret_point_size != NULL)
+    *ret_point_size = ps;
+
+  if (ret_dpix != NULL)
+    *ret_dpix = dpix;
+  if (ret_dpiy != NULL)
+    *ret_dpiy = dpiy;
+}
+
+Private void
+mag_mode_2(int font_size, int size,
+	   FONT_BDF font_bdf, VF_FONT font, 
+	   double mag_x, double mag_y,
+	   double *ret_mag_x, double *ret_mag_y, double *ret_pixel_size)
+{
+  double  mx, my, ps, asp;
+
+  if ((ps = font->pixel_size) < 0)
+    if ((ps = font_bdf->pixel_size) < 0)
+      if ((ps = font_size) < 0)
+	if ((ps = size) < 0)
+	  ps = DEFAULT_PIXEL_SIZE;
+
+  asp = v_default_aspect * font_bdf->aspect;
+
+  if (font_size <= 0){
+    mx = mag_x * font_bdf->mag * font->mag_x * asp;
+    my = mag_y * font_bdf->mag * font->mag_y;
+  } else {
+    mx = mag_x * font_bdf->mag * font->mag_x * asp * ps /(double)font_size;
+    my = mag_y * font_bdf->mag * font->mag_y *       ps /(double)font_size;
+  }
+
+  ps = ps * font_bdf->mag * font->mag_y;
+
+  if (ret_mag_x != NULL)
+    *ret_mag_x = mx;
+  if (ret_mag_y != NULL)
+    *ret_mag_y = my;
+
+  if (ret_pixel_size != NULL)
+    *ret_pixel_size = ps;
+}
+
+
+
+
+
+/* 
+ * Include Low-Level Font Interface Routine. 
+ */ 
+#define STRCMP(s1,s2) strncmp(s1,s2,sizeof(s2)-1)
+
+#include "bdf.c"
+
+
+static int   bdf_last_bdf_id = -1;
+static BDF   bdf_last_bdf    = NULL;
+
+Private void
+BDF_SetBDF(int bdf_id, BDF bdf)
+{
+  bdf_last_bdf_id  = bdf_id;
+  bdf_last_bdf     = bdf;
+}
+
+Private BDF
+BDF_GetBDF(int bdf_id)
+{
+  BDF   bdf;
+
+  if (bdf_id == -1){
+    bdf_last_bdf_id  = -1;
+    bdf_last_bdf     = NULL;
+    return NULL;
+  }
+
+  if (   (bdf_last_bdf_id == bdf_id) 
+      && (bdf_last_bdf != NULL) 
+      && (bdf_last_bdf_id != -1))
+    return bdf_last_bdf;
+  
+  bdf = (bdf_table->get_obj_by_id)(bdf_table, bdf_id);
+  bdf_last_bdf_id = bdf_id;
+  bdf_last_bdf    = bdf;  
+
+  return bdf;
+}
+
+
+/*EOF*/

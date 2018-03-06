@@ -1,0 +1,53 @@
+#!/bin/sh
+
+#
+# Typical invocation of configure script
+#
+# Most of the case, you want to do this when configure VFlib.
+#
+
+
+machtype=`./config.guess`
+
+case ${machtype} in
+i386-*-freebsd*)
+  ROOT=/usr/local
+  ;;
+*-*-linux*)
+  ROOT=/usr
+  OPT="--prefix=/usr"
+  ;;
+*)
+  ROOT=/usr/local
+  ;;
+esac
+
+
+OPT_K="--with-kpathsea \
+       --with-kpathsea-includedir=${ROOT}/include \
+       --with-kpathsea-libdir=${ROOT}/lib"
+
+OPT_F="--with-freetype1 \
+       --with-freetype1-includedir=${ROOT}/include/freetype1/freetype \
+       --with-freetype1-libdir=${ROOT}/lib"
+
+OPT_O="--with-opentype"
+
+OPT_T="--with-t1lib \
+       --with-t1lib-includedir=${ROOT}/include \
+       --with-t1lib-libdir=${ROOT}/lib"
+
+OPT_OPT=""
+
+OPTIONS="${OPT_K} ${OPT_F} ${OPT_T} ${OPT_O} ${OPT_OPT}"
+
+echo
+echo Running configure for ${machtype}...
+echo ./configure ${OPTIONS} 
+echo
+
+rm -f config.cache 
+./configure ${OPTIONS}
+
+
+#EOF

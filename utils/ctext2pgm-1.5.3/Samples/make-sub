@@ -1,0 +1,35 @@
+# make-sub
+# for creating sample images 
+#
+
+# -----------------------------------------------------------------------
+RM =    rm -f
+RM_RF = rm -rf
+RMDIR = rmdir
+
+.SUFFIXES: .gif .txt .hex
+
+.txt.gif:
+	../../ctext2pgm $(ARG_CTEXT2PGM) -v ../../vflibcap-ctext2pgm $<  \
+	  | pgmtoppm $(ARG_FGCOLOR)-$(ARG_BGCOLOR) \
+	  | ppmtogif -interlace -transparent $(ARG_BGCOLOR)  > $@
+
+.txt.hex:
+	hd $<  > $@
+
+default all: $(DOCS)
+	../makeit $(MAKE) $(DOCS)
+
+clean::
+	-$(RM) $(PROGRAMS)
+
+clean::
+	-$(RM) *.o *.lo *.la *.core core gmon.out a.out 
+veryclean:: clean 
+	-$(RM) *~
+distclean:: clean
+	-$(RM) *~
+
+clean-images::
+	-$(RM) *.pgm *.ppm *.pbm *.gif *.tiff *.eps *.hex
+# -----------------------------------------------------------------------

@@ -1,0 +1,1195 @@
+;;; -*-Lisp-*-
+
+;;
+;; vflibcap-ctext2pgm
+;;      by h.kakugawa@computer.org
+;;
+
+
+;; -------------------------------------------------------------------------
+;;   VFlib Default
+;; -------------------------------------------------------------------------
+(define-default  VFlib
+  (extension-hints (".bdf" bdf) (".pcf" pcf) (".pfb" type1)
+		   (".ttf" truetype) (".ttc" truetype))
+  (uncompression-programs  (".Z" "zcat") (".gz" "gzip -cd"))
+  (variable-values  (TeX_DPI               "300")
+		    (TeX_USE_KPATHSEA      "Yes")
+		    (TeX_KPATHSEA_MODE     "cx") 
+		    (TeX_KPATHSEA_PROGRAM  "ctext2pgm"))
+  (use-kpathsea           $TeX_USE_KPATHSEA)
+  (kpathsea-mode          $TeX_KPATHSEA_MODE)
+  (kpathsea-dpi           $TeX_DPI)
+  (kpathsea-program-name  $TeX_KPATHSEA_PROGRAM)
+  (code-conversion-files  
+   "iso8859-1_unicode.ccv" "iso8859-2_unicode.ccv" "iso8859-3_unicode.ccv"
+   "iso8859-4_unicode.ccv" "iso8859-5_unicode.ccv" "iso8859-6_unicode.ccv"
+   "iso8859-7_unicode.ccv" "iso8859-8_unicode.ccv" "iso8859-9_unicode.ccv"
+   "iso8859-10_unicode.ccv" "iso8859-13_unicode.ccv" 
+   "iso8859-14_unicode.ccv" "iso8859-15_unicode.ccv"
+   "jisx0208_unicode.ccv" "jisx0208sjis_unicode.ccv" 
+   "jisx0201_unicode.ccv" "jisx0212_unicode.ccv" 
+   "ksc5601_unicode.ccv" "ksx1001_unicode.ccv"
+   "gb12345_unicode.ccv" "gb2312_unicode.ccv"
+   "big5_unicode.ccv" "cns11643-1_unicode.ccv" "cns11643-2_unicode.ccv"
+   "iso8859-5_koi8-r.ccv" "koi8-r_iso8859-5.ccv" "koi8-r_unicode.ccv"))
+
+;; -------------------------------------------------------------------------
+;;   BDF Font Class Default
+;; -------------------------------------------------------------------------
+(define-default  bdf
+  (font-directories "/usr/local/share/emacs/fonts/"
+		    "/usr/local/share/fonts/emacs/"
+		    "/usr/local/fonts/X11//" )
+  (compression-extensions ".gz" ".Z")
+  (properties ("FONT_CLASS" "BDF")) )
+
+;; -------------------------------------------------------------------------
+;;   PCF Font Class Default
+;; -------------------------------------------------------------------------
+(define-default  pcf
+  (font-directories  "/usr/X11R6/lib/X11/fonts/100dpi/"
+                     "/usr/X11R6/lib/X11/fonts/misc/"
+		     "/usr/local/X11R6/lib/X11/fonts/100dpi/"
+		     "/usr/local/X11R6/lib/X11/fonts/misc/"
+		     "/usr/openwin/lib/X11/fonts/100dpi/"
+		     "/usr/openwin/lib/X11/fonts/misc/"
+		     "/usr/X386/lib/X11/fonts/100dpi/"
+		     "/usr/XFree86/lib/X11/fonts/100dpi/"
+		     "/usr/X11/lib/X11/fonts/100dpi/"
+		     "/usr/local/lib/X11/fonts/100dpi/"
+		     "/usr/X11R5/lib/X11/fonts/100dpi/"
+		     "/usr/local/X11R5/lib/X11/fonts/100dpi/"
+		     "/usr/local/share/emacs/fonts/"
+		     "/usr/local/share/fonts/emacs/"
+		     "/usr/share/emacs/fonts/"
+		     "/usr/local/fonts/X11//" )
+  (compression-extensions ".gz" ".Z")
+  (properties ("FONT_CLASS" "PCF"))  )
+
+;; ISO 8859-2 (Latin-2) fonts
+(define-macro pcf:iso8859_2
+  (font-class pcf)
+  (font-directories "/usr/local/share/fonts/X11/Latin-2/100dpi/"
+		    "/usr/local/share/fonts/emacs/"))
+
+;; ISO 8859-5 (Cyrillic) fonts by KOI8-R encoded fonts
+(define-macro pcf:iso8859_5:koi8r  
+  (font-class pcf)
+  (character-set "ISO8859-5")   (encoding "ISO")
+  (font-character-set "KOI8-R") (font-encoding "KOI8-R"))
+
+;; -------------------------------------------------------------------------
+;; TrueType Font Class Default
+;; -------------------------------------------------------------------------
+(define-default  truetype
+  (font-directories  "TEXMF"  ; - a special name to search by `kpathsea'
+		     "/usr/local/fonts/DynaFont-Premium30//"
+		     "/usr/local/fonts/DynaFont-SpecialPack1//"
+		     "/usr/local/fonts/DynaFont-TypeMuseum//"
+                     "/usr/local/fonts/TrueTypeWorld-ValueFontDX//" )
+  ;;(debug "*")
+  (properties ("FONT_CLASS" "TrueType"))  )
+  
+
+;; -------------------------------------------------------------------------
+;; Type1 Font Class Default
+;; -------------------------------------------------------------------------
+(define-default type1
+  (font-directories
+       "TEXMF"
+       "/usr/local/Acrobat3/Fonts"
+       "/usr/local/Acrobat4/Resource/Font"
+       "/usr/local/share/ghostscript/fonts")
+  (afm-directories
+       "TEXMF"
+       "/usr/local/share/ghostscript/fonts")
+  (encoding-vector-directories)
+  (log-level "none")
+  (dpi $TeX_DPI))
+
+;; -------------------------------------------------------------------------
+
+
+
+;; -------------------------------------------------------------------------
+;; 14-dot fonts
+;; -------------------------------------------------------------------------
+
+;; iso 8859-1
+(define-font iso8859_1:14:f  (font-class pcf)
+  (font-file  "7x13-ISO8859-1.pcf" "7x13.pcf" 
+	      "lt1-14-etl.pcf" "etl14-latin1.pcf"))
+(define-font iso8859_1:14B:f (font-class pcf)
+  (font-file  "7x13B-ISO8859-1.pcf" "7x13B.pcf"))
+(define-font iso8859_1:14:t  (font-class pcf) 
+  (font-file "timR10-ISO8859-1.pcf" "timR10.pcf"))
+(define-font iso8859_1:14I:t (font-class pcf) 
+  (font-file "timI10-ISO8859-1.pcf" "timI10.pcf"))
+(define-font iso8859_1:14B:t (font-class pcf)
+  (font-file "timB10-ISO8859-1.pcf" "timB10.pcf"))
+(define-font iso8859_1:14:h  (font-class pcf)
+  (font-file "helvR10-ISO8859-1.pcf" "helvR10.pcf"))
+(define-font iso8859_1:14I:h (font-class pcf)
+  (font-file "helvO10-ISO8859-1.pcf" "helvO10.pcf"))
+(define-font iso8859_1:14B:h (font-class pcf)
+  (font-file "helvB10-ISO8859-1.pcf" "helvB10.pcf"))
+(define-font iso8859_1:14:c  (font-class pcf)
+  (font-file "courR10-ISO8859-1.pcf" "courR10.pcf"))
+(define-font iso8859_1:14I:c (font-class pcf)
+  (font-file "courO10-ISO8859-1.pcf" "courO10.pcf"))
+(define-font iso8859_1:14B:c (font-class pcf) 
+  (font-file "courB10-ISO8859-1.pcf" "courB10.pcf"))
+
+;; iso 8859-2
+(define-font iso8859_2:14:f  (font-class pcf)
+  (font-file "7x13-ISO8859-2.pcf"))
+(define-font iso8859_2:14B:f (font-class pcf)
+  (font-file "7x13B-ISO8859-2.pcf"))
+(define-font iso8859_2:14:t  (font-class pcf) 
+  (font-file "timR10-ISO8859-2.pcf"))
+(define-font iso8859_2:14I:t (font-class pcf) 
+  (font-file "timI10-ISO8859-2.pcf"))
+(define-font iso8859_2:14B:t (font-class pcf)
+  (font-file "timB10-ISO8859-2.pcf"))
+(define-font iso8859_2:14:h  (font-class pcf)
+  (font-file "helvR10-ISO8859-2.pcf"))
+(define-font iso8859_2:14I:h (font-class pcf)
+  (font-file "helvO10-ISO8859-2.pcf"))
+(define-font iso8859_2:14B:h (font-class pcf)
+  (font-file "helvB10-ISO8859-2.pcf"))
+(define-font iso8859_2:14:c  (font-class pcf)
+  (font-file "courR10-ISO8859-2.pcf"))
+(define-font iso8859_2:14I:c (font-class pcf)
+  (font-file "courO10-ISO8859-2.pcf"))
+(define-font iso8859_2:14B:c (font-class pcf) 
+  (font-file "courB10-ISO8859-2.pcf"))
+
+;; iso 8859-3
+(define-font iso8859_3:14:f  (font-class pcf)
+  (font-file "7x13-ISO8859-3.pcf"))
+(define-font iso8859_3:14B:f (font-class pcf)
+  (font-file "7x13B-ISO8859-3.pcf"))
+(define-font iso8859_3:14:t  (font-class pcf) 
+  (font-file "timR10-ISO8859-3.pcf"))
+(define-font iso8859_3:14I:t (font-class pcf) 
+  (font-file "timI10-ISO8859-3.pcf"))
+(define-font iso8859_3:14B:t (font-class pcf)
+  (font-file "timB10-ISO8859-3.pcf"))
+(define-font iso8859_3:14:h  (font-class pcf)
+  (font-file "helvR10-ISO8859-3.pcf"))
+(define-font iso8859_3:14I:h (font-class pcf)
+  (font-file "helvO10-ISO8859-3.pcf"))
+(define-font iso8859_3:14B:h (font-class pcf)
+  (font-file "helvB10-ISO8859-3.pcf"))
+(define-font iso8859_3:14:c  (font-class pcf)
+  (font-file "courR10-ISO8859-3.pcf"))
+(define-font iso8859_3:14I:c (font-class pcf)
+  (font-file "courO10-ISO8859-3.pcf"))
+(define-font iso8859_3:14B:c (font-class pcf) 
+  (font-file "courB10-ISO8859-3.pcf"))
+
+;; iso 8859-4
+(define-font iso8859_4:14:f  (font-class pcf)
+  (font-file "7x13-ISO8859-4.pcf"))
+(define-font iso8859_4:14B:f (font-class pcf)
+  (font-file "7x13B-ISO8859-4.pcf"))
+(define-font iso8859_4:14:t  (font-class pcf) 
+  (font-file "timR10-ISO8859-4.pcf"))
+(define-font iso8859_4:14I:t (font-class pcf) 
+  (font-file "timI10-ISO8859-4.pcf"))
+(define-font iso8859_4:14B:t (font-class pcf)
+  (font-file "timB10-ISO8859-4.pcf"))
+(define-font iso8859_4:14:h  (font-class pcf)
+  (font-file "helvR10-ISO8859-4.pcf"))
+(define-font iso8859_4:14I:h (font-class pcf)
+  (font-file "helvO10-ISO8859-4.pcf"))
+(define-font iso8859_4:14B:h (font-class pcf)
+  (font-file "helvB10-ISO8859-4.pcf"))
+(define-font iso8859_4:14:c  (font-class pcf)
+  (font-file "courR10-ISO8859-4.pcf"))
+(define-font iso8859_4:14I:c (font-class pcf)
+  (font-file "courO10-ISO8859-4.pcf"))
+(define-font iso8859_4:14B:c (font-class pcf) 
+  (font-file "courB10-ISO8859-4.pcf"))
+
+;; iso 8859-5    ;; XXX
+(define-font iso8859_5:14:f  (font-class try)
+  (font-list "iso8859_5:14:f:koi8r"  ;; "lt5-14-etl.pcf" 
+	     "cyr14-etl.pcf" "etl14-cyrillic.pcf"))
+(define-font iso8859_5:14B:f (font-class try) 
+(font-list "iso8859_5:14B:f:koi8r"))
+(define-font iso8859_5:14:t  (font-class try)
+  (font-list "iso8859_5:14:t:koi8r"))
+(define-font iso8859_5:14I:t (font-class try) 
+  (font-list "iso8859_5:14I:t:koi8r"))
+(define-font iso8859_5:14B:t (font-class try)
+  (font-list "iso8859_5:14B:t:koi8r"))
+(define-font iso8859_5:14:h  (font-class try)
+  (font-list "iso8859_5:14:h:koi8r"))
+(define-font iso8859_5:14I:h (font-class try)
+  (font-list "iso8859_5:14I:h:koi8r"))
+(define-font iso8859_5:14B:h (font-class try)
+  (font-list "iso8859_5:14B:h:koi8r"))
+(define-font iso8859_5:14:c  (font-class try)
+  (font-list "iso8859_5:14:c:koi8r"))
+(define-font iso8859_5:14I:c (font-class try)
+  (font-list "iso8859_5:14I:c:koi8r"))
+(define-font iso8859_5:14B:c (font-class try)
+  (font-list "iso8859_5:14B:c:koi8r"))
+
+;; iso 8859-7
+(define-font iso8859_7:14:f  (font-class pcf) 
+  (font-file "7x13-ISO8859-7.pcf"))
+
+;; iso 8859-8
+(define-font iso8859_8:14:f  (font-class pcf) 
+  (font-file "7x13-ISO8859-8.pcf"))
+
+;; iso 8859-9
+(define-font iso8859_9:14:f  (font-class pcf) 
+  (font-file "7x13-ISO8859-9.pcf"))
+
+;; japanese
+(define-font jisx0201r:14:f  (font-class pcf)
+  (font-file "7x14-JISX0201.1976-0.pcf" "7x14rk.pcf" "8x16rk.pcf"))
+(define-font jisx0201k:14:f  (font-class pcf) 
+  (font-file "7x14-JISX0201.1976-0.pcf" "7x14rk.pcf" "8x16rk.pcf"))
+(define-font jisx0208:14:f   (font-class pcf) 
+  (font-file "k14.pcf"))
+(define-font jisx0212:14:f   (font-class pcf) 
+  (font-file "jksp16.pcf" "jisksp16-1990.pcf" "min-1-16.pcf"))
+
+;; hangle
+(define-font ksc5601:14:f    (font-class pcf) 
+  (font-file "hanglg16.pcf" "hanglm16.pcf"))
+(define-font ksc5601:14:c    (font-class pcf) (font-file "hanglg16.pcf"))
+(define-font ksc5601:14:h    (font-class pcf) (font-file "hanglg16.pcf"))
+(define-font ksc5601:14:t    (font-class pcf) (font-file "hanglm16.pcf"))
+
+;; chinese
+(define-font gb2312:14:f     (font-class pcf) (font-file "gb16fs.pcf"))
+(define-font gb2312:14:t     (font-class pcf) (font-file "gb16st.pcf"))
+(define-font big5:14:f       (font-class pcf) (font-file "taipei16.pcf"))
+(define-font cns11643_1:14:f (font-class pcf)
+  (font-file "cns1-16.pcf" "cns-1-16.pcf"))
+(define-font cns11643_2:14:f (font-class pcf)
+  (font-file "cns2-16.pcf" "cns-2-16.pcf"))
+(define-font cns11643_3:14:f (font-class pcf)
+  (font-file "cns3-16.pcf" "cns-3-16.pcf"))
+(define-font cns11643_4:14:f (font-class pcf)
+  (font-file "cns4-16.pcf" "cns-4-16.pcf"))
+(define-font cns11643_5:14:f (font-class pcf)
+  (font-file "cns5-16.pcf" "cns-5-16.pcf"))
+(define-font cns11643_6:14:f (font-class pcf)
+  (font-file "cns6-16.pcf" "cns-6-16.pcf"))
+(define-font cns11643_7:14:f (font-class pcf)
+  (font-file "cns7-16.pcf" "cns-7-16.pcf"))
+
+;; mule arabic
+(define-font mule_arab0:14:f (font-class pcf)
+  (font-file "arab16-0-etl.pcf" "etl16-arabic0.pcf"))
+(define-font mule_arab1:14:f (font-class pcf)
+  (font-file "arab16-1-etl.pcf" "etl16-arabic1.pcf"))
+(define-font mule_arab2:14:f (font-class pcf)
+  (font-file "arab16-2-etl.pcf" "etl16-arabic2.pcf"))
+
+;; mule viscii
+(define-font mule_viscii_u:14:f (font-class pcf)
+  (font-file "visc16-etl.pcf" "etl16-viscii.pcf"))
+(define-font mule_viscii_l:14:f (font-class pcf)
+  (font-file "visc16-etl.pcf" "etl16-viscii.pcf"))
+
+;; mule ethiopic
+(define-font mule_ethio:14:f (font-class pcf) 
+  (font-file "ethio16f-uni.pcf" "ethiomx16f-uni.pcf"))
+
+
+
+;; -------------------------------------------------------------------------
+;; 16-dot fonts
+;; -------------------------------------------------------------------------
+
+;; iso 8859-1
+(define-font iso8859_1:16:f  (font-class pcf)
+  (font-file "9x15-ISO8859-1.pcf" "9x15.pcf"))
+(define-font iso8859_1:16B:f (font-class pcf)
+  (font-file "9x15B-ISO8859-1.pcf" "9x15B.pcf"))
+(define-font iso8859_1:16I:f (font-class pcf)
+  (font-file "9x15-ISO8859-1.pcf" "9x15.pcf"))
+(define-font iso8859_1:16:t  (font-class pcf) 
+  (font-file "timR12-ISO8859-1.pcf" "timR12.pcf"))
+(define-font iso8859_1:16I:t (font-class pcf)
+  (font-file "timI12-ISO8859-1.pcf" "timI12.pcf"))
+(define-font iso8859_1:16B:t (font-class pcf) 
+  (font-file "timB12-ISO8859-1.pcf" "timB12.pcf"))
+(define-font iso8859_1:16:h  (font-class pcf)
+  (font-file "helvR12-ISO8859-1.pcf" "helvR12.pcf"))
+(define-font iso8859_1:16I:h (font-class pcf)
+  (font-file "helvO12-ISO8859-1.pcf"))
+(define-font iso8859_1:16B:h (font-class pcf)
+  (font-file "helvB12-ISO8859-1.pcf"))
+(define-font iso8859_1:16:c  (font-class pcf)
+  (font-file "courR12-ISO8859-1.pcf"))
+(define-font iso8859_1:16I:c (font-class pcf)
+  (font-file "courO12-ISO8859-1.pcf"))
+(define-font iso8859_1:16B:c (font-class pcf)
+  (font-file "courB12-ISO8859-1.pcf"))
+
+;; iso 8859-2
+(define-font iso8859_2:16:f  (font-class pcf)
+  (font-file "9x15-ISO8859-2.pcf"))
+(define-font iso8859_2:16B:f (font-class pcf)
+  (font-file "9x15B-ISO8859-2.pcf"))
+(define-font iso8859_2:16I:f (font-class pcf)
+  (font-file "9x15-ISO8859-2.pcf"))
+(define-font iso8859_2:16:t  (font-class pcf) 
+  (font-file "timR12-ISO8859-2.pcf"))
+(define-font iso8859_2:16I:t (font-class pcf)
+  (font-file "timI12-ISO8859-2.pcf"))
+(define-font iso8859_2:16B:t (font-class pcf) 
+  (font-file "timB12-ISO8859-2.pcf"))
+(define-font iso8859_2:16:h  (font-class pcf)
+  (font-file "helvR12-ISO8859-2.pcf"))
+(define-font iso8859_2:16I:h (font-class pcf)
+  (font-file "helvO12-ISO8859-2.pcf"))
+(define-font iso8859_2:16B:h (font-class pcf)
+  (font-file "helvB12-ISO8859-2.pcf"))
+(define-font iso8859_2:16:c  (font-class pcf)
+  (font-file "courR12-ISO8859-2.pcf"))
+(define-font iso8859_2:16I:c (font-class pcf)
+  (font-file "courO12-ISO8859-2.pcf"))
+(define-font iso8859_2:16B:c (font-class pcf)
+  (font-file "courB12-ISO8859-2.pcf"))
+
+;; iso 8859-3
+(define-font iso8859_3:16:f  (font-class pcf)
+  (font-file "9x15-ISO8859-3.pcf"))
+(define-font iso8859_3:16B:f (font-class pcf)
+  (font-file "9x15B-ISO8859-3.pcf"))
+(define-font iso8859_3:16I:f (font-class pcf)
+  (font-file "9x15-ISO8859-3.pcf"))
+(define-font iso8859_3:16:t  (font-class pcf) 
+  (font-file "timR12-ISO8859-3.pcf"))
+(define-font iso8859_3:16I:t (font-class pcf)
+  (font-file "timI12-ISO8859-3.pcf"))
+(define-font iso8859_3:16B:t (font-class pcf) 
+  (font-file "timB12-ISO8859-3.pcf"))
+(define-font iso8859_3:16:h  (font-class pcf)
+  (font-file "helvR12-ISO8859-3.pcf"))
+(define-font iso8859_3:16I:h (font-class pcf)
+  (font-file "helvO12-ISO8859-3.pcf"))
+(define-font iso8859_3:16B:h (font-class pcf)
+  (font-file "helvB12-ISO8859-3.pcf"))
+(define-font iso8859_3:16:c  (font-class pcf)
+  (font-file "courR12-ISO8859-3.pcf"))
+(define-font iso8859_3:16I:c (font-class pcf)
+  (font-file "courO12-ISO8859-3.pcf"))
+(define-font iso8859_3:16B:c (font-class pcf)
+  (font-file "courB12-ISO8859-3.pcf"))
+
+;; iso 8859-4
+(define-font iso8859_4:16:f  (font-class pcf)
+  (font-file "9x15-ISO8859-4.pcf"))
+(define-font iso8859_4:16B:f (font-class pcf)
+  (font-file "9x15B-ISO8859-4.pcf"))
+(define-font iso8859_4:16I:f (font-class pcf)
+  (font-file "9x15-ISO8859-4.pcf"))
+(define-font iso8859_4:16:t  (font-class pcf) 
+  (font-file "timR12-ISO8859-4.pcf"))
+(define-font iso8859_4:16I:t (font-class pcf)
+  (font-file "timI12-ISO8859-4.pcf"))
+(define-font iso8859_4:16B:t (font-class pcf) 
+  (font-file "timB12-ISO8859-4.pcf"))
+(define-font iso8859_4:16:h  (font-class pcf)
+  (font-file "helvR12-ISO8859-4.pcf"))
+(define-font iso8859_4:16I:h (font-class pcf)
+  (font-file "helvO12-ISO8859-4.pcf"))
+(define-font iso8859_4:16B:h (font-class pcf)
+  (font-file "helvB12-ISO8859-4.pcf"))
+(define-font iso8859_4:16:c  (font-class pcf)
+  (font-file "courR12-ISO8859-4.pcf"))
+(define-font iso8859_4:16I:c (font-class pcf)
+  (font-file "courO12-ISO8859-4.pcf"))
+(define-font iso8859_4:16B:c (font-class pcf)
+  (font-file "courB12-ISO8859-4.pcf"))
+
+;; iso 8859-5    ;; XXX
+(define-font iso8859_5:16:f  (font-class try)
+  (font-list "iso8859_5:16:f:koi8r" ;; "lt5-16-etl.pcf" 
+	     "cyr16-etl.pcf" "etl16-cyrillic.pcf"))
+(define-font iso8859_5:16B:f (font-class try)
+  (font-list "iso8859_5:16B:f:koi8r"))
+(define-font iso8859_5:16:t  (font-class try) 
+  (font-list "iso8859_5:16:t:koi8r"))
+(define-font iso8859_5:16I:t (font-class try)
+  (font-list "iso8859_5:16I:t:koi8r"))
+(define-font iso8859_5:16B:t (font-class try)
+  (font-list "iso8859_5:16B:t:koi8r"))
+(define-font iso8859_5:16:h  (font-class try)
+  (font-list "iso8859_5:16:h:koi8r" ))
+(define-font iso8859_5:16I:h (font-class try)
+  (font-list "iso8859_5:16I:h:koi8r"))
+(define-font iso8859_5:16B:h (font-class try)
+  (font-list "iso8859_5:16B:h:koi8r"))
+(define-font iso8859_5:16:c  (font-class try)
+  (font-list "iso8859_5:16:c:koi8r"))
+(define-font iso8859_5:16I:c (font-class try)
+  (font-list "iso8859_5:16I:c:koi8r"))
+(define-font iso8859_5:16B:c (font-class try) 
+  (font-list "iso8859_5:16B:c:koi8r"))
+
+;; iso 8859-7
+(define-font iso8859_7:16:f  (font-class pcf)
+  (font-file "9x15-ISO8859-7.pcf"))
+
+;; iso 8859-8
+(define-font iso8859_8:16:f  (font-class pcf)
+  (font-file "9x15-ISO8859-8.pcf"))
+
+;; iso 8859-9
+(define-font iso8859_9:16:f  (font-class pcf)
+  (font-file "9x15-ISO8859-9.pcf"))
+
+;; japanese
+(define-font jisx0201r:16:f  (font-class pcf) (font-file "8x16rk.pcf"))
+(define-font jisx0201k:16:f  (font-class pcf) (font-file "8x16rk.pcf"))
+(define-font jisx0208:16:f   (font-class pcf)
+  (font-file "j90-16.pcf" "jiskan16.pcf"))
+(define-font jisx0212:16:f   (font-class pcf)
+  (font-file "jksp16.pcf" "jisksp16.pcf" "jisksp16-1990.pcf" "min-1-16.pcf"))
+
+;; hangle
+(define-font ksc5601:16:f    (font-class pcf) (font-file "hanglm16.pcf"))
+(define-font ksc5601:16B:f   (font-class pcf) (font-file "hanglg16.pcf"))
+(define-font ksc5601:16:t    (font-class pcf) (font-file "hanglm16.pcf"))
+(define-font ksc5601:16B:t   (font-class pcf) (font-file "hanglg16.pcf"))
+(define-font ksc5601:16:h    (font-class pcf) (font-file "hanglg16.pcf"))
+(define-font ksc5601:16:c    (font-class pcf) (font-file "hanglg16.pcf"))
+
+;; chinese
+(define-font gb2312:16:f     (font-class pcf) (font-file "gb16fs.pcf"))
+(define-font gb2312:16B:f    (font-class pcf) (font-file "gb16st.pcf"))
+(define-font gb2312:16:t     (font-class pcf) (font-file "gb16fs.pcf"))
+(define-font gb2312:16B:t    (font-class pcf) (font-file "gb16st.pcf"))
+(define-font big5:16:f       (font-class pcf) (font-file "taipei16.pcf"))
+(define-font cns11643_1:16:f (font-class pcf)
+  (font-file "cns1-16.pcf" "cns-1-16.pcf"))
+(define-font cns11643_2:16:f (font-class pcf)
+  (font-file "cns2-16.pcf" "cns-2-16.pcf"))
+(define-font cns11643_3:16:f (font-class pcf)
+  (font-file "cns3-16.pcf" "cns-3-16.pcf"))
+(define-font cns11643_4:16:f (font-class pcf)
+  (font-file "cns4-16.pcf" "cns-4-16.pcf"))
+(define-font cns11643_5:16:f (font-class pcf)
+  (font-file "cns5-16.pcf" "cns-5-16.pcf"))
+(define-font cns11643_6:16:f (font-class pcf)
+  (font-file "cns6-16.pcf" "cns-6-16.pcf"))
+(define-font cns11643_7:16:f (font-class pcf)
+  (font-file "cns7-16.pcf" "cns-7-16.pcf"))
+
+;; mule arabic
+(define-font mule_arab0:16:f (font-class pcf) 
+  (font-file "arab16-0-etl.pcf" "etl16-arabic0.pcf"))
+(define-font mule_arab1:16:f (font-class pcf) 
+  (font-file "arab16-1-etl.pcf" "etl16-arabic1.pcf"))
+(define-font mule_arab2:16:f (font-class pcf) 
+  (font-file "arab16-2-etl.pcf" "etl16-arabic2.pcf"))
+
+;; mule viscii
+(define-font mule_viscii_l:16:f (font-class pcf)
+  (font-file "visc16-etl.pcf" "etl16-viscii.pcf"))
+(define-font mule_viscii_u:16:f (font-class pcf) 
+  (font-file "visc16-etl.pcf" "etl16-viscii.pcf"))
+
+;; mule ethiopic
+(define-font mule_ethio:16:f (font-class pcf) 
+  (font-file "ethio16f-uni.pcf" "ethiomx16f-uni.pcf"))
+
+
+
+;; -------------------------------------------------------------------------
+;; 18-dot fonts
+;; -------------------------------------------------------------------------
+
+;; iso 8859-1
+(define-font iso8859_1:18:f  (font-class pcf)
+  (font-file "10x20-ISO8859-1.pcf" "10x20.pcf"))
+(define-font iso8859_1:18:t  (font-class pcf) 
+  (font-file "timR14-ISO8859-1.pcf" "timR14.pcf"))
+(define-font iso8859_1:18I:t (font-class pcf) 
+  (font-file "timI14-ISO8859-1.pcf" "timI14.pcf"))
+(define-font iso8859_1:18B:t (font-class pcf) 
+  (font-file "timB14-ISO8859-1.pcf" "timB14.pcf"))
+(define-font iso8859_1:18:h  (font-class pcf) 
+  (font-file "helvR14-ISO8859-1.pcf" "helvR14.pcf"))
+(define-font iso8859_1:18I:h (font-class pcf) 
+  (font-file "helvO14-ISO8859-1.pcf" "helvO14.pcf"))
+(define-font iso8859_1:18B:h (font-class pcf) 
+  (font-file "helvB14-ISO8859-1.pcf" "helvB14.pcf"))
+(define-font iso8859_1:18:c  (font-class pcf) 
+  (font-file "courR14-ISO8859-1.pcf" "courR14.pcf"))
+(define-font iso8859_1:18I:c (font-class pcf) 
+  (font-file "courO14-ISO8859-1.pcf" "courO14.pcf"))
+(define-font iso8859_1:18B:c (font-class pcf) 
+  (font-file "courB14-ISO8859-1.pcf" "courB14.pcf"))
+
+;; iso 8859-2
+(define-font iso8859_2:18:f  (font-class pcf)
+  (font-file "10x20-ISO8859-2.pcf"))
+(define-font iso8859_2:18:t  (font-class pcf) 
+  (font-file "timR14-ISO8859-2.pcf"))
+(define-font iso8859_2:18I:t (font-class pcf) 
+  (font-file "timI14-ISO8859-2.pcf"))
+(define-font iso8859_2:18B:t (font-class pcf) 
+  (font-file "timB14-ISO8859-2.pcf"))
+(define-font iso8859_2:18:h  (font-class pcf) 
+  (font-file "helvR14-ISO8859-2.pcf"))
+(define-font iso8859_2:18I:h (font-class pcf) 
+  (font-file "helvO14-ISO8859-2.pcf"))
+(define-font iso8859_2:18B:h (font-class pcf) 
+  (font-file "helvB14-ISO8859-2.pcf"))
+(define-font iso8859_2:18:c  (font-class pcf) 
+  (font-file "courR14-ISO8859-2.pcf"))
+(define-font iso8859_2:18I:c (font-class pcf) 
+  (font-file "courO14-ISO8859-2.pcf"))
+(define-font iso8859_2:18B:c (font-class pcf) 
+  (font-file "courB14-ISO8859-2.pcf"))
+
+;; iso 8859-3
+(define-font iso8859_3:18:f  (font-class pcf)
+  (font-file "10x20-ISO8859-3.pcf"))
+(define-font iso8859_3:18:t  (font-class pcf) 
+  (font-file "timR14-ISO8859-3.pcf"))
+(define-font iso8859_3:18I:t (font-class pcf) 
+  (font-file "timI14-ISO8859-3.pcf"))
+(define-font iso8859_3:18B:t (font-class pcf) 
+  (font-file "timB14-ISO8859-3.pcf"))
+(define-font iso8859_3:18:h  (font-class pcf) 
+  (font-file "helvR14-ISO8859-3.pcf"))
+(define-font iso8859_3:18I:h (font-class pcf) 
+  (font-file "helvO14-ISO8859-3.pcf"))
+(define-font iso8859_3:18B:h (font-class pcf) 
+  (font-file "helvB14-ISO8859-3.pcf"))
+(define-font iso8859_3:18:c  (font-class pcf) 
+  (font-file "courR14-ISO8859-3.pcf"))
+(define-font iso8859_3:18I:c (font-class pcf) 
+  (font-file "courO14-ISO8859-3.pcf"))
+(define-font iso8859_3:18B:c (font-class pcf) 
+  (font-file "courB14-ISO8859-3.pcf"))
+
+;; iso 8859-4
+(define-font iso8859_4:18:f  (font-class pcf)
+  (font-file "10x20-ISO8859-4.pcf"))
+(define-font iso8859_4:18:t  (font-class pcf) 
+  (font-file "timR14-ISO8859-4.pcf"))
+(define-font iso8859_4:18I:t (font-class pcf) 
+  (font-file "timI14-ISO8859-4.pcf"))
+(define-font iso8859_4:18B:t (font-class pcf) 
+  (font-file "timB14-ISO8859-4.pcf"))
+(define-font iso8859_4:18:h  (font-class pcf) 
+  (font-file "helvR14-ISO8859-4.pcf"))
+(define-font iso8859_4:18I:h (font-class pcf) 
+  (font-file "helvO14-ISO8859-4.pcf"))
+(define-font iso8859_4:18B:h (font-class pcf) 
+  (font-file "helvB14-ISO8859-4.pcf"))
+(define-font iso8859_4:18:c  (font-class pcf) 
+  (font-file "courR14-ISO8859-4.pcf"))
+(define-font iso8859_4:18I:c (font-class pcf) 
+  (font-file "courO14-ISO8859-4.pcf"))
+(define-font iso8859_4:18B:c (font-class pcf) 
+  (font-file "courB14-ISO8859-4.pcf"))
+
+;; iso 8859-5  ;; XXX 
+(define-font iso8859_5:18:f (font-class try)
+  (font-list "iso8859_5:18:f:koi8r" ;; "lt5-16-etl.pcf" 
+	     "cyr16-etl.pcf" "etl16-cyrillic.pcf"))
+(define-font iso8859_5:18B:f (font-class try)
+  (font-list "iso8859_5:18B:f:koi8r"))
+(define-font iso8859_5:18:t (font-class try)
+  (font-list "iso8859_5:18:t:koi8r"))
+(define-font iso8859_5:18I:t (font-class try)
+  (font-list "iso8859_5:18I:t:koi8r"))
+(define-font iso8859_5:18B:t (font-class try)
+  (font-list "iso8859_5:18B:t:koi8r"))
+(define-font iso8859_5:18:h (font-class try)
+  (font-list "iso8859_5:18:h:koi8r"))
+(define-font iso8859_5:18I:h (font-class try)
+  (font-list "iso8859_5:18I:h:koi8r"))
+(define-font iso8859_5:18B:h (font-class try)
+  (font-list "iso8859_5:18B:h:koi8r"))
+(define-font iso8859_5:18:c (font-class try)
+  (font-list "iso8859_5:18:c:koi8r"))
+(define-font iso8859_5:18I:c (font-class try)
+  (font-list "iso8859_5:18I:c:koi8r"))
+(define-font iso8859_5:18B:c (font-class try) 
+  (font-list "iso8859_5:18B:c:koi8r"))
+
+;; iso 8859-7
+(define-font iso8859_7:18:f  (font-class pcf) 
+  (font-file "10x20-ISO8859-7.pcf"))
+
+;; iso 8859-8
+(define-font iso8859_8:18:f  (font-class pcf) 
+  (font-file "10x20-ISO8859-9.pcf"))
+
+;; iso 8859-9
+(define-font iso8859_9:18:f  (font-class pcf) 
+  (font-file "10x20-ISO8859-9.pcf"))
+
+;; japanese
+(define-font jisx0201r:18:f  (font-class pcf) (font-file "8x16rk.pcf"))
+(define-font jisx0201k:18:f  (font-class pcf) (font-file "8x16rk.pcf"))
+(define-font jisx0208:18:f   (font-class pcf) 
+  (font-file "j83-18.pcf"  "18x18ja.pcf" "jiskan16.pcf"))
+(define-font jisx0208:18B:f   (font-class pcf)
+  (font-file "j83-18B.pcf" "18x18ja.pcf" "jiskan16.pcf"))
+(define-font jisx0208:18I:f   (font-class pcf) 
+  (font-file "j83-18i.pcf" "18x18ja.pcf" "jiskan16.pcf"))
+(define-font jisx0212:18:f   (font-class pcf) 
+  (font-file "jksp16.pcf" "jisksp16.pcf" "jisksp16-1990.pcf" "min-1-16.pcf"))
+
+;; hangle
+(define-font ksc5601:18:f    (font-class pcf) 
+  (font-file "18x18ko.pcf" "hanglm16.pcf"))
+
+;; chinese
+(define-font gb2312:18:f     (font-class pcf) (font-file "gb16fs.pcf"))
+(define-font big5:18:f       (font-class pcf) (font-file "taipei16.pcf"))
+(define-font cns11643_1:18:f (font-class pcf)
+  (font-file "cns1-16.pcf" "cns-1-16.pcf"))
+(define-font cns11643_2:18:f (font-class pcf)
+  (font-file "cns2-16.pcf" "cns-2-16.pcf"))
+(define-font cns11643_3:18:f (font-class pcf)
+  (font-file "cns3-16.pcf" "cns-3-16.pcf"))
+(define-font cns11643_4:18:f (font-class pcf)
+  (font-file "cns4-16.pcf" "cns-4-16.pcf"))
+(define-font cns11643_5:18:f (font-class pcf)
+  (font-file "cns5-16.pcf" "cns-5-16.pcf"))
+(define-font cns11643_6:18:f (font-class pcf)
+  (font-file "cns6-16.pcf" "cns-6-16.pcf"))
+(define-font cns11643_7:18:f (font-class pcf)
+  (font-file "cns7-16.pcf" "cns-7-16.pcf"))
+
+;; mule arabic
+(define-font mule_arab0:18:f (font-class pcf)
+  (font-file "arab16-0-etl.pcf" "etl16-arabic0.pcf"))
+(define-font mule_arab1:18:f (font-class pcf)
+  (font-file "arab16-1-etl.pcf" "etl16-arabic1.pcf"))
+(define-font mule_arab2:18:f (font-class pcf)
+  (font-file "arab16-2-etl.pcf" "etl16-arabic2.pcf"))
+
+;; mule viscii
+(define-font mule_viscii_l:18:f (font-class pcf) 
+  (font-file "visc18-etl.pcf" "visc16-etl.pcf" "etl16-viscii.pcf"))
+(define-font mule_viscii_l:18I:f (font-class pcf) 
+  (font-file "visc18i-etl.pcf"))
+(define-font mule_viscii_l:18B:f (font-class pcf)
+  (font-file "visc18b-etl.pcf"))
+(define-font mule_viscii_u:18:f (font-class pcf)
+  (font-file "visc18-etl.pcf" "visc16-etl.pcf" "etl16-viscii.pcf"))
+(define-font mule_viscii_u:18I:f (font-class pcf) 
+  (font-file "visc18i-etl.pcf"))
+(define-font mule_viscii_u:18B:f (font-class pcf)
+  (font-file "visc18b-etl.pcf"))
+
+;; mule ethiopic
+(define-font mule_ethio:18:f (font-class pcf) 
+  (font-file "ethio16f-uni.pcf" "ethiomx16f-uni.pcf"))
+
+
+
+;; -------------------------------------------------------------------------
+;; 24-dot fonts
+;; -------------------------------------------------------------------------
+
+;; iso 8859-1
+(define-font iso8859_1:24:f  (font-class pcf) 
+  (font-file "12x24.pcf" "12x24.pcf"))
+(define-font iso8859_1:24B:f (font-class pcf) (font-file "lt1-24b-etl.pcf"))
+(define-font iso8859_1:24B:f (font-class pcf) (font-file "lt1-24i-etl.pcf"))
+(define-font iso8859_1:24:t  (font-class pcf) (font-file "timR18.pcf"))
+(define-font iso8859_1:24I:t (font-class pcf) (font-file "timI18.pcf"))
+(define-font iso8859_1:24B:t (font-class pcf) (font-file "timB18.pcf"))
+(define-font iso8859_1:24:h  (font-class pcf) (font-file "helvR18.pcf"))
+(define-font iso8859_1:24I:h (font-class pcf) (font-file "helvO18.pcf"))
+(define-font iso8859_1:24B:h (font-class pcf) (font-file "helvB18.pcf"))
+(define-font iso8859_1:24:c  (font-class pcf) (font-file "courR18.pcf"))
+(define-font iso8859_1:24I:c (font-class pcf) (font-file "courO18.pcf"))
+(define-font iso8859_1:24B:c (font-class pcf) (font-file "courB18.pcf"))
+
+;; iso 8859-2
+(define-font iso8859_2:24:f  pcf:iso8859_2
+  (font-file "lt2-24-etl.pcf" "etl24-latin2.pcf" "12x24.pcf"))
+(define-font iso8859_2:24B:f pcf:iso8859_2 (font-file "lt2-24b-etl.pcf"))
+(define-font iso8859_2:24:t  pcf:iso8859_2 (font-file "timR18.pcf"))
+(define-font iso8859_2:24I:t pcf:iso8859_2 (font-file "timI18.pcf"))
+(define-font iso8859_2:24B:t pcf:iso8859_2 (font-file "timB18.pcf"))
+(define-font iso8859_2:24:h  pcf:iso8859_2 (font-file "helvR18.pcf"))
+(define-font iso8859_2:24I:h pcf:iso8859_2 (font-file "helvO18.pcf"))
+(define-font iso8859_2:24B:h pcf:iso8859_2 (font-file "helvB18.pcf"))
+(define-font iso8859_2:24:c  pcf:iso8859_2 (font-file "courR18.pcf"))
+(define-font iso8859_2:24I:c pcf:iso8859_2 (font-file "courO18.pcf"))
+(define-font iso8859_2:24B:c pcf:iso8859_2 (font-file "courB18.pcf"))
+
+;; iso 8859-3
+(define-font iso8859_3:24:f  (font-class pcf)
+  (font-file "lt3-24-etl.pcf" "etl24-latin3.pcf"))
+
+;; iso 8859-4 
+(define-font iso8859_4:24:f  (font-class pcf) 
+  (font-file "lt4-24-etl.pcf" "etl24-latin4.pcf"))
+
+;; iso 8859-5
+(define-font iso8859_5:24:f (font-class try)
+  (font-list "iso8859_5:24:f:koi8r" ;; "lt5-24-etl.pcf" 
+	     "cyr24-etl.pcf" "etl24-cyrillic.pcf"))
+(define-font iso8859_5:24B:f (font-class try) 
+  (font-list "iso8859_5:24B:f:koi8r"))
+(define-font iso8859_5:24:t (font-class try)
+  (font-list "iso8859_5:24:t:koi8r"))
+(define-font iso8859_5:24I:t (font-class try)
+  (font-list "iso8859_5:24I:t:koi8r"))
+(define-font iso8859_5:24B:t (font-class try)
+  (font-list "iso8859_5:24B:t:koi8r"))
+(define-font iso8859_5:24:h (font-class try)
+  (font-list "iso8859_5:24:h:koi8r"))
+(define-font iso8859_5:24I:h (font-class try)
+  (font-list "iso8859_5:24I:h:koi8r"))
+(define-font iso8859_5:24B:h (font-class try)
+  (font-list "iso8859_5:24B:h:koi8r"))
+(define-font iso8859_5:24:c (font-class try)
+  (font-list "iso8859_5:24:c:koi8r"))
+(define-font iso8859_5:24I:c (font-class try)
+  (font-list "iso8859_5:24I:c:koi8r"))
+(define-font iso8859_5:24B:c (font-class try)
+  (font-list "iso8859_5:24B:c:koi8r"))
+
+;; iso 8859-7
+(define-font iso8859_7:24:f  (font-class pcf) 
+  (font-file "grk24-etl.pcf" "etl24-greek.pcf"))
+
+;; iso 8859-8
+(define-font iso8859_8:24:f 
+  (font-class pcf) (font-file "heb24-etl.pcf" "etl24-hebrew.pcf"))
+
+;; iso 8859-9
+(define-font iso8859_9:24:f  (font-class pcf)
+  (font-file "lt5-24-etl.pcf" "etl24-latin5.pcf"))
+
+;; japanese
+(define-font jisx0201r:24:f  (font-class pcf) (font-file "12x24rk.pcf"))
+(define-font jisx0201k:24:f  (font-class pcf) (font-file "12x24rk.pcf"))
+(define-font jisx0208:24:f   (font-class pcf) (font-file "jiskan24.pcf"))
+(define-font jisx0212:24:f   (font-class pcf) (pixel-size 24)
+  (font-file "jksp24.pcf" "jksp40.pcf" "jisksp40.pcf" "min-1-24.pcf"))
+
+;; hangle
+(define-font ksc5601:24:f    (font-class pcf) (font-file "hanglm24.pcf"))
+
+;; chinese
+(define-font gb2312:24:f     (font-class pcf) (font-file "gb24st.pcf"))
+(define-font big5:24:f       (font-class pcf) (font-file "taipei24.pcf"))
+(define-font cns11643_1:24:f (font-class pcf) 
+  (font-file "cns1-24.pcf" "cns-1-24.pcf"))
+(define-font cns11643_2:24:f (font-class pcf)
+  (font-file "cns2-24.pcf" "cns-2-24.pcf"))
+(define-font cns11643_3:24:f (font-class pcf)
+  (font-file "cns3-24.pcf" "cns-3-24.pcf"))
+(define-font cns11643_4:24:f (font-class pcf)
+  (font-file "cns4-24.pcf" "cns-4-24.pcf"))
+(define-font cns11643_5:24:f (font-class pcf)
+  (font-file "cns5-24.pcf" "cns-5-24.pcf"))
+(define-font cns11643_6:24:f (font-class pcf)
+  (font-file "cns6-24.pcf" "cns-6-24.pcf"))
+(define-font cns11643_7:24:f (font-class pcf)
+  (font-file "cns7-24.pcf" "cns-7-24.pcf"))
+
+;; mule arabic
+(define-font mule_arab0:24:f (font-class pcf)
+  (font-file "arab24-0-etl.pcf" "etl24-arabic0.pcf"))
+(define-font mule_arab1:24:f (font-class pcf)
+  (font-file "arab24-1-etl.pcf" "etl24-arabic1.pcf"))
+(define-font mule_arab2:24:f (font-class pcf)
+  (font-file "arab24-2-etl.pcf" "etl24-arabic2.pcf"))
+
+;; mule viscii
+(define-font mule_viscii_u:24:f (font-class pcf)
+  (font-file "visc24-etl.pcf" "etl24-viscii.pcf"))
+(define-font mule_viscii_l:24:f (font-class pcf)
+  (font-file "visc24-etl.pcf" "etl24-viscii.pcf"))
+
+;; mule ethiopic
+(define-font mule_ethio:24:f (font-class pcf) 
+  (font-file "ethio24f-uni.pcf" "ethiomx24f-uni.pcf"))
+
+
+
+;; -------------------------------------------------------------------------
+;; scalable fonts
+;; -------------------------------------------------------------------------
+
+;; iso 8859-1
+(define-font iso8859_1:n:f  (font-class try)
+  (font-list "iso8859_1:n:f_type1" "iso8859_1:n:f_pcf"))
+(define-font iso8859_1:nB:f  (font-class try)
+  (font-list "iso8859_1:nB:f_type1" "iso8859_1:nB:f_pcf"))
+(define-font iso8859_1:nI:f  (font-class try)
+  (font-list "iso8859_1:nI:t_type1" "iso8859_1:nI:t_pcf"))
+(define-font iso8859_1:n:t  (font-class try) 
+  (font-list "iso8859_1:n:t_type1" "iso8859_1:n:t_pcf"))
+(define-font iso8859_1:nI:t (font-class try) 
+  (font-list "iso8859_1:nI:t_type1" "iso8859_1:nI:t_pcf"))
+(define-font iso8859_1:nB:t (font-class try)
+  (font-list "iso8859_1:nB:t_type1" "iso8859_1:nB:t_pcf"))
+(define-font iso8859_1:n:h  (font-class try)
+  (font-list "iso8859_1:n:h_type1" "iso8859_1:n:h_pcf"))
+(define-font iso8859_1:nI:h (font-class try)
+  (font-list "iso8859_1:nI:h_type1" "iso8859_1:nI:h_pcf"))
+(define-font iso8859_1:nB:h (font-class try)
+  (font-list "iso8859_1:nI:h_type1" "iso8859_1:nI:h_pcf"))
+(define-font iso8859_1:n:c  (font-class try)
+  (font-list "iso8859_1:n:c_type1" "iso8859_1:n:c_pcf"))
+(define-font iso8859_1:nI:c (font-class try)
+  (font-list "iso8859_1:nI:c_type1" "iso8859_1:nI:c_pcf"))
+(define-font iso8859_1:nB:c (font-class try)
+  (font-list "iso8859_1:nB:c_type1" "iso8859_1:nB:c_pcf"))
+
+(define-font iso8859_1:n:f_pcf  (font-class pcf)
+  (font-file "lt1-24-etl.pcf" "etl24-latin1.pcf" "12x24.pcf"))
+(define-font iso8859_1:nB:f_pcf  (font-class pcf)
+  (font-file "lt1-24b-etl.pcf"))
+(define-font iso8859_1:nI:f_pcf  (font-class pcf)
+  (font-file "lt1-24i-etl.pcf"))
+(define-font iso8859_1:n:t_pcf  (font-class pcf) (font-file "timR24.pcf"))
+(define-font iso8859_1:nI:t_pcf (font-class pcf) (font-file "timI24.pcf"))
+(define-font iso8859_1:nB:t_pcf (font-class pcf) (font-file "timB24.pcf"))
+(define-font iso8859_1:n:h_pcf  (font-class pcf) (font-file "helvR24.pcf"))
+(define-font iso8859_1:nI:h_pcf (font-class pcf) (font-file "helvO24.pcf"))
+(define-font iso8859_1:nB:h_pcf (font-class pcf) (font-file "helvB24.pcf"))
+(define-font iso8859_1:n:c_pcf  (font-class pcf) (font-file "courR24.pcf"))
+(define-font iso8859_1:nI:c_pcf (font-class pcf) (font-file "courO24.pcf"))
+(define-font iso8859_1:nB:c_pcf (font-class pcf) (font-file "courB24.pcf"))
+(define-font iso8859_1:nI:t_pcf (font-class pcf) (font-file "timI24.pcf"))
+
+(define-font iso8859_1:n:f_type1  (font-class type1)
+  (font-file "Courier" "Courier.pfb" "n022003l.pfb"))
+(define-font iso8859_1:nB:f_type1  (font-class type1)
+  (font-file "Courier-Bold" "Courier-Bold.pfb" "n022004l.pfb"))
+(define-font iso8859_1:nI:f_type1  (font-class type1)
+  (font-file "Courier-Oblique" "Courier-Oblique.pfb" "n022023l.pfb"))
+(define-font iso8859_1:n:t_type1  (font-class type1) 
+  (font-file "Times-Roman" "Times-Roman.pfb" "n021003l.pfb"))
+(define-font iso8859_1:nI:t_type1  (font-class type1) 
+  (font-file "Times-Italic" "Times-Italic.pfb" "n021023l.pfb"))
+(define-font iso8859_1:nB:t_type1 (font-class type1)
+  (font-file "Times-Bold" "Times-Bold.pfb" "n021004l.pfb"))
+(define-font iso8859_1:n:h_type1  (font-class type1) 
+  (font-file "Helvetica" "Helvetica.pfb" "n019003l.pfb"))
+(define-font iso8859_1:nI:h_type1 (font-class type1)
+  (font-file "Helvetica-Oblique" "Helvetica-Oblique.pfb" "n019023l.pfb"))
+(define-font iso8859_1:nB:h_type1 (font-class type1)
+  (font-file "Helvetica-Bold" "Helvetica-Bold.pfb" "n019004l.pfb"))
+(define-font iso8859_1:n:c_type1  (font-class type1)
+  (font-file "Courier" "Courier.pfb" "n022003l.pfb"))
+(define-font iso8859_1:nI:c_type1 (font-class type1)
+  (font-file "Courier-Oblique" "Courier-Oblique.pfb" "n022023l.pfb"))
+(define-font iso8859_1:nB:c_type1 (font-class type1)
+  (font-file "Courier-Bold" "Courier-Bold.pfb" "n022004l.pfb"))
+
+
+;; iso 8859-2
+(define-font iso8859_2:n:f   pcf:iso8859_2
+  (font-file "lt2-24-etl.pcf" "etl24-latin2.pcf" "12x24.pcf"))
+(define-font iso8859_2:n:t   pcf:iso8859_2 (font-file "timR24.pcf"))
+(define-font iso8859_2:nI:t  pcf:iso8859_2 (font-file "timI24.pcf"))
+(define-font iso8859_2:nB:t  pcf:iso8859_2 (font-file "timB24.pcf" ))
+(define-font iso8859_2:n:h   pcf:iso8859_2 (font-file "helvR24.pcf"))
+(define-font iso8859_2:nI:h  pcf:iso8859_2 (font-file "helvO24.pcf"))
+(define-font iso8859_2:nB:h  pcf:iso8859_2 (font-file "helvB24.pcf"))
+(define-font iso8859_2:n:c   pcf:iso8859_2 (font-file "courR24.pcf"))
+(define-font iso8859_2:nI:c  pcf:iso8859_2 (font-file "courO24.pcf"))
+(define-font iso8859_2:nB:c  pcf:iso8859_2 (font-file "courB24.pcf"))
+
+;; iso 8859-3
+(define-font iso8859_3:n:f  (font-class pcf)
+  (font-file "lt3-24-etl.pcf" "etl24-latin3.pcf"))
+
+;; iso 8859-4
+(define-font iso8859_4:n:f  (font-class pcf) 
+  (font-file "lt4-24-etl.pcf" "etl24-latin4.pcf"))
+
+;; iso 8859-5
+(define-font iso8859_5:n:f  (font-class try)
+  (font-list "iso8859_5:24:f:koi8r" ;; "lt5-24-etl.pcf" 
+	     "cyr24-etl.pcf" "etl24-cyrillic.pcf"))
+(define-font iso8859_5:nB:f (font-class try)
+  (font-list "iso8859_5:24B:f:koi8r"))
+(define-font iso8859_5:n:t  (font-class try) 
+  (font-list "iso8859_5:24:t:koi8r"))
+(define-font iso8859_5:nI:t  (font-class try)
+  (font-list "iso8859_5:24I:t:koi8r"))
+(define-font iso8859_5:nB:t  (font-class try)
+  (font-list "iso8859_5:24B:t:koi8r"))
+(define-font iso8859_5:n:h  (font-class try)
+  (font-list "iso8859_5:24:h:koi8r"))
+(define-font iso8859_5:nI:h (font-class try)
+  (font-list "iso8859_5:24I:h:koi8r"))
+(define-font iso8859_5:nB:h (font-class try)
+  (font-list "iso8859_5:24B:h:koi8r"))
+(define-font iso8859_5:n:c  (font-class try)
+  (font-list "iso8859_5:24:c:koi8r"))
+(define-font iso8859_5:nI:c (font-class try)
+  (font-list "iso8859_5:24I:c:koi8r"))
+(define-font iso8859_5:nB:c (font-class try)
+  (font-list "iso8859_5:24B:c:koi8r"))
+
+;; iso 8859-7
+(define-font iso8859_7:n:f  (font-class pcf) 
+  (font-file "grk24-etl.pcf" "etl24-greek.pcf"))
+
+;; iso 8859-8
+(define-font iso8859_8:n:f  (font-class pcf) 
+  (font-file "heb24-etl.pcf" "etl24-hebrew.pcf"))
+
+;; iso 8859-9
+(define-font iso8859_9:n:f  (font-class pcf) 
+  (font-file "lt5-24-etl.pcf" "etl24-latin5.pcf"))
+
+;; japanese
+(define-font jisx0201r:n:f (font-class pcf)
+  (font-file "7x14-JISX0201.1976-0.pcf"))
+(define-font jisx0201k:n:f (font-class pcf)
+  (font-file "7x14-JISX0201.1976-0.pcf"))
+(define-font jisx0208:n:f  (font-class pcf) 
+  (font-file "j83-48.pcf" "j83-32.pcf" "jiskan24.pcf" 
+	     "j83-18.pcf" "jiskan16.pcf"))
+(define-font jisx0208:n:t  (font-class try)
+  (font-list "jisx0208:n:t:ttf"  "jisx0208:n:f"))
+(define-font jisx0208:nI:t (font-class try)
+  (font-list "jisx0208:nI:t:ttf" "jisx0208:n:f"))
+(define-font jisx0208:nB:t (font-class try)
+  (font-list "jisx0208:nB:t:ttf" "jisx0208:n:f"))
+(define-font jisx0208:n:h  (font-class try)
+  (font-list "jisx0208:n:h:ttf"  "jisx0208:n:f"))
+(define-font jisx0208:nI:h (font-class try)
+  (font-list "jisx0208:nI:h:ttf" "jisx0208:n:f"))
+(define-font jisx0208:nB:h (font-class try)
+  (font-list "jisx0208:nB:h:ttf" "jisx0208:n:f"))
+(define-font jisx0208:n:c  (font-class try)
+  (font-list "jisx0208:n:c:ttf"  "jisx0208:n:f"))
+(define-font jisx0208:nI:c (font-class try)
+  (font-list "jisx0208:nI:c:ttf" "jisx0208:n:f"))
+(define-font jisx0208:nB:c (font-class try)
+  (font-list "jisx0208:nB:c:ttf" "jisx0208:n:f"))
+(define-font jisx0212:n:f  (font-class pcf) 
+  (font-file "jksp40.pcf" "jisksp40.pcf" "min-1-24.pcf" 
+	     "jisksp16.pcf" "min-1-16.pcf"))
+(define-font jisx0212:n:t  (font-class try)
+  (font-list "jisx0212:n:t:ttf"  "jisx0212:n:f"))
+(define-font jisx0212:n:h  (font-class try)
+  (font-list "jisx0212:n:h:ttf"  "jisx0212:n:f"))
+(define-font jisx0212:n:c  (font-class try)
+  (font-list "jisx0212:n:c:ttf"  "jisx0212:n:f"))
+
+;; hangle
+(define-font ksc5601:n:f    (font-class pcf) 
+  (font-file "hanglm24.pcf" "hanglm16.pcf" "hanglg16.pcf"))
+(define-font ksc5601:n:t 
+  (font-class try) (font-list "ksc5601:n:t:ttf"   "ksc5601:n:f"))
+(define-font ksc5601:n:h 
+  (font-class try) (font-list "ksc5601:n:h:ttf"   "ksc5601:n:f"))
+(define-font ksc5601:n:c 
+  (font-class try) (font-list "ksc5601:n:c:ttf"   "ksc5601:n:f"))
+
+
+;; chinese
+(define-font gb2312:n:t 
+  (font-class try) (font-list "gb2312:n:t:ttf"   "gb2312:n:f"))
+(define-font gb2312:n:h 
+  (font-class try) (font-list "gb2312:n:h:ttf"   "gb2312:n:f"))
+(define-font gb2312:n:c 
+  (font-class try) (font-list "gb2312:n:c:ttf"   "gb2312:n:f"))
+(define-font gb2312:n:f     (font-class pcf)
+  (font-file "cc48s.pcf" "cc40s.pcf" "gb24st.pcf" "gb16st.pcf" "gb16fs.pcf"))
+(define-font big5:n:f       (font-class pcf) (font-file "taipei24.pcf"))
+(define-font cns11643_1:n:f (font-class pcf)
+  (font-file "cns1-40.pcf" "cns-1-40.pcf" 
+	     "cns1-24.pcf" "cns-1-24.pcf" "cns1-16.pcf" "cns-1-16.pcf"))
+(define-font cns11643_2:n:f (font-class pcf)
+  (font-file "cns2-40.pcf" "cns-2-40.pcf"
+	     "cns2-24.pcf" "cns-2-24.pcf" "cns2-16.pcf" "cns-2-16.pcf"))
+(define-font cns11643_3:n:f (font-class pcf)
+  (font-file "cns3-40.pcf" "cns-3-40.pcf"
+	     "cns3-24.pcf" "cns-3-24.pcf" "cns3-16.pcf" "cns-3-16.pcf"))
+(define-font cns11643_4:n:f (font-class pcf)
+  (font-file "cns4-40.pcf" "cns-4-40.pcf"
+	     "cns4-24.pcf" "cns-4-24.pcf" "cns4-16.pcf" "cns-4-16.pcf"))
+(define-font cns11643_5:n:f (font-class pcf)
+  (font-file "cns5-40.pcf" "cns-5-40.pcf"
+	     "cns5-24.pcf" "cns-5-24.pcf" "cns5-16.pcf" "cns-5-16.pcf"))
+(define-font cns11643_6:n:f (font-class pcf)
+  (font-file "cns6-40.pcf" "cns-6-40.pcf"
+	     "cns6-24.pcf" "cns-6-24.pcf" "cns6-16.pcf" "cns-6-16.pcf"))
+(define-font cns11643_7:n:f (font-class pcf)
+  (font-file "cns7-40.pcf" "cns-7-40.pcf"
+	     "cns7-24.pcf" "cns-7-24.pcf" "cns7-16.pcf" "cns-7-16.pcf"))
+
+;; mule arabic
+(define-font mule_arab0:n:f (font-class pcf)
+  (font-file "arab24-0-etl.pcf" "etl24-arabic0.pcf"))
+(define-font mule_arab1:n:f (font-class pcf)
+  (font-file "arab24-1-etl.pcf" "etl24-arabic1.pcf"))
+(define-font mule_arab2:n:f (font-class pcf) 
+  (font-file "arab24-2-etl.pcf" "etl24-arabic2.pcf"))
+
+;; mule viscii
+(define-font mule_viscii_u:n:f (font-class pcf) 
+  (font-file "visc24-etl.pcf" "etl24-viscii.pcf"))
+(define-font mule_viscii_l:n:f (font-class pcf)
+  (font-file "visc24-etl.pcf" "etl24-viscii.pcf"))
+
+;; mule ethiopic
+(define-font mule_ethio:n:f (font-class pcf) 
+  (font-file "ethio24f-uni.pcf" "ethiomx24f-uni.pcf"))
+
+
+;; -------------------------------------------------------------------------
+;; Optional Cyrillic fonts in XFree86 ("crox")
+;  14
+(define-font iso8859_5:14:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi8x13.pcf"))
+(define-font iso8859_5:14B:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi8x13.pcf"))
+(define-font iso8859_5:14:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2t.pcf"))
+(define-font iso8859_5:14I:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2to.pcf"))
+(define-font iso8859_5:14B:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2tb.pcf"))
+(define-font iso8859_5:14:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2h.pcf"))
+(define-font iso8859_5:14I:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2ho.pcf"))
+(define-font iso8859_5:14B:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2hb.pcf"))
+(define-font iso8859_5:14:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2c.pcf"))
+(define-font iso8859_5:14I:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2co.pcf"))
+(define-font iso8859_5:14B:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox2cb.pcf"))
+;  16
+(define-font iso8859_5:16:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi9x15.pcf"))
+(define-font iso8859_5:16B:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi9x15.pcf"))
+(define-font iso8859_5:16:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3t.pcf"))
+(define-font iso8859_5:16I:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3to.pcf"))
+(define-font iso8859_5:16B:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3tb.pcf"))
+(define-font iso8859_5:16:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3h.pcf"))
+(define-font iso8859_5:16I:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3ho.pcf"))
+(define-font iso8859_5:16B:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3hb.pcf"))
+(define-font iso8859_5:16:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3c.pcf"))
+(define-font iso8859_5:16I:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3co.pcf"))
+(define-font iso8859_5:16B:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox3cb.pcf"))
+;  18
+(define-font iso8859_5:18:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi10x20.pcf"))
+(define-font iso8859_5:18B:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi10x20.pcf"))
+(define-font iso8859_5:18:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4t.pcf"))
+(define-font iso8859_5:18I:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4to.pcf"))
+(define-font iso8859_5:18B:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4tb.pcf"))
+(define-font iso8859_5:18:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4h.pcf"))
+(define-font iso8859_5:18I:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4ho.pcf"))
+(define-font iso8859_5:18B:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4hb.pcf"))
+(define-font iso8859_5:18:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4c.pcf"))
+(define-font iso8859_5:18I:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4co.pcf"))
+(define-font iso8859_5:18B:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox4cb.pcf"))
+;  24
+(define-font iso8859_5:24:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi12x24.pcf"))
+(define-font iso8859_5:24B:f:koi8r  
+  pcf:iso8859_5:koi8r (font-file "koi12x24.pcf"))
+(define-font iso8859_5:24:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5t.pcf"))
+(define-font iso8859_5:24I:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5to.pcf"))
+(define-font iso8859_5:24B:t:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5tb.pcf"))
+(define-font iso8859_5:24:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5h.pcf"))
+(define-font iso8859_5:24I:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5ho.pcf"))
+(define-font iso8859_5:24B:h:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5hb.pcf"))
+(define-font iso8859_5:24:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5c.pcf"))
+(define-font iso8859_5:24I:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5co.pcf"))
+(define-font iso8859_5:24B:c:koi8r  
+  pcf:iso8859_5:koi8r (font-file "crox5cb.pcf"))
+
+
+;; -------------------------------------------------------------------------
+;; Optional Japanese fonts in TrueType
+(define-macro  jisx0208:n:ttf
+  (font-class truetype) (platform-id "microsoft") 
+  (character-set "JISX0208") (encoding "JIS") (hinting "on"))
+(define-font jisx0208:n:t:ttf   jisx0208:n:ttf (font-file "dfhsmw3.ttc"))
+(define-font jisx0208:nI:t:ttf  jisx0208:n:ttf (font-file "dfhsmw3.ttc"))
+(define-font jisx0208:nB:t:ttf  jisx0208:n:ttf (font-file "dfhsmw7.ttc"))
+(define-font jisx0208:n:h:ttf   jisx0208:n:ttf (font-file "dfhsgw5.ttc"))
+(define-font jisx0208:nI:h:ttf  jisx0208:n:ttf (font-file "dfhsgw5.ttc"))
+(define-font jisx0208:nB:h:ttf  jisx0208:n:ttf (font-file "dfhsgw7.ttc"))
+(define-font jisx0208:n:c:ttf   jisx0208:n:ttf (font-file "dfhsgw3.ttc"))
+(define-font jisx0208:nI:c:ttf  jisx0208:n:ttf (font-file "dfhsgw3.ttc"))
+(define-font jisx0208:nB:c:ttf  jisx0208:n:ttf (font-file "dfhsgw7.ttc"))
+(define-macro  jisx0212:n:ttf
+  (font-class truetype) (platform-id "microsoft") 
+  (character-set "JISX0212") (encoding "JIS") (hinting "on"))
+(define-font jisx0212:n:t:ttf   jisx0212:n:ttf (font-file "hgrhm3h.ttf"))
+(define-font jisx0212:n:h:ttf   jisx0212:n:ttf (font-file "hgrgbh.ttf"))
+(define-font jisx0212:n:c:ttf   jisx0212:n:ttf (font-file "hgrgbh.ttf"))
+
+;; -------------------------------------------------------------------------
+;; Optional Hangle fonts in TrueType (From Dynalab, "TypeMuseum")
+(define-macro ksc5601:n:ttf
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "KSC5601") (encoding "JIS") (hinting "on"))
+(define-font ksc5601:n:f:ttf    ksc5601:n:ttf (font-file "dfheibd.ttf"))
+(define-font ksc5601:n:t:ttf    ksc5601:n:ttf (font-file "dfheibd.ttf"))
+(define-font ksc5601:n:h:ttf    ksc5601:n:ttf (font-file "dfheibd.ttf"))
+(define-font ksc5601:n:c:ttf    ksc5601:n:ttf (font-file "dfheibd.ttf"))
+
+;; -------------------------------------------------------------------------
+;; Optional Chinese fonts in TrueType (From Dynalab, "TypeMuseum")
+(define-macro gb2312:n:ttf
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "GB2312") (encoding "JIS") (hinting "on"))
+(define-font gb2312:n:f:ttf     gb2312:n:ttf (font-file "dgbn_b6.ttf"))
+(define-font gb2312:n:t:ttf     gb2312:n:ttf (font-file "dgbn_f6.ttf"))
+(define-font gb2312:n:h:ttf     gb2312:n:ttf (font-file "dgbn_k6.ttf"))
+(define-font gb2312:n:c:ttf     gb2312:n:ttf (font-file "dgbn_m6.ttf"))
+
+;; -------------------------------------------------------------------------
+;; EOF

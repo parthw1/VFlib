@@ -1,0 +1,146 @@
+<HTML>
+<HEADER>
+  <TITLE>A Page of Multilingual Texts in Bitmaps</TITLE>
+</HEADER>
+<BODY FGCOLOR="#000000" BGCOLOR="#E0FFE0" LINK="#000080" VLINK="000060">
+
+<HR>
+<H1>いろいろな言語の混在した文書のページの例</H1>
+ビットマップの埋め込みによる、多言語Webページ<P>
+<HR>
+
+<P>
+このページ内のビットマップはいずれも、<I><B>ctext2pgm</B></I> 
+プログラムによって作られました。
+<I><B>ctext2pgm</B></I> は、「コンパウンドテキスト形式」
+で符合化されている多言語文書ファイルを、
+PBM または PGM 形式の画像ファイルに変換します。
+このプログラムは VFlib 3 に附属しています。
+<I><B>ctext2pgm</B></I> は、コンパウンドテキスト形式以外にも、
+日本語 EUC, 韓国語 EUC, 中国語 EUC で符合化されているテキストファイルも
+取り扱えます。
+ </P>
+ <P>
+PBM/PGM による画像データ形式は、他の画像形式 (GIF, TIFF, EPS など) 
+に変換できます。
+例えば、<I>netpbm</I> パッケージには変換を行なうプログラムが含まれおり、
+無料で利用できます。
+ </P>
+
+<P><HR><P>
+
+<P>簡単な例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC1.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC1.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>ドイツ語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC5.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC5.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>スペイン語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC6.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC6.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>スウェーデン語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC7.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC7.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>ポーランド語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC8.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC8.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>チェコ語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC9.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC9.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>デンマーク語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC10.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC10.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>フランス語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC11.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC11.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>イタリア語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC12.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC12.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>ロシア語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC13.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC13.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>ギリシア語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC14.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC14.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>エスペラント語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC15.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC15.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>中国語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC16.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC16.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>韓国語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC17.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC17.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>ヘブライ語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT-HEBREW/DOC1.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT-HEBREW/DOC1.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>アラビア語文書の例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT-MULE-ARABIC/DOC1.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT-MULE-ARABIC/DOC1.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>多言語文書の例 1: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC3.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC3.hex">元文書データの16進ダンプ</A></P>
+
+<P><HR></P>
+
+<P>フォント切替えの例: </P>
+<P ALIGN=CENTER><IMG SRC="CTEXT/DOC2.gif" ALT="*bitmap*"></P>
+<P><A HREF="CTEXT/DOC2.hex">元文書データの16進ダンプ</A></P>
+
+
+
+<IMG SRC="CTEXT/DOC99.gif" ALT="by Hirotsugu Kakugawa">
+ <P>
+  <!--#exec cmd="/bin/counter.sh CTEXT2PBM"--> 
+ times since June 9 1998.
+
+</BODY>
+</HTML>

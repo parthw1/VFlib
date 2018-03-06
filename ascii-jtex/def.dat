@@ -1,0 +1,281 @@
+#(This file contains Japanese character set JISX0208.)
+
+# 
+# Optional Japanese Kanji Font (JISX0208) List
+#    The following is a list of Japanese Kanji font files in TrueType format 
+#
+
+#      L     M     B     E     H
+#  W:  3  4  5  6  7  8  9 10 11 12 
+#      m  o  p     s     v     x  z
+
+
+# FONT-NAME                             FILE-NAME	TeX-FONT-NAME
+
+### 富士通 FontCity 2
+明朝体L					f5ajcfm2.ttf	fjminmaa
+明朝体B					f5ajcfm8.ttf	fjminsaa
+平成明朝体				f5ajchm3.ttf	fjhsmmaa
+平成中太明朝体				f5ajchm6.ttf	fjhsmraa
+平成極太明朝体				f5ajchm9.ttf	fjhsmvaa
+ゴシック体L				f5ajcfg3.ttf	fjgotmaa
+ゴシック体M				f5ajcfg7.ttf	fjgotpaa
+ゴシック体B				f5ajcfg9.ttf	fjgotsaa
+ゴシック体H				f5ajcfgd.ttf	fjgotxaa
+平成角ゴシック体			f5ajchg5.ttf	fjhsgpaa
+平成中太ゴシック体			f5ajchg7.ttf	fjhsgsaa
+平成極太角ゴシック体			f5ajchg9.ttf	fjhsgvaa
+丸ゴシック体L				f5ajcfr3.ttf	fjmrgmaa
+丸ゴシック体M				f5ajcfr5.ttf	fjmrgpaa
+丸ゴシック体B				f5ajcfr7.ttf	fjmrgsaa
+丸ゴシック体H				f5ajcfrd.ttf	fjmrgxaa
+平成丸ゴシック体			f5ajchr4.ttf	fjhrgoaa
+重ね丸ゴシック体H			f5ajckrh.ttf	fjashxaa
+教科書体L				f5ajcky1.ttf	fjkykmaa
+教科書体M				f5ajcky2.ttf	fjkykpaa
+ふで楷書体				f5ajcfdk.ttf	fjfdkmaa
+行楷書体				f5ajcgyk.ttf	fjgykmaa
+隷書体					f5ajcrei.ttf	fjreipaa
+勘亭流江戸文字				f5ajcked.ttf	fjkedxaa
+ひげ文字				f5ajchig.ttf	fjhigxaa
+高橋隷書体				f5ajctre.ttf	fjtrepaa
+淡古印体				f5ajctko.ttf	fjtkosaa
+千葉ペン字体				f5ajccpe.ttf	fjcpemaa
+筆記体					f5ajchik.ttf	fjhikmaa
+まる文字				f5ajcmar.ttf	fjmarpaa
+イーマ108				f5ajci18.ttf	fjimapaa
+イーマ205				f5ajci25.ttf	fjimbmaa
+イーマ310				f5ajci3a.ttf	fjimcraa
+イーマ407				f5ajci47.ttf	fjimdsaa
+イーマ513				f5ajci5d.ttf	fjimevaa
+FCイラスト				f5ajcsxx.ttf	fjcsxmaa
+かな書体01				f5ajck01.ttf	fjkanaxa
+かな書体02				f5ajck02.ttf	fjkanaxb
+かな書体03				f5ajck03.ttf	fjkanaxc
+かな書体04				f5ajck04.ttf	fjkanaxd
+かな書体05				f5ajck05.ttf	fjkanaxe
+かな書体06				f5ajck06.ttf	fjkanaxf
+かな書体07				f5ajck07.ttf	fjkanaxg
+かな書体08				f5ajck08.ttf	fjkanaxh
+かな書体09				f5ajck09.ttf	fjkanaxi
+かな書体10				f5ajck10.ttf	fjkanaxj
+かな書体11				f5ajck11.ttf	fjkanaxk
+かな書体12				f5ajck12.ttf	fjkanaxl
+かな書体13				f5ajck13.ttf	fjkanaxm
+かな書体14				f5ajck14.ttf	fjkanaxn
+かな書体15				f5ajck15.ttf	fjkanaxo
+かな書体16				f5ajck16.ttf	fjkanaxp
+かな書体17				f5ajck17.ttf	fjkanaxq
+かな書体18				f5ajck18.ttf	fjkanaxr
+かな書体19				f5ajck19.ttf	fjkanaxs
+かな書体20				f5ajck20.ttf	fjkanaxt
+
+
+### DynaFont Type Museum
+DFP新篆体W5				dfsht5.ttc	dfshtpaa
+DFP新篆体W7				dfsht7.ttc	dfshtsaa
+DFP欧陽詢体W5				dfoyj5.ttc	dfoyjpaa
+DFP龍門石碑体W9				dfrys9.ttc	dfrysvaa
+DFP顏真卿体W7				dfgsk7.ttc	dfgsksaa
+DFP宗楷書W7				dfskai7.ttc	dfskasaa
+DFP超極太楷書体				dfkaie.ttc	dfkaizaa
+DFP金文体W3				dfkbt3.ttc	dfkbtmaa
+DFPクラフト童W3				dfcrd3.ttc	dfcrdmaa
+DFPフリー流線W3				dffrs3.ttc	dffrsmaa
+DCP方隷書W3				dchlei5.ttc	dfhlepaa
+DCP麗楷書W5				dclkai5.ttc	dflkapaa
+DCP籠文字W12				dckgmc.ttc	dfkgmzaa
+DCPひげ文字W5				dchgm5.ttc	dfhgmpaa
+DCP寄席文字W7				dcysm7.ttc	dfysmsaa
+DCP愛W5					dcai5.ttc	dfainpaa
+DCP愛ラインW5				dcail5.ttc	dfailpaa
+DCP愛シャドーW5				dcais5.ttc	dfaispaa
+DCPクリスタルW5				dccry5.ttc	dfcrypaa
+DCPインラインW5				dcinl5.ttc	dfinlpaa
+DFP極太明朝体				dfminc.ttc1	dfminyaa
+DFP超極太明朝体				dfmine.ttc	dfminzaa
+DFP特太ゴシック体			dfheia.ttc	dfgotwaa
+DFP極太ゴシック体			dfheic.ttc	dfgotxaa
+DFP超極太ゴシック体			dfheie.ttc	dfgotzaa
+DFP細丸ゴシック体			dfmrg2.ttc	dfmrgkaa
+DFP新細丸ゴシック体			dfmrg3.ttc	dfmrgmaa
+DFP中丸ゴシック体			dfmrg5.ttc	dfmrgpaa
+DFP中太丸ゴシック体			dfmrg7.ttc	dfmrgsaa
+DFP太丸ゴシック体			dfmrg9.ttc	dfmrgvaa
+DFP極太丸ゴシック体			dfmrgc.ttc	dfmrgyaa
+DFP超極太丸ゴシック体			dfmrge.ttc	dfmrgzaa
+DFP行書体				dfgys3.ttc	dfgysmaa
+DFP祥南行書体W5				dfsgyo5.ttc	dfsgypaa
+DFP細楷書体				dfkai3.ttc	dfkaimaa
+DFP中楷書体				dfkai5.ttc	dfkaipaa
+DFP中太楷書体				dfkai7.ttc	dfkaisaa
+DFP太楷書体				dfkai9.ttc	dfkaivaa
+DFP極太楷書体				dfkaic.ttc	dfkaiyaa
+DFP教科書体W3				dfkyks3.ttc	dfkykmaa
+DFP教科書体W4				dfkyks4.ttc	dfkykoaa
+DFP新宋体				dfsso3.ttc	dfssomaa
+DFP痩金体W3				dfsokn3.ttc	dfsokmaa
+DFP魏碑体W7				dfgihi7.ttc	dfgihsaa
+DFP康印体W4				dfkoin4.ttc	dfkoioaa
+DFP隷書体				dflis6.ttc	dflispaa
+DFP唐風隷書体W5				dftlei5.ttc	dftlepaa
+DFP唐風隷書体W7				dftlei7.ttc	dftlesaa
+DFP唐風隷書体W9				dftlei9.ttc	dftlevaa
+DFP勘亭流				dfktl8.ttc	dfktlxaa
+DFP相撲体W12				dfsumoc.ttc	dfsumzaa
+DFPクラフト遊W5				dfcry5.ttc	dfcfypaa
+DFPクラフト遊W7				dfcry7.ttc	dfcfysaa
+DFPクラフト墨W9				dfcrs9.ttc	dfcfsvaa
+DFPフリー流線				dffrs2.ttc	dffrskaa
+DFPフリー流葉				dffry2.ttc	dffrykaa
+DFP流隷体W5				dfrule5.ttc	dfrulpaa
+DFP流隷体W7				dfrule7.ttc	dfrulsaa
+DFP流隷体AW5				dfrula5.ttc	dfruapaa
+DFP流隷体AW9				dfrula9.ttc	dfruasaa
+DFPまるもじ体W3				dfmrm3.ttc	dfmrmmaa
+DFPまるもじ体				dfmrm5.ttc	dfmrmpaa
+DFPまるもじ体W7				dfmrm7.ttc	dfmrmsaa
+DFPまるもじ体W9				dfmrm9.ttc	dfmrmvaa
+DFPブラッシュSQW5			dfbrs5.ttc	dfbrspaa
+DFPブラッシュSQW9			dfbrs9.ttc	dfbrsvaa
+DFPブラッシュSQW12			dfbrsc.ttc	dfbrszaa
+DFPブラッシュRDW7			dfbrr7.ttc	dfbrrsaa
+DFPブラッシュRDW12			dfbrrc.ttc	dfbrrzaa
+DFPPOPコンW7				dfpoco7.ttc	dfpocsaa
+DFPPOPコンW12				dfpococ.ttc	dfpoczaa
+DFPPOP1体W3				dfpop3.ttc	dfpopmaa
+DFPPOP1体W5				dfpop5.ttc	dfpoppaa
+DFPPOP1体				dfpop7.ttc	dfpopraa
+DFPPOP1体W9				dfpop9.ttc	dfpopvaa
+DFPPOP1体W12				dfpop1-c.ttc	dfpopzaa
+DFPPOP2体W9				dfpop2-9.ttc	dfpoqvaa
+DFPPOP2体W12				dfpop2-c.ttc	dfpoqzaa
+DFPPOPステンシルW7			dfpost7.ttc	dfposraa
+DFPPOPクリップW7			dfpocl7.ttc	dfpocraa
+DFP麗雅宋				dflgs9.ttc	dflgsvaa
+DFP風雲体W7				dffuu7.ttc	dffuusaa
+DFP風雲体W12				dffuuc.ttc	dffuuzaa
+DFP綜藝体W5				dfsoge5.ttc	dfsogpaa
+DFP綜藝体W7				dfsoge7.ttc	dfsogsaa
+DFP綜藝体W9				dfsoge9.ttc	dfsogvaa
+DFP平成明朝体W3				dfhsm3.ttc	dfhsmmaa	
+DFP平成明朝体W5				dfhsm5.ttc	dfhsmpaa
+DFP平成明朝体W7				dfhsm7.ttc	dfhsmsaa
+DFP平成明朝体W9				dfhsm9.ttc	dfhsmvaa
+DFP平成ゴシック体W3			dfhsg3.ttc	dfhsgmaa
+DFP平成ゴシック体W5			dfhsg5.ttc	dfhsgpaa
+DFP平成ゴシック体W7			dfhsg7.ttc	dfhsgsaa
+DFP平成ゴシック体W9			dfhsg9.ttc	dfhsgvaa
+DFP平成丸ゴシック体W4			dfhsr4.ttc	dfhrgoaa
+DFP華康明朝体W3				dfmimp3.ttc	dfmipmaa
+DFP華康明朝体W5				dfmimp5.ttc	dfmippaa
+DFP華康ゴシック体W2			dfgotp2.ttc	dfgopkaa
+DFP華康ゴシック体W3			dfgotp3.ttc	dfgopmaa
+DFP華康ゴシック体W5			dfgotp5.ttc	dfgoppaa
+
+
+### DynaFont プレミアム 30 書体パック
+#DF平成明朝体W3				dfhsmw3.ttc	dfhsmmaa
+#DF平成明朝体W5				dfhsmw5.ttc	dfhsmpaa
+#DF平成明朝体W7				dfhsmw7.ttc	dfhsmsaa
+#DF平成明朝体W9				dfhsmw9.ttc	dfhsmvaa
+#DF極太明朝体				dfminub.ttc	dfminzaa
+#DF平成ゴシック体W3			dfhsgw3.ttc	dfhsgmaa
+#DF平成ゴシック体W5			dfhsgw5.ttc	dfhsgpaa
+#DF平成ゴシック体W7			dfhsgw7.ttc	dfhsgsaa
+#DF平成ゴシック体W9			dfhsgw9.ttc	dfhsgvaa
+#DF特太ゴシック体			dfgoteb.ttc	dfgotxaa
+#DF極太ゴシック体			dfgotub.ttc	dfgotzaa
+#DF平成丸ゴシック体W4			dfhsrw4.ttc	dfhrgoaa
+#DF細丸ゴシック体			dfmrglt.ttc	dfmrgmaa
+#DF中丸ゴシック体			dfmrgmd.ttc	dfmrgpaa
+#DF中太丸ゴシック体			dfmrgbd.ttc	dfmrgsaa
+DF行書体				dfgyomd.ttc	dfgyopaa
+#DF細楷書体				dfkailt.ttc	dfkaimaa
+#DF中楷書体				dfkaimd.ttc	dfkaipaa
+#DF中太楷書体				dfkaisb.ttc	dfkaisaa
+#DF太楷書体				dfkaibd.ttc	dfkaivaa
+DF隷書体				dfleimd.ttc	dfleipaa
+DF勘亭流				dfktrxb.ttc	dfktrxaa
+#DFPOP1体W3				dfpopw3.ttc	dfpopmaa
+#DFPOP1体W5				dfpopw5.ttc	dfpoppaa
+#DFPOP1体				dfpop1.ttc	dfpopraa
+##DFPOP1体W9				dfpopw9.ttc	dfpopvaa
+#DFまるもじ体W3				dfmrmw3.ttc	dfmrmpaa
+#DFまるもじ体				dfmrmmd.ttc	dfmrmmaa
+#DFまるもじ体W7				dfmrmw7.ttc	dfmrmsaa
+#DFまるもじ体W9				dfmrmw9.ttc	dfmrmvaa
+
+
+### DynaFont スペシャルパック1
+#DF痩金体W3				dfsokn3.ttc	dfsokmaa
+#DF祥南行書体W5				dfsgyo5.ttc	dfsgypaa
+#DF魏碑体W7				dfgihi7.ttc	dfgihsaa
+#DF教科書体W3				dfkyks3.ttc	dfkykmaa
+#DF教科書体W4				dfkyks4.ttc	dfkykoaa
+#DF唐風隷書体W5				dftlei5.ttc	dftlepaa
+#DF唐風隷書体W7				dftlei7.ttc	dftlesaa
+#DF唐風隷書体W9				dftlei9.ttc	dftlevaa
+#DF流隷体W5				dfrule5.ttc	dfrulpaa
+#DF流隷体W7				dfrule7.ttc	dfrulsaa
+#DF相撲体W12				dfsumoc.ttc	dfsumzaa
+#DF康印体W4				dfkoin4.ttc	dfkoioaa
+#DF綜藝体W5				dfsoge5.ttc	dfsogpaa
+#DF綜藝体W7				dfsoge7.ttc	dfsogsaa
+#DF綜藝体W9				dfsoge9.ttc	dfsogvaa
+
+
+### Ricoh TrueTypeWorld Value Font 141
+行書体					hgrgysj.ttc	rcgyopaa
+教科書体				hgrkksj.ttc	rckykmaa
+正楷書体				hgrsksj.ttc	rckaipaa
+岸本楷書体				hgraksj.ttc	rckkapaa
+白州行草書体				hgrhkgsj.ttc	rchkgpaa
+白州太楷書体				hgrhkfsj.ttc	rchkfsaa
+高橋筆楷書体				hgrbfksj.ttf	rctfkpaa
+高橋隷書体				hgrbresj.ttf	rctrepaa
+羽衣L					hgrhalsj.ttf	rchagmaa
+羽衣M					hgrhamsj.ttf	rchagpaa
+羽衣B					hgrhabsj.ttf	rchagsaa
+羽衣E					hgrhaesj.ttf	rchagvaa
+半古印体				hgrcksj.ttc	rcckssaa
+創英ペン字体				hgrpn1sj.ttc	rcspnmaa
+白州ペン楷書体				hgrhkpsj.ttc	rchkpmaa
+創英角ポップ体				hgrpp1sj.ttc	rcppkvaa
+創英丸ポップ体				hgrpp2sj.ttc	rcppmvaa
+重ね角ゴシックH				hgragusj.ttc	rcaguxaa
+重ね丸ゴシックH				hgrashsj.ttf	rcashxaa
+プリティフランクH			hgrapsj.ttf	rcapfxaa
+プリティフランクHライン			hgraplsj.ttf	rcaplxaa
+プリティフランクHシャドウ		hgrapssj.ttf	rcapsxaa
+江戸文字勘亭流				hgrkrsj.ttc	rckedxaa
+関演芸文字				hgraesj.ttf	rcaegxaa
+相撲文字				hgradhsj.ttc	rcadhxaa
+ひげ文字				hgrah2sj.ttc	rchigxaa
+篭字					hgrakgsj.ttc	rcakgxaa
+れいしっく				hgrcresj.ttc	rccremaa
+ブーケ					hgrcbsj.ttc	rccbkpaa
+メタル角ゴシックE			hgramgsj.ttc	rcamgvaa
+インライン角ゴシックH			hgraigsj.ttc	rcaigxaa
+インライン丸ゴシックE			hgraissj.ttc	rcaisxaa
+武蔵野丸ゴシックH			hgrtsesj.ttc	rctsexaa
+平成明朝体W3				hgrhm3sj.ttc	rchmnmaa
+平成明朝体W9				hgrhm9sj.ttc	rchmnvaa
+平成角ゴシック体W5			hgrhg5sj.ttc	rchgopaa
+平成角ゴシック体W9			hgrhg9sj.ttc	rchgovaa
+平成角ゴシック体W9ライン		hgrg9lsj.ttf	rchglvaa
+平成角ゴシック体W9シャドウ		hgrg9ssj.ttf	rchgsvaa
+平成丸ゴシック体W4			hgrhr4sj.ttc	rchrgoaa
+GFカットコレクション風物編		gfrcg1sj.ttf	rcrcgmaa
+
+# みかちゃんフォント
+みかちゃん      			mikachan.ttf    mikpnmaa
+みかちゃんプロポーショナル		mikachan-P.ttf  mikppmaa
+みかちゃんプロポーショナル太		mikachan-PB.ttf mikpppaa
+みかちゃんプロポーショナルＳ		mikachan-PS.ttf mikpsmaa
+
+# ことり文字フォント
+ことり文字				kotori.ttf	kotppmaa
+ことり文字細				kotori-hoso.ttf	kotppkaa
+
+#EOF

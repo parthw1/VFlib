@@ -1,0 +1,10 @@
+#! /bin/sh
+
+CS1=$1
+EN1=`echo $2 | sed 's/,/ /g'`
+CS2=$3
+EN2=`echo $4 | sed 's/,/ /g'`
+
+gzip -cd $5 | sed 's/#.*$//' | grep '^.' | awk '{print $2, $3 }' \
+  | sort | ./mkcscv ${CS1} "${EN1}" ${CS2} "${EN2}" > $6
+exit 0

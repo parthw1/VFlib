@@ -1,0 +1,335 @@
+;;; -*-Lisp-*-
+
+;;
+;; vflibcap for TrueType fonts
+;; by h.kakugawa@computer.org
+;;
+
+
+;; -----------------------------------------------------------------
+;;   VFlib Default
+;; -----------------------------------------------------------------
+(define-default VFlib
+  (extension-hints  (".ttf" truetype) (".ttc" truetype)
+		    ("pk" TeX))
+  (implicit-font-classes   truetype)
+  (uncompression-programs  (".Z" "zcat") (".gz" "gzip -cd")) 
+  (variable-values  (TeX_DPI               "300")
+		    (TeX_USE_KPATHSEA      "Yes")
+		    (TeX_KPATHSEA_MODE     "cx")
+		    (TeX_KPATHSEA_PROGRAM  "vflserver"))
+  (use-kpathsea           $TeX_USE_KPATHSEA)
+  (kpathsea-mode          $TeX_KPATHSEA_MODE)
+  (kpathsea-dpi           $TeX_DPI)
+  (kpathsea-program-name  $TeX_KPATHSEA_PROGRAM)
+  (code-conversion-files  
+   "iso8859-1_unicode.ccv" "iso8859-2_unicode.ccv" "iso8859-3_unicode.ccv"
+   "iso8859-4_unicode.ccv" "iso8859-5_unicode.ccv" "iso8859-6_unicode.ccv"
+   "iso8859-7_unicode.ccv" "iso8859-8_unicode.ccv" "iso8859-9_unicode.ccv"
+   "iso8859-10_unicode.ccv" "iso8859-13_unicode.ccv" 
+   "iso8859-14_unicode.ccv" "iso8859-15_unicode.ccv"
+   "jisx0208_unicode.ccv" "jisx0208sjis_unicode.ccv" 
+   "jisx0201_unicode.ccv" "jisx0212_unicode.ccv" 
+   "ksc5601_unicode.ccv" "ksx1001_unicode.ccv"
+   "gb12345_unicode.ccv" "gb2312_unicode.ccv"
+   "big5_unicode.ccv" "cns11643-1_unicode.ccv" "cns11643-2_unicode.ccv"
+   "iso8859-5_koi8-r.ccv" "koi8-r_iso8859-5.ccv" "koi8-r_unicode.ccv"))
+
+;; -----------------------------------------------------------------
+;; TrueType Font Class Default
+;; -----------------------------------------------------------------
+(define-default truetype
+  (font-directories
+     "TEXMF"
+     "/usr/local/share/fonts/FontCity2//"
+     "/usr/local/share/fonts/TrueTypeWorld-ValueFont141//"
+     "/usr/local/share/fonts/DynaFont-Premium30/win95/futt//"
+     "/usr/local/share/fonts/DynaFont-SpecialPack1/win95/futt//"
+     "/usr/local/share/fonts/DynaFont-TypeMuseum//")
+  ;;(debug "")
+  (point-size 10)
+  (dpi 200)
+  (properties ("FONT_CLASS" "TrueType")) )
+  
+;; -----------------------------------------------------------------
+;;   TeX-related Font Class Default and TeX Font Mapper
+;; -----------------------------------------------------------------
+(define-default  TeX
+  (tfm-directories  "TEXMF")
+  (tfm-filename-extensions  ".tfm")
+  (font-mapping
+   ((ascii-jtex-kanji "%f.jtex")
+    "min*" "goth*" "tmin*" "tgoth*" "fj*" "tfj*" "df*" "tdf*" "rc*" "trc*")
+   ;;((truetype "%f.ttf" point-size-from-tfm (magnification-adjustment 1.0))
+   ;; *)
+   ((pk "%f.%dpk") (gf "%f.%dgf") *)
+   ((vf "%f.vf") *)
+   ((type1 "%f.pfb" point-size-from-tfm (magnification-adjustment 1.0)) *)
+   ((tfm "%f.%dtfm")  *))
+  (resolution-accuracy 0.02)
+  (resolution-corrections
+   (240  ;; epson, canonlbp
+    240  263  288  312  346  415  498  597)
+   (300  ;; cx
+    300  329  360  432  518  622  746  896 1075 1290  240 270)
+   (400  ;; sparcptr
+    400  438  480  576  691  829  995 1194 1433 1720  320 360)
+   (600  ;; ljfour
+    600  657  720  864 1037 1244 1493 1792 2150 2580  480 540))
+  (dpi $TeX_DPI))
+
+;; -----------------------------------------------------------------
+;;   GF Font Class Default
+;; -----------------------------------------------------------------
+(define-default gf
+  (font-directories  "TEXMF"))
+
+;; -----------------------------------------------------------------
+;;   PK Font Class Default
+;; -----------------------------------------------------------------
+(define-default pk
+  (font-directories  "TEXMF"))
+
+;; -----------------------------------------------------------------
+;;   TFM Font Class Default
+;; -----------------------------------------------------------------
+(define-default tfm
+  (glyph-style  "fill"))
+
+;; -----------------------------------------------------------------
+;;   VF Font Class Default
+;; -----------------------------------------------------------------
+(define-default vf
+  (font-directories  "TEXMF")
+  (font-mapping
+   ((* "%f.%dpk") (type1 "%f.pfb" point-size-from-tfm)  *))
+  (open-style "try")     ;; "none", "try", or "require"
+  (glyph-style "fill"))  ;; "fill", or "empty"
+
+;; -----------------------------------------------------------------
+;;   ASCII-jTeX Kanji Font Class Default
+;; -----------------------------------------------------------------
+(define-default  ascii-jtex-kanji
+  (tfm-directories  "TEXMF")
+  (tfm-filename-extensions ".tfm")
+  (implicit-font-mapping-suffix ".jtex"))
+
+
+;; -----------------------------------------------------------------
+;;  sample font definitions for Japanese TeX
+ 
+(define-font jtex-min
+  (font-class truetype)
+  (platform-id "microsoft") (character-set "JISX0208") (encoding "ISO2022")
+  (font-file "f5ajchm3.ttf") (dpi $TeX_DPI))
+(define-font jtex-goth
+  (font-class truetype)
+  (platform-id "microsoft") (character-set "JISX0208") (encoding "ISO2022")
+  (font-file "f5ajchg5.ttf") (dpi $TeX_DPI))
+(define-font jtex-tmin
+  (font-class truetype)
+  (platform-id "microsoft") (character-set "JISX0208") (encoding "ISO2022")
+  (font-file "f5ajchm3.ttf") (dpi $TeX_DPI))
+(define-font jtex-tgoth
+  (font-class truetype)
+  (platform-id "microsoft") (character-set "JISX0208") (encoding "ISO2022")
+  (font-file "f5ajchg5.ttf") (dpi $TeX_DPI))
+
+(define-macro min-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-min)
+  (kanji-font-magnification 1.00) (metric-adjustment-file "f5ajchm3.adj"))
+(define-macro goth-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-goth)
+  (kanji-font-magnification 1.00) (metric-adjustment-file "f5ajchg5.adj"))
+(define-macro tmin-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-tmin)
+  (kanji-font-magnification 1.00) (metric-adjustment-file "tf5ajchm3.adj"))
+(define-macro tgoth-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-tgoth)
+  (kanji-font-magnification 1.00) (metric-adjustment-file "tf5ajchg5.adj"))
+
+(define-font min5.jtex     (kanji-font-point-size  5)  min-common)
+(define-font min6.jtex     (kanji-font-point-size  6)  min-common)
+(define-font min7.jtex     (kanji-font-point-size  7)  min-common)
+(define-font min8.jtex     (kanji-font-point-size  8)  min-common)
+(define-font min9.jtex     (kanji-font-point-size  9)  min-common)
+(define-font min10.jtex    (kanji-font-point-size 10)  min-common)
+(define-font goth5.jtex    (kanji-font-point-size  5)  goth-common)
+(define-font goth6.jtex    (kanji-font-point-size  6)  goth-common)
+(define-font goth7.jtex    (kanji-font-point-size  7)  goth-common)
+(define-font goth8.jtex    (kanji-font-point-size  8)  goth-common)
+(define-font goth9.jtex    (kanji-font-point-size  9)  goth-common)
+(define-font goth10.jtex   (kanji-font-point-size 10)  goth-common)
+(define-font tmin5.jtex    (kanji-font-point-size  5)  tmin-common)
+(define-font tmin6.jtex    (kanji-font-point-size  6)  tmin-common)
+(define-font tmin7.jtex    (kanji-font-point-size  7)  tmin-common)
+(define-font tmin8.jtex    (kanji-font-point-size  8)  tmin-common)
+(define-font tmin9.jtex    (kanji-font-point-size  9)  tmin-common)
+(define-font tmin10.jtex   (kanji-font-point-size 10)  tmin-common)
+(define-font tgoth5.jtex   (kanji-font-point-size  5)  tgoth-common)
+(define-font tgoth6.jtex   (kanji-font-point-size  6)  tgoth-common)
+(define-font tgoth7.jtex   (kanji-font-point-size  7)  tgoth-common)
+(define-font tgoth8.jtex   (kanji-font-point-size  8)  tgoth-common)
+(define-font tgoth9.jtex   (kanji-font-point-size  9)  tgoth-common)
+(define-font tgoth10.jtex  (kanji-font-point-size 10)  tgoth-common)
+
+
+;; -----------------------------------------------------------------
+
+(define-font ttf-font1
+  (font-class truetype)
+  (platform-id "microsoft")
+  (character-set "JISX0208")
+  (encoding "ISO2022")
+  (font-file "f5ajchm3.ttf"))
+(define-font ttf-font2
+  (font-class truetype)
+  (font-number 1)
+  (platform-id "microsoft")
+  (character-set "JISX0208")
+  (encoding "ISO2022")
+  (magnification 1.2)
+  (font-file "f5ajchm6.ttf"))
+(define-font ttf-font3
+  (font-class truetype)
+  (platform-id "microsoft")
+  (font-number 2)
+  (character-set "JISX0208")
+  (encoding "ISO2022")
+  (font-file "f5ajchm9.ttf"))
+(define-font ttf-font4
+  (font-class truetype)
+  (platform-id "microsoft")
+  (font-number 2)
+  (character-set "JISX0208")
+  (encoding "ISO2022")
+  (font-file "dfsokn3.ttc"))
+
+(define-macro ttf-common-def
+  (font-class truetype)
+  (platform-id "microsoft")
+  (character-set "JISX0208")
+  (encoding "ISO2022")
+  (point-size 10)
+  (dpi 200))
+(define-font ttf-fontA
+  ttf-common-def
+  (font-file "hgrhm3sj.ttc"))
+(define-font ttf-fontB
+  ttf-common-def
+  (font-file "hgrhm9sj.ttc"))
+(define-font ttf-fontC
+  ttf-common-def
+  (font-file "hgrhr4sj.ttc"))
+
+(define-font ttf-fontX1
+  ttf-common-def (hinting "on") (font-file "hgrhr4sj.ttc"))
+(define-font ttf-fontX2
+  ttf-common-def (hinting "off") (font-file "hgrhr4sj.ttc"))
+
+(define-font ttf-fontAa
+  ttf-common-def
+  (aspect-ratio 1.0)
+  (font-file "hgrhm3sj.ttc"))
+(define-font ttf-fontAb
+  ttf-common-def
+  (aspect-ratio 0.5)
+  (font-file "hgrhm3sj.ttc"))
+(define-font ttf-fontAc
+  ttf-common-def
+  (aspect-ratio 2)
+  (font-file "hgrhm3sj.ttc"))
+
+(define-font ttf-activa__
+  (font-class truetype)
+  (platform-id "microsoft")
+  (character-set "iso8859-1")
+  (encoding "unicode")
+  (point-size 16)
+  (dpi 200)
+  (font-file "/usr/local/share/fonts/FontGarden/ttf/a/activa__.ttf"))
+(define-font ttf-activa_b
+  (font-class truetype)
+  (platform-id "microsoft")
+  (character-set "iso8859-1")
+  (encoding "unicode")
+  (point-size 16)
+  (dpi 200)
+  (font-file "/usr/local/share/fonts/FontGarden/ttf/a/activa_b.ttf"))
+
+
+(define-macro ttf-boston
+  (font-class truetype)
+  (platform-id "microsoft")
+  (character-set "iso8859-1")
+  ;;(encoding "unicode")
+  (encoding "iso")
+  (point-size 16)
+  (dpi 200))
+(define-font ttf-boston__
+  ttf-boston
+  (font-file "/usr/local/share/fonts/FontGarden/ttf/b/boston__.ttf"))
+(define-font ttf-boston_i
+  ttf-boston
+  (font-file "/usr/local/share/fonts/FontGarden/ttf/b/boston_i.ttf"))
+(define-font ttf-boston_b
+  ttf-boston
+  (font-file "/usr/local/share/fonts/FontGarden/ttf/b/boston_b.ttf"))
+
+
+(define-macro HakuSyuu-common
+  (font-class truetype)
+  (platform-id "microsoft")
+  (font-number 1)
+  (character-set "jisx0208")
+  (encoding "ISO2022"))
+(define-font ttf-Hkgyokk
+  HakuSyuu-common
+  (font-file "/usr/local/share/fonts/HakuSyuu/Hkgyokk.ttf"))
+(define-font ttf-Hkkaikk
+  HakuSyuu-common
+  (font-file "/usr/local/share/fonts/HakuSyuu/Hkkaikk.ttf"))
+(define-font ttf-Hkkoinkk
+  HakuSyuu-common
+  (font-file "/usr/local/share/fonts/HakuSyuu/Hkkoinkk.ttf"))
+(define-font ttf-hktenkk
+  HakuSyuu-common
+  (font-file "/usr/local/share/fonts/HakuSyuu/hktenkk.ttf"))
+
+(define-font ttf-test
+  (font-class truetype)
+  (platform-id "microsoft")
+  (character-set "jisx0201")
+  (font-file "f5ajchg5.ttf"))
+
+
+;;
+;; "dfgotu_5.ttf" is a unicode font by DynaFont Co.
+;;
+(define-font ttf-test2
+  (font-class truetype) (platform-id "microsoft") 
+  (character-set "iso8859-1") (encoding "iso")
+  (font-file "dfgotu_5.ttf"))
+(define-font ttf-test2-2
+  (font-class truetype) (platform-id "microsoft") 
+  (character-set "iso8859-2") (encoding "iso")
+  (font-file "dfgotu_5.ttf"))
+(define-font ttf-test3
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "jisx0201") (encoding "jis")
+  (font-file "dfgotu_5.ttf"))
+(define-font ttf-test4
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "unicode") (encoding "jis")
+  (font-file "dfgotu_5.ttf"))
+(define-font ttf-test5
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "jisx0208") (encoding "jis")
+  (font-file "dfgotu_5.ttf"))
+(define-font ttf-test5-sjis
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "jisx0208") (encoding "sjis")
+  (font-file "dfgotu_5.ttf"))
+
+;; -----------------------------------------------------------------
+;EOF

@@ -1,0 +1,31 @@
+*** Mojikyo font support ***
+                                                   Hirotsugu Kakugawa 
+  
+
+Mojikyo font is a great set of characters containing more than 
+90 thousand Kanji characters!
+
+For detail, access this web site:
+   http://www.mojikyo.gr.jp/
+
+
+To use Mojikyo font with pLaTeX:
+
+  (pLaTeX is a Japanese LaTeX, with vertical writing feature.)
+  Obtain a style file "mojikyo.sty" and Mojikyo font files (in 
+  TrueType format) from the web site shown above.
+
+  Use a shell script "mkmjkjfm.sh" in this directory to make JFM 
+  files (Font metric file for Japanese, extension of TFM) for Mojikyo 
+  fonts in TeX.
+
+  See also "$(VFlib3)/vflibcaps/vflibcap-jtex" how to define Mojikyo 
+  fonts in VFlib.
+
+
+Sample files:
+   sample.tex
+       A sample document. Japanese LaTeX (pLaTeX) is necessary to typeset 
+       this file.
+   sample.dvi     
+       DVI file for sample.tex, obtained by running pLaTeX.

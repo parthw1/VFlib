@@ -1,0 +1,7 @@
+$(B$3$N%Z!<%8$G;H$o$l$F$$$k2hA|$K$h$kB?8@8lJ8=q$O!"(B
+$(B%U%)%s%H%i%$%V%i%j(B \BVFlib\N $(B$rMxMQ$7$?%W%m%0%i%`(B
+\Bctext2pgm\N $(B$K$h$j:n$j$^$7$?!#(B
+
+$(B3Q@nM5<!!w9-EgBg3X(B
+\t\BHirotsugu Kakugawa, Hiroshima University
+\t\BEmail: \Ih.kakugawa@computer.org

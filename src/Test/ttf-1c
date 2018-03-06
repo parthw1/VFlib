@@ -1,0 +1,19 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  ttf-fontA
+open1  ttf-fontB
+open1  ttf-fontC
+open1  ttf-activa__
+open1  ttf-activa_b
+
+bitmap1 !0 0x4567 1.0 1.0
+bitmap1 !1 0x4567 1.0 1.0
+bitmap1 !2 0x4567 1.0 1.0
+bitmap1 !3 0x67 1.0 1.0
+bitmap1 !4 0x67 1.0 1.0
+
+quit

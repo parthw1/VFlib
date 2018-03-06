@@ -1,0 +1,91 @@
+;;; -*-Lisp-*-
+
+;;
+;; 'vflibcap' for X11 BDF fonts
+;; by h.kakugawa@computer.org
+;;
+
+
+;; -----------------------------------------------------------------
+;;   VFlib Default
+;; -----------------------------------------------------------------
+(define-default VFlib
+  (extension-hints         (".bdf" bdf))
+  (uncompression-programs  (".Z" "zcat") (".gz" "gzip -cd"))
+  (implicit-font-classes   bdf)
+  (variable-values   (VAR1 ("PROP1" "VAL1"))
+		     (VARX ("PROPX" "VFlib-VALX"))))
+
+;; -----------------------------------------------------------------
+;;   BDF Font Class Default
+;; -----------------------------------------------------------------
+(define-default bdf
+  (filename-extensions ".bdf")
+  (font-directories "/usr/local/share/emacs/fonts//"
+                    "/usr/local/share/fonts/X11/bdf//"
+		    "/usr/local/share/fonts/X11/ETL/"
+		    "/usr/local/share/fonts/X11/chinese/"
+		    "/usr/local/share/fonts/X11/japanese/"
+		    "/usr/local/share/fonts/X11/yasuoka/"
+		    "/usr/local/share/fonts/X11/greek/")
+  (compression-extensions ".gz" ".Z")
+  (variable-values
+     (VAR2 ("PROP2" "VAL2"))
+     (VARX ("PROPX" "Class-VALX")) )
+  ;;(debug "P")
+  (properties ("FONT_CLASS" "BDF"))  )
+  
+;; -----------------------------------------------------------------
+
+(define-font timR24
+  (font-class bdf)
+  (font-file "timR24.bdf"))
+
+(define-font timR24-1
+  (font-class "bdf")
+  (pixel-size 32)
+  (point-size 32)
+  (font-file "timR24.bdf"))
+
+(define-font timR24-2
+  (font-class "bdf")
+  (pixel-size 48)
+  (point-size 48)
+  (font-file "timR24.bdf"))
+
+(define-font jiskan16
+  (font-class bdf)
+  (font-file "jiskan16.bdf"))
+
+
+(define-macro size-definition
+  (point-size 10)
+  (dpi 300))
+
+(define-font  bdf-latin1
+  (font-class bdf)
+  size-definition
+  (font-file "etl24-latin1.bdf"))
+
+(define-font bdf-font1
+  (font-class bdf)
+  (properties $VAR1)
+  (font-file "etl16-latin1.bdf"))
+
+(define-font bdf-font2
+  (font-class bdf)
+  (magnification 1.2)
+  (properties $VAR2)
+  (font-file "etl16-latin1.bdf"))
+
+(define-font bdf-fontx
+  (font-class bdf)
+  (properties $VARX)
+  (font-file "etl16-latin1.bdf"))
+
+(define-font bdf-jiskan16
+  (font-class bdf)
+  (font-file "jiskan16.bdf"))
+
+;; -----------------------------------------------------------------
+;EOF

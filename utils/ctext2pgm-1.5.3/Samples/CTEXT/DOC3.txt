@@ -1,0 +1,16 @@
+\B$(BB?8@8lJ8>O$NNc(B
+An example of multilingual text\.
+
+"-LÍÔàÐÒáâÒãÙâÕ" $(B$O!"1Q8l$G(B Hello $(B$H$$$&0UL#$N%m%7%"8l$G(B-A
+$(B$9!#F|K\8l$J$i!V$3$s$K$A$O!W$H$$$&0UL#$G$9$M!#%.%j%7(B
+$(B%"$N8@MU$G$O!"(B"-FÃåéÜ óáò" $(B$H8@$&$=$&$G$9!#Cf9q$N8@MU(B-A
+$(B$G$O!"!V$(ADc:C$(B!W$G$9!#%O%s%0%k$G$O!"!V$(C>H3gGO<<?d$(B!W$H(B
+$(B$$$$$^$9!#%I%$%D8l$G$O!"!V(BGuten Tag$(B!W$^$?$O!V(BGrüß Gott$(B!W(B
+$(B$H8@$$$^$9!#%X%V%i%$8l$G$O!V›2]-Hùìïí›]!W$H$$$$$^$9!#(B-A
+
+The term "-LÍÔàÐÒáâÒãÙâÕ\<" means "\Ihello\N" in English. -A
+In Japanese, it means "$(B$3$s$K$A$O(B". They say "-FÃåéÜ óáò"-A
+in Greek language.  (It's greek to me!)  In Chinese, "$(ADc:C(B" 
+is a word of the same meaning. Korean people say "$(C>H3gGO<<?d(B"
+to say hello. In German, they say "Guten Tag" or "Grüß Gott".
+In Hebrew, they say "›2]-Hùìïí›]".-A

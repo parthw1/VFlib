@@ -1,0 +1,47 @@
+A font library VFlib version 3.7.2
+
+                                       Hirotsugu Kakugawa, Osaka Univ
+                                              h.kakugawa@computer.org 
+
+* NOTE: The source code of VFlib 3.7.2 is identical to VFlib 3.7.1,
+   however, it comes now with two licenses:
+     - GPLv3 
+     - FreeType Project License (FTL)
+   Choose the one which fits your needs best.
+
+
+VFlib is a font library written in C language with several functions
+to obtain bitmaps of fonts.  Unique feature of VFlib is that fonts
+in different formats are accessed by unified interface.
+
+VFlib supports the following font formats:
+   TeX fonts:       PK, GF, VF, TFM
+   Omega TeX fonts: OFM (level 0), OVF
+   X Window fonts:  PCF, BDF
+   Other fonts:     TrueType, Type 1, HBF, Syotai Club, JG, ekanji
+
+   * The FreeType library version 1.2 is used for 
+     TrueType format support. Install it before you install VFlib.
+   * The T1Lib library version 5.1 is used for Type 1
+     format support. Install it before you install VFlib.
+   * Kpathsae  library 3.2 (in web2c-7.2) is used for 
+     font file search. Install it before you install VFlib.
+   * Syotai Club and JG are font formats for Japanese Kanji characters.
+
+VFlib version 3 supports fonts for various languages. (VFlib versions 
+1 and 2 supports only Japanese Kanji fonts.)
+
+I also developed the TeX-Guy package, which is a set of previewers
+and printer drivers for TeX DVI files using VFlib.
+
+At this moment, only Unix-like operating systems are supported.
+VFlib is tested on FreeBSD 5.3.
+You must write makefiles by yourself to compile 
+VFlib on Windows {3.1, 95, 98, NT}, for example. (Since GNU 
+autoconf and GNU libtool are used to compile programs in VFlib, 
+porting may not simple. I'm not sure.) But the source code itself 
+contain less Unix-specific parts.  Please let me know if you 
+successfully ported VFlib to non-Unix systems.
+
+
+<EOF>

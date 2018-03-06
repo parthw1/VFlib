@@ -1,0 +1,13 @@
+\ProvidesFile{jy1hsg.fd}[1998/09/07 Keisei Gothic (Horizontal)]
+\DeclareKanjiFamily{JY1}{hsg}{}
+\DeclareRelationFont{JY1}{hsg}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JY1}{hsg}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{hsg}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{hsg}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JY1}{hsg}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JY1}{hsg}{sl}{n}{ <-> dfhsgmaa  }{}
+\DeclareFontShape{JY1}{hsg}{m}{n}{ <->  dfhsgpaa  }{}
+\DeclareFontShape{JY1}{hsg}{sb}{n}{ <-> dfhsgraa  }{}
+\DeclareFontShape{JY1}{hsg}{b}{n}{ <->  dfhsgsaa  }{}
+\DeclareFontShape{JY1}{hsg}{bx}{n}{ <-> dfhsgvaa  }{}
+\endinput

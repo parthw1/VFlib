@@ -1,0 +1,29 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  ekan0010
+open1  ekan0010 -1 2 2
+open1  ekan0010 -1 1 2
+open1  ekan0010 -1 2 1
+
+bitmap1 !0 0xe00
+bitmap1 !1 0xe00
+bitmap1 !2 0xe00
+bitmap1 !3 0xe00
+
+bitmap1 !0 0xe00 1.2  1.2
+bitmap1 !0 0xe00 1.44 1.44
+bitmap1 !0 0xe00 1.00 2.00
+bitmap1 !0 0xe00 2.00 1.00
+bitmap1 !0 0xe00 2.00 2.00
+
+bitmap1 !1 0xe00 1.2  1.2
+bitmap1 !1 0xe00 1.44 1.44
+bitmap1 !1 0xe00 1.00 2.00
+bitmap1 !1 0xe00 2.00 1.00
+bitmap1 !1 0xe00 2.00 2.00
+
+quit

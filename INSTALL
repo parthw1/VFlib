@@ -1,0 +1,77 @@
+INSTALL
+
+                                                    Hirotsugu Kakugawa
+                                               h.kakugawa@computer.org
+
+
+
+1. To install VFlib3, following libraries are (optionally) necessary. 
+   Obtain, compile, and install them before you compile VFlib.
+   These external libraries are optional and therefore VFlib 
+   can be compiled not to use such libraries. But in such a case,
+   you cannot use TrueType, Type1 fonts and searching TeX fonts is
+   very limited. So, I strongly recommend to use such libraries. 
+
+   Note: following libraries may be provided as binary packages
+   for your operating systems. In such a case, obtain them 
+   and install. Not only binaries for libraries but also
+   `header files' are necessary since we are to compile 
+   programs that use such libraries.
+
+  * FreeType 1.2 or later (if you want to use TrueType fonts)
+    Obtain it from 
+       ftp://ftp.freetype.org/pub/freetype/
+    or see
+       http://www.freetype.org/
+
+  * FreeType 2 or later (if you want to use OpenType fonts)
+    See
+       http://www.freetype.org/
+    
+  * T1Lib 5.1 (if you want to use Type 1 fonts)
+    Obtain it from 
+       ftp://ftp.neuroinformatik.ruhr-uni-bochum.de/pub/software/t1lib/
+    or
+       ftp://ftp.sunsite.unc.edu/pub/Linux/libs/graphics/
+
+  * kpathsea 3.2 in web2c-7.2 (if you want to use advanced TeX font searching)
+    Obtain it from 
+       ftp://tug.ctan.org/tex-archive/systems/web2c/
+
+
+2. To compile, run the `configure' script and run 'make'
+
+       % ./configure  [RETURN]
+       % make   [RETURN]
+
+   *NOTE* By default, VFlib is compiled not to use TrueType, Type1, 
+   and kpathsea. 
+     To compile VFlib to use these features, run configure program 
+   with the following long options, for example. Probably, most 
+   users do this. 
+
+   (If you do no want to type this long lines, run a shell 
+    script 'configure-site'.)
+
+       % ./configure --with-kpathsea \
+                       --with-kpathsea-includedir=/usr/local/include \
+                       --with-kpathsea-libdir=/usr/local/lib \
+                     --with-opentype \
+                     --with-freetype \
+                       --with-freetype-includedir=/usr/local/include \
+                       --with-freetype-libdir=/usr/local/lib \
+                     --with-t1lib \
+                       --with-t1lib-includedir=/usr/local/include \
+                       --with-t1lib-libdir=/usr/local/lib    [RETURN]
+
+
+       % make   [RETURN]
+
+
+3. Become a super user (root) and install VFlib
+       % su  [RETURN]
+       Password: ???????  [RETURN]   (password for root)
+       # make install  [RETURN]
+
+
+That's it.

@@ -1,0 +1,14 @@
+\documentclass{jarticle}
+\usepackage{jisx0212}
+\def\TEXT{\char\jis"3021\char\jis"3022\char\jis"3023\char\jis"3024}
+\begin{document}
+
+\begin{itemize}
+\item JISX0208: \TEXT
+\item JISX0208: \begin{jisx0208}\TEXT\end{jisx0208}
+\item JISX0212: \begin{jisx0212}\TEXT\end{jisx0212}
+\item JISX0212: \HojoKanji{\TEXT}
+\end{itemize}
+
+\end{document}
+

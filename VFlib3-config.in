@@ -1,0 +1,176 @@
+#!/bin/sh
+#
+# VFlib3-config
+#     a script to obtain installation information
+#  
+
+version=@vflib_version@
+prefix=@prefix@
+exec_prefix=${prefix}
+exec_prefix_set=no
+datadir=${prefix}/share
+datadir_set=no
+
+
+usage()
+{
+	cat << __EOF__
+Usage: VFlib3-config [Options]
+Options:
+	[--prefix[=DIR]]
+	[--exec-prefix[=DIR]]
+	[--datadir[=DIR]]
+	[--version]
+	[--cflags]
+	[--lib-vflib]
+	[--lib-opt]
+	[--libs]  (same as --lib-vflib --lib-opt)
+	[--runtime-dir]
+	[--runtime-site-dir]
+	[--vflibcap]
+	[--help]
+__EOF__
+	exit $1
+}
+
+
+if test $# -eq 0;
+then
+	usage 1  1>&2
+fi
+
+while test $# -gt 0; 
+do
+  case "$1" in
+  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case $1 in
+    --prefix=*)
+      prefix=$optarg
+      if test $exec_prefix_set = no ; then
+        exec_prefix=$optarg
+      fi
+      ;;
+    --prefix)
+      echo_prefix=yes
+      ;;
+    --exec-prefix=*)
+      exec_prefix=$optarg
+      exec_prefix_set=yes
+      ;;
+    --exec-prefix)
+      echo_exec_prefix=yes
+      ;;
+    --datadir=*)
+      datadir=$optarg
+      datadir_set=yes
+      ;;
+    --datadir)
+      echo_datadir=yes
+      ;;
+    --exec-prefix)
+      echo_exec_prefix=yes
+      ;;
+    --version)
+      echo @vflib_version@
+      ;;
+    --cflags)
+      echo_cflags=yes
+      ;;
+    --lib-vflib)
+      echo_lib_vflib=yes
+      ;;
+    --lib-opt)
+      echo_lib_opt=yes
+      ;;
+    --libs)
+      echo_lib_vflib=yes
+      echo_lib_opt=yes
+      ;;
+    --runtime-dir)
+      echo_runtime_dir=yes
+      ;;
+    --runtime-site-dir)
+      echo_runtime_site_dir=yes
+      ;;
+    --vflibcap)
+      echo_vflibcap=yes
+      ;;
+    --help|*)
+      usage 1 1>&2
+      ;;
+  esac
+  shift
+done
+
+S=""
+
+if test "$echo_prefix" = "yes"; then
+  S="$S $prefix"
+fi
+
+if test "$echo_exec_prefix" = "yes"; then
+  S="$S $exec_prefix"
+fi
+
+if test "$echo_datadir" = "yes"; then
+  S="$S $datadir"
+fi
+
+if test "$echo_version" = "yes"; then
+  S="$S $version"
+fi
+
+if test "$echo_cflags" = "yes"; then
+  S="$S -I$prefix/include"
+fi
+
+L=""
+if test "$echo_lib_vflib" = "yes"; then
+  L="$L -L${exec_prefix}/lib -lVFlib3"
+fi
+if test "$echo_lib_opt" = "yes"; then
+  L="$L @freetype_libdir@  @freetype_lib@ \
+        @opentype_lib@ \
+        @t1lib_libdir@ @t1lib_lib@ \
+        @kpathsea_libdir@ @kpathsea_lib@ \
+        @gettext_lib@ "
+fi
+if test -n "$L"; then
+  for f in $L
+  do
+    case "$f" in
+    -L*)
+      v=`echo $f | sed 's/^-L/L/' | sed 's/[!@#$%^&*-+=./|:;{}]/_/g'`
+      w=`echo $v | sed 's/^\(.*\)$/${\1}/'`
+      x=`eval "echo $w"`
+      if test x"$x" != x"yes"; then
+        eval "$v=yes"
+        S="$S $f"
+      fi   
+      ;;
+    *)
+      S="$S $f"
+      ;;
+    esac
+  done
+fi
+
+if test "$echo_runtime_dir" = "yes"; then
+  S="$S $datadir/VFlib/$version"
+fi
+
+if test "$echo_runtime_site_dir" = "yes"; then
+  S="$S $datadir/VFlib/site"
+fi      
+
+if test "$echo_vflibcap" = "yes"; then
+  S="$S $datadir/VFlib/$version/vflibcap"
+fi      
+
+echo $S
+
+
+#EOF

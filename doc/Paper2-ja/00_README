@@ -1,0 +1,9 @@
+This short paper describes VFlib in Japanese.
+It is appeared in a joint meeting of electric- and information-
+related academic societies in Chugoku area of Japan.
+
+The dvi file itself can be previewed by previewers (e.g., xldvi)
+in TeX-Guy package in standard X Window environmnet using default
+installation of TypeHack.
+
+Hirotsugu Kakugawa

@@ -1,0 +1,271 @@
+*** CHANGES OF VFlib ***
+
+VFlib 3.7.2  15 Sep 2017
+   * Relased under dual-license (GPL v3 and FreeType).
+     (Source files are the same as 3.7.1)
+
+VFlib 3.6.14  25 Feb 2006
+   * Enhanced vflmkcaptex for searching dvips config files.  
+   * Upgrade to T1Lib 5.1.
+
+VFlib 3.6.13  1 Nov 2001
+   * Improved vflimkcaptex to read mode.cf to obtain device resolution.
+   * Bug fix of vflimkcaptex.
+   * Fixed memory leaks as possible.
+   * Upgrade to T1Lib 1.3.
+   * Fixed memory allocaion bug in texfonts.c.
+
+VFlib 3.6.10 
+   * Added vflmkcaptex to generate vflibcap file for TeX DVI ware.
+   * Improvement of type1 driver.
+   * Improvement of virtual font driver.
+   * Tested with T1Lib 1.1.1
+   * Tested on FreeBSD 4.3
+
+VFlib 3.6.5  27 December 1999
+   * Bug fix of src/ccv.c and src/defaults.c.
+
+VFlib 3.6.4  9 December 1999
+   * Tested with T1Lib 1.0.0 for Type1 font driver.
+   * Added VF_GetVersion().
+   * Added vflib-version command in vflserver.
+   * Added eKanji font driver. (See http://www.zinbun.kyoto-u.ac.jp/~ekanji/
+     for details of eKanji fonts.)
+   * Added pLaTeX2e macro packages for eKanji fonts. (See ascii-jtex/eKanji/)
+   * Added mojikyo-mapper font driver to access mojikyo font files
+     by 'mojikyo code'.
+
+VFlib 3.6.3  28 November 1999
+   * Tested with FreeBSD, Linux, Solaris 2.5.1/SPARC. Improved portability.
+   * Fixed wrong version numbering and installation directory of runtime files.
+
+VFlib 3.6.2  19 November 1999
+   * Changed RPM spec file, configure.in, and some scripts for Linux.
+   * System dependent code is improved for Linux.
+
+VFlib 3.6.1  16 November 1999
+   * Changed drv_jtex.c to return empty bitmap when a character of subfont
+     does not exist.
+
+VFlib 3.6.0  28 October 1999
+   * Added `VFlib3-config' script to obtain installed VFlib 3 information,
+     such as required external libs (FreeType/T1Lib/kpathsea), version 
+     number, etc.     
+   * Added SPEC file for Linux RPM packaging.
+   * A script file 'run-conf' is renamed to 'configure-site', for typical
+     configuration.
+   * Added 'make-missing-glyph' capablity for PK and GF font class.
+     If a glyph file is missing and source file for the font in metafont
+     code exists, run the matafont program to generate glyph on the fly.
+   * Now OFM (Omega font metric) file level 0 is supported. OFM files
+     are handled by tfm font class and they can be used exactly the same
+     as traditional TFM files in VFlib.
+   * Type 1 driver with T1Lib 0.9.2 seems to work fine now. Changed default
+     vflibcap files to check and use Type 1 fonts, if available, before 
+     checking PK and GF fonts.
+   * Improved PK, GF, and VF font class not to open a corresponding TFM 
+     file if unnecessary.
+   * Added more CCV files. Added multiple encoding names in CCV files.
+   * Added more ADJ files for adjusting metrics of Japanese Kanji characters.
+   * Added JIS X 0212 (Supplementary Kanji Character Set) support for
+     pLaTeX2e, a localized latex2e for Japanese text. 
+     See `ascii-jtex/HojoKanji/00README'.
+   * Support for Mojikyo fonts. (Mojikyo font is a set of more than 
+     90 thousand Kanji characters.)  See ascii-jtex/Mojikyo/. 
+     See also http://www.mojikyo.gr.jp/ for downloading fonts.
+   * Added an ad-hoc solution in TrueType font driver to handle 
+     JIS X 0212 fonts with non-standard encoding such that 
+     row 47 is empty and followed rows are shifted by one.
+     (That is, Kanjis in row 48 of JIS X 0212 appeard in row 49 in such 
+     fonts.) Added "jisx0212-row47-empty-sjis" capability to enable 
+     this feature. See the manual.
+   * Upgrade to GNU Libtool 1.3.3 and GNU Autoconf 2.13. 
+   * Bug fix of `vfl2bdf'.
+
+VFlib 3.5.6  16 Feb 1999
+   * IMPORTANT: Now configure script requires explicit command line 
+     options to use Kpathsea, FreeType, and T1Lib. (See also 'run-conf'
+     script.)
+   * Added to change runtime directory by environment variables.
+     VFLIB_RUNTIME_DIRECTORY for the root of runtime directory, 
+     VFLIB_CCV_DIRECTORY for ccv file directory, and VFLIB_VFLIBCAP_DIRECTORY
+     for vflibcap directory.
+   * Improved the Type 1 font driver not to open the same font more than once,
+     i.e., VFlib fonts that refre to the same type 1 font share the same 
+     t1lib font ID to obtain glyphs.
+   * Added new feature to read /usr/local/share/VFlib/site/ directory for
+     run time files (e.g., vflibcap, *.ccv, *.adj) before 
+     /usr/local/share/VFlib/3.x.y/ directory. In the "site" directory
+     /usr/local/share/VFlib/site/, no files are installed by VFlib;
+     It is a place to put site-created files and they are not overwritten
+     by VFlib installation. (No directory hierarchy in site directory,
+     different from /usr/local/share/VFlib/3.x.y/ directory; all kind of
+     files are placed just under the site directory.)
+   * Added encoding conversions for WanSung, Ku-Ten, and EUC. See "src/ccv.c".
+
+VFlib 3.5.5  24 Dec 1998
+   * New feature: font file searcing module uses a font file hint database
+     ("VFlib.fdb") called FDB file for fast font file search (in case it 
+     exists in a font file directory). 
+   * Added vflmkfdb program to make a FDB file.
+   * TrueType fonr driver opens/closes dynamically font files to limit 
+     the number of simultaneously opened files.
+   * TrueType font driver ("ttf" font class) supports 
+     VF_GetFontBoundingBox1() and VF_GetFontBoundingBox2() operations.
+   * TrueType font driver ("ttf" font class) are controled by 
+     "VFLIB_TTF_DEBUG" environment variable to print debug information,
+     in addition to capability value in vflibcap file.
+   * Sample program "hyakubm" and "hyakux11" (in utils/hykau/ directory)
+     support mode 1 and 2 for opening font.
+   * Fixed a bug in Type 1 driver to obtain font metrics in mode 1 fonts.
+     Now TeX DVI previewers of TeX-Guy package can display Computer Modern
+     fonts in Type 1 formats.
+
+VFlib 3.5.4  4 Dec 1998
+   * Some installation problems are fixed.
+
+VFlib 3.5.3  29 Nov 1998
+   * IMPORTANT: Changed shared library versioning scheme.
+   * Changed source codes to be compiled by gcc with '-pedantic -ansi' options.
+   * Improved compiling utitlity programs using X Window. See X11/ directory.
+
+VFlib 3.5.2  26 Nov 1998
+   * Added image.c for image file output. (PBM ASCII, PGM Raw, PGM ASCII,
+     EPS are supported for now.)
+   * Added VF_GetFontBoundingBox1() and VF_GetFontBoundingBox2() to 
+     obtain font bounding box information of an opened font.
+   * Added FONTBBX1 and FONTBBX2 command in vflserver.
+   * Added --enable-static, --disable-static, --enable-shared, 
+     --enable-shared options for configure. By default, static library 
+     is not created if the system supports shared libraries. 
+     (Thanks to Werner Lemberg.)
+   * Virtual Font driver is improved. (Thanks to Werner Lemberg.)
+   * Added debug flag control for BDF, PCF, and HBF font drivers
+     by an environment variable VFLIB_BDF_DEBUG, VFLIB_PCF_DEBUG, and
+     VFLIB_HBF_DEBUG. (Debug flags can be given in vflibcap too.)
+     See source code (drv_bdf.c and bdf.c) for detail.
+
+VFlib 3.5.1  7 Sep 1998
+   * Improved ascii-jtex-kanji driver. I supports "char-all" directive
+     in metric adjustment file.
+   * Added several metric adjustment files for the ascii-jtex-kanji driver.
+
+VFlib 3.5.0  1 Sep 1998
+   * Changed distribution style. VFlib 3 is now distributed without 
+     FreeType, T1Lib, Web2c sources.
+   * Added VF_RotatedBitmap() and VF_ReflectedBitmap().
+   * Added --with-XXX-includedir=DIR, --with-XXX-libdir=DIR, 
+     and --with-XXX=LIB options for configure, where XXX is freetype, 
+     t1lib, and kpathsea.
+   * Support of vertical writing in ascii-jtex font driver for pTeX.
+     It supports glyph rotation to yield glyphs for vertical writing
+     from fonts ofr horizontal writing.
+     (Unfortunately, rotation is not supported in VF_GetOutline2()
+     in ascii-jtex driver.)
+   * Japanese comic font driver supports subfont sepecification
+     for each character class: symbol, alpha-numeric, Hirakana, Katakana,
+     Greek, Cyrillic, Keisen, Kanji.
+
+VFlib 3.4.2  27 July 1998
+   * Added --disable-XXX (XXX represents a font driver name) option
+     for configure script to exclude unnecessary font drivers.
+   * Added Type1 font driver using T1Llib.  It lacks support for
+     outline extracting since T1Lib does not have such feature.
+     Currently, outlines are created from glyphs.
+   * Added the TeX font mapping driver (driver name: "TeX").
+   * Added font mapping mechanism in the virtual font (vf) driver. 
+     The vf font driver is documented. 
+   * Implemented "vfldrvs" which prints a list of installed font drivers.
+
+VFlib 3.4.1  25 June 1998
+   * Adopted FreeType 1.1
+   * Fixed minor bugs in Makefiles.
+   * Added 'ctext2pbm' program in utils directory. 
+   * Added 'vflpp' program. (A vflibcap prettyprinter.)
+   * Implemented 'try' font driver. 
+   * Multiple font filenames can be given in the 'font-file' capability
+     for fonts of BDF, PCF, and HBF font classes.
+   * Added 'font-directories' capability in font definitions for fonts 
+     of BDF, PCF, and HBF font classes.
+   * Added VF_BITMAPLIST data type and several functions for the data type.
+   * Parameter values in vflibcap by environment variable can be 
+     any lisp-syntax object. 
+
+VFlib 3.4.0  25 May 1998
+   * Upgraded libtool to version 1.2
+   * Upgraded kpathsea to version 3.2 in web2c-7.2.
+     (TrueType fonts under the texmf directory can be searched by kpathsea.)
+   * Adopted lisp-like syntax for vflibcap.
+   * Adopted FreeType version 1.0 for TrueType font driver.
+   * API is changed. (Point size is no longer given for VF_GetBitmap.)
+   * Ducument is written in TeXinfo format. (See doc/ directory)
+   * A paper on VFlib 3.4 is added. (See doc/Paper directory)
+
+VFlib 3.3.0  20 Nov 1997
+   * Deleted global font directory list ('font-directories' capability
+     in 'VFlib-Defails' entry in vflibcap file).
+   * Adopted libtool 1.0.
+   * Improved installer.
+   * Changed vflibcap file searching.  Now we can omit runtime 
+     directory name.  See description for  VF_Init() in doc/api.txt
+     for details.
+
+VFlib 3.2.99  20 Oct 1997
+   * Changed VFlib API
+     --- Several parameters (e.g., maginication, point size) are
+       given at font open.
+   * Updated documents for the new API.
+
+VFlib 3.2.6  01 Aug 1997
+   * A common vflibcap capablility "character-set" for all font classes 
+     are deleted.
+   * Added dynamic loading of code conversion tables.
+     In vflibcap file, a capability "code_conversion_files"
+     is added for an entry "VFlibcap-Defaults" to specify a list 
+     of file names of code conversion table files.
+     Code conversion table files are stored in a directory, for example, 
+     /usr/local/lib/VFlib/3.2/ccv/.
+   * Code conversion routine in TrueType font driver is chaned to
+     use dynamic loaded code conversion tables.
+   * Changed capability names of TrueType font class:
+        * "encoding" is changed to "platform-encoding". (A symbolic name
+           of encoding in TrueType font terminology.)
+        * "encoding" is added. (An encoding name such as "unicode", "kuten",
+          "sjis", etc.)
+
+VFlib 3.2.4  10 July 1997
+   * Added virtual font (VF) support. (experimental)
+   * Added a feature to override parameter values in vflibcap by
+     environment variables (Name of environment variables are
+     "VFLIBCAP_PARAM_" followed by parameter names.)
+   * Added VF_ClearBitmap() and VF_FillBitmap().
+
+VFlib 3.2.3  28 May 1997
+   * Added recursive font file searching.  (e.g., /FOO/BAR//)
+
+VFlib 3.2.2  20 May 1997
+   * Compilation and linking by 'klibtool'.
+
+VFlib 3.2.1  12 May 1997
+   * Documents are translated in English.
+   * 'list' and 'alist' data classes are internally introduced.
+   * Name of 'vfx11' is changed as 'vflx11'.
+   * A BDF font generator 'vfl2bdf' is implemented.
+
+VFlib 3.2    9 Apr 1997
+   * Capability names can be any length.
+   * kpathsea 3.0 is adopted to search TeX fonts.
+   * A path name of vflibcap file should not be absolute path; a 
+     relative path name is now allowed.
+   * Introduced parameterized vflibcap feature.
+   * Added "pg" capability in texfont driver for an arguent 
+     ('program name') of initialization function of kpathsea 
+     library.
+   * Bugs in HBF font driver are fixed.
+
+VFlib 3.1.5  20 Mar 1997
+   * Added a feature to specify symbolic names for 'pl' and 'en' 
+     capabilities in vflibcap for TrueType font class.
+
+VFlib 3.1.4   7 Mar 1997
+   'CHANGES' starts from this version.

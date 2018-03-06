@@ -1,0 +1,103 @@
+README: ctext2pgm
+
+by Hirotsugu Kakugawa 
+(h.kakugawa@computer.org)
+  
+
+1. What is "ctext2pgm" ?
+
+Ctext2pgm makes a bitmap of a text encoded in compound text.
+Bitmap format is PGM, PBM, EPS and ASCII art format.   
+Not only it accepts compound text encodings but also it
+accepts EUC-Japanese, EUC-Korean, and EUC-Chinese encodings 
+for input file encodings.
+
+This program supports scripts of Left-to-Right writing direction.
+Therefore, Arabic and Hebrew languages are not supported.
+Currently, the following character sets are supported:
+
+     ASCII                  (English), 
+     ISO 8859-1,2,3,4,9     (English, German, Italy, French, Spanish, etc)
+     ISO 8859-5             (Russian)
+     ISO 8859-7             (Greek)
+     ISO 8859-8             (Hebrew)
+     Mule Arabic            (Arabic by Mule editor)
+     JIS X 0201             (Japanese Roman and and Roman)
+     JIS X 0208             (Japanese Kanji)
+     GB 2312                (Chinese Hanzi)
+     CNS 11641              (Chinese Hanzi)
+     KSC 5601               (Hangle)
+
+
+2. Installing ctext2pgm
+     
+To compile the program, run the "configure" script and then, run "make" 
+in ctext2pgm directory:
+
+     % ./configure [RET]
+     % make [RET]
+
+To install the program, become the root user and run "make" with an 
+"install" argument:
+
+     # make install [RET]
+
+The program "ctext2pgm" and default vflibcap file (a font database) 
+"vflibcap-ctext2pgm" is installed. The program used "vflibcap-ctext2pgm"
+for its font database file by default.
+
+
+3. Running ctext2pgm
+
+Run ctext2pgm with a `-help' option. Short help message is printed.
+See `VFlib-34.info' (users manual of VFlib 3.4) for detail.
+
+
+4. Fonts
+
+Ctext2pgm used VFlib library to obtain glyphs of characters of various
+character sets.  A file `vflibcap-ctext2pgm' defines a set of fonts
+that are used in ctext2pgm.  Standard `vflibcap-ctext2pgm' defines
+fonts to use standard fonts of X Window system in PCF format.
+(ISO8859-{2,3,4,9}, Mule Arabic, and CNS11641 fonts are not included 
+standard X WIndow system.)
+
+You can obtain these optional fonts from the following URLs.
+   ftp://ftp.etl.go.jp/pub/mule/fonts/ETL/
+   ftp://ftp.etl.go.jp/pub/mule/fonts/japanese/
+   ftp://ftp.etl.go.jp/pub/mule/fonts/chinese/
+If optional fonts are installed under directories 
+   /usr/local/share/fonts/X11/ETL/
+   /usr/local/share/fonts/X11/japanese/
+   /usr/local/share/fonts/X11/chinese/
+in your system, respectively, you can use the default vflibcap file
+without any modifications. Since the fonts are in BDF format, 
+a shell script shown below may be useful to convert from BDF 
+to PCF:
+
+ - * -  - * -  - * -  - * -  - * -  - * -  - * -  - * -  - * -
+#! /bin/sh
+for BDF in `echo *.bdf.gz` 
+do
+  echo ${BDF}...
+  PCF=`echo ${BDF} | sed 's/.bdf.gz$/.pcf/'`
+  rm -f ${PCF} ${PCF}.gz
+  gzip -cd < ${BDF} | bdftopcf | gzip -c > ${PCF}.gz
+done
+ - * -  - * -  - * -  - * -  - * -  - * -  - * -  - * -  - * -
+
+If you want to use these optional fonts by application software 
+on X Window system (e.g., multilingual editor Mule), the "fonts.dir"
+file is necessary in the directory.
+
+Run the "mkfontdir" program to make `fonts.dir' file.
+This file is necessary if you want to use such font on application 
+software on X Window.
+
+
+5. Making multilingual text files
+
+Use the Mule editor. It is distributed from the following URL:
+   ftp://ftp.etl.go.jp/pub/mule/
+
+<EOF>

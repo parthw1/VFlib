@@ -1,0 +1,75 @@
+; DynaFont Heisei Series
+; tdfhsmw{3,5,7,9}.adj
+; tdfhsgw{3,5,7,9}.adj
+; tdfhsrw4.adj
+
+;   Metric adjustment file for Kanji TrueType font file.
+
+; See tminXX.pl (or generete it by tftopl command) to see 
+; the relation between code point and char-type.
+;   Shift bitmap to right:  give positive value for delta-X
+;   Shift bitmap to up:  give positive value for delta-Y
+
+;--------------------------------------------------------
+; Writing direction and Rotation semantics
+;--------------------------------------------------------
+(direction vertical)        ;; "vertical" or "horizontal"
+(rotation-semantics ptex)   ;; "ptex" or "jisx0208"
+
+;--------------------------------------------------------
+; Semantics for delta-X and delta-Y
+;--------------------------------------------------------
+(semantics design-size)
+
+;--------------------------------------------------------
+;  global shift
+;--------------------------------------------------------
+(char-all  0.00  0.00)
+
+;--------------------------------------------------------
+;  char-type & delta
+;--------------------------------------------------------
+;        char-type  delta-X  delta-Y
+(char-type   0     -0.48    -0.75 )  ; Kanji
+(char-type   1      0.10    -0.35 )  ; Comma and Period
+(char-type   2      0.10    -0.35 )  ; Touten and Kuten
+(char-type   3     -0.40    -0.55 )  ; small Kana
+(char-type   4     -0.50    -0.85 )  ; ? and ! 
+(char-type   5     -0.29     0.04 )  ; Zenkaku-Yakubutsu 
+(char-type   6     -0.27     0.70 )  ; opening Kakko
+(char-type   7     -0.30     0.30 )  ; Nakatsuki-Yakubutsu
+(char-type   8     -0.27    -0.20 )  ; closing Kakko
+
+;--------------------------------------------------------
+
+;--------------------------------------------------------
+; char-code and delta
+;    --- "char-type & delta" given above is overridden
+;--------------------------------------------------------
+;          char-code  delta-X  delta-Y
+
+(char-code  0x2161   -0.28     0.02 )  ; chartype 0
+(char-code  0x2161   -0.28     0.02 )  ; chartype 0
+(char-code  0x213c   -0.35     0.00 )  ; chartype 0
+(char-code  0x2141   -0.30     0.00 )  ; chartype 0
+
+(char-code  0x2133   -0.45    -0.65 )  ; chartype 3
+(char-code  0x2134   -0.45    -0.70 )  ; chartype 3
+(char-code  0x2135   -0.45    -0.65 )  ; chartype 3
+(char-code  0x2136   -0.45    -0.70 )  ; chartype 3
+(char-code  0x2137   -0.45    -0.65 )  ; chartype 3
+(char-code  0x2139   -0.47    -0.60 )  ; chartype 3
+
+(char-code  0x2126   -0.46    -0.53 )  ; chartype 7
+
+(char-code  0x2146   -1.00    -0.70 )  ; chartype 6
+(char-code  0x2147    0.00    -0.90 )  ; chartype 8
+
+(char-code  0x2148   -0.90    -0.70 )  ; chartype 6
+(char-code  0x2149    0.00    -1.00 )  ; chartype 8
+
+(char-code  0x2154   -0.27     0.55 )  ; chartype 6
+(char-code  0x2155   -0.27    -0.05 )  ; chartype 8
+
+;--------------------------------------------------------
+;EOF

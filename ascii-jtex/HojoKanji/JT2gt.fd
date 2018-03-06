@@ -1,0 +1,12 @@
+%% JT2gt.fd
+\ProvidesFile{JT2gt.fd}
+       [1999/08/30 by H. Kakugawa]
+\DeclareKanjiFamily{JT2}{gt}{}
+\DeclareRelationFont{JT2}{gt}{m}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT2}{gt}{m}{n}{<5> <6> <7> <8> <9> <10> sgen*tgothh
+    <10.95><12><14.4><17.28><20.74><24.88> tgothh10
+    <-> tgothh10
+    }{}
+\DeclareFontShape{JT2}{gt}{bx}{n}{<->ssub*gt/m/n}{}
+\endinput
+%% EOF

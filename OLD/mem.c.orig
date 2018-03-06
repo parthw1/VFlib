@@ -1,0 +1,68 @@
+/*
+ * mem.c  --- memory manager
+ *
+ */
+/*
+ * Copyright (C) 2001  Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * This file is part of the VFlib Library.  This library is free
+ * software; you can redistribute it and/or modify it under the terms of
+ * the GNU Library General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  This library is distributed in the hope
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Library General Public License for more details.
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
+
+#include "config.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+#if HAVE_STRINGS_H
+# include <strings.h>
+#endif
+#include <sys/types.h>
+#include <sys/param.h>
+
+#include "VFlib-3_6.h"
+#include "VFsys.h"
+
+
+
+Glocal void
+vf_free(void *p) 
+{
+  static  int  init = 0;
+  static  void *xaddr = NULL;
+
+  if (init == 0){
+    init = 1;
+    if (getenv("VFLIB_DEBUG_FREE") != NULL){
+      sscanf(getenv("VFLIB_DEBUG_FREE"), "%p", &xaddr);
+    }
+  }
+
+  if (p == NULL)
+    return;
+
+  if ((xaddr != NULL) && (p == xaddr)){
+    fprintf(stderr, "VFlib error in free\n");
+    abort();
+  }
+
+  free(p);
+}
+
+
+/*EOF*/

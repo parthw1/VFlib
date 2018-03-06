@@ -1,0 +1,13 @@
+\ProvidesFile{jy1kyk.fd}[1998/09/07 Kyokasyo (Horizontal)]
+\DeclareKanjiFamily{JY1}{kyk}{}
+\DeclareRelationFont{JY1}{kyk}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JY1}{kyk}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{kyk}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{kyk}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JY1}{kyk}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JY1}{kyk}{sl}{n}{ <-> dfkykmaa  }{}
+\DeclareFontShape{JY1}{kyk}{m}{n}{  <-> dfkykmaa  }{}
+\DeclareFontShape{JY1}{kyk}{sb}{n}{ <-> dfkykpaa  }{}
+\DeclareFontShape{JY1}{kyk}{b}{n}{  <-> dfkykpaa  }{}
+\DeclareFontShape{JY1}{kyk}{bx}{n}{ <-> dfkykpaa  }{}
+\endinput

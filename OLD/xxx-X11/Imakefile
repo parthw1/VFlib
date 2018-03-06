@@ -1,0 +1,14 @@
+x11.mk: Makefile
+	-rm -f x11.mk
+	touch x11.mk
+	@echo "PROJECTROOT=$(PROJECTROOT)"  >> x11.mk
+	@echo "INCROOT=$(INCROOT)"          >> x11.mk
+	@echo "USRLIBDIR=$(USRLIBDIR)"      >> x11.mk
+	@echo "XLIB=$(XLIB)"                >> x11.mk
+	@echo "XTOOLLIB=$(XTOOLLIB)"        >> x11.mk
+	@echo "XMLIB=$(XMLIB)"              >> x11.mk
+
+clean veryclean::
+	-rm x11.mk
+distclean::
+	-rm x11.mk Makefile *~ core *.core *.bak

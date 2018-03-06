@@ -1,0 +1,76 @@
+#  Makefile.in for VFlib3
+#  by Hirotsugu Kakugawa (h.kakugwa@computer.org)
+
+makedefault: default
+include make-sub
+
+#-------------------------------------------------
+LIBTOOL = ./libtool
+
+MAKE_SUBDIRS  = src ccv utils
+INST_SUBDIRS  = $(MAKE_SUBDIRS) doc t1lib ascii-jtex 
+CLEAN_SUBDIRS = $(MAKE_SUBDIRS) doc t1lib ascii-jtex vflibcaps
+
+default all:
+	for d in $(MAKE_SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done
+
+install:
+	@if [ ! -d $(bindir) ] ; then \
+	    ./recmkdir $(bindir); fi
+	@if [ ! -d $(libdir) ] ; then \
+	    ./recmkdir $(libdir); fi
+	@if [ ! -d $(runtimesitedir) ] ; then \
+	    ./recmkdir $(runtimesitedir); fi
+	@if [ ! -d $(runtimedir) ] ; then \
+	    ./recmkdir $(runtimedir); fi
+	@for d in $(INST_SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done
+	@echo "Installing vflibcaps..."
+	@for f in `ls ./vflibcaps/vflibcap*`; do \
+	   ./$(INSTALL_DATA) $$f $(runtimedir); done
+	@./$(INSTALL_PROGRAM) VFlib3-config $(bindir)
+
+uninstall:
+	@for d in $(INST_SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done
+	-$(RM) $(runtimedir)/vflibcap* 
+	-$(RMDIR) $(runtimedir)
+
+clean veryclean::
+	-for d in $(CLEAN_SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done
+distclean::
+	for d in $(CLEAN_SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done
+	-pwd=`pwd`; \
+	for d in `find $$pwd -type d -print | \
+	          grep '^.*-[0-9]\.[0-9.]*$$'` ; do \
+	  dir=`echo $$d | sed 's/^\(.*\)-[0-9.]*$$/\1/'`; \
+	  if test -h $$dir; then \
+	    echo Removing a symbolic link: $$dir; \
+	    $(RM) $$dir; \
+	  fi; \
+	done
+#	(cd X11; rm -f x11.mk Makefile *.bak *~ core *.core)
+	-$(RM) make-sub VFlib3-config WebFiles.tar
+
+wc:
+	find . -name '*.[c,h]' -print | xargs wc
+
+# DEVELOPERS ONLY
+web-files:
+	-$(RM) WebFiles.tar
+	(cd doc;           tar cvf    ../WebFiles.tar  *.ps *.html )
+	(cd doc/Paper1;    tar rvf ../../WebFiles.tar  *.ps )
+	(cd doc/Paper2-ja; tar rvf ../../WebFiles.tar  *.ps )
+	(cd .;             tar rvf     ./WebFiles.tar  CHANGES )
+	(cd .;             tar rvf     ./WebFiles.tar  ANNOUNCE*.txt )
+	(cd utils;         tar rvf    ../WebFiles.tar \
+			     ctext2pgm/Samples/*.html \
+			     ctext2pgm/Samples/CTEXT \
+			     ctext2pgm/Samples/CTEXT-MULE-ARABIC \
+			     ctext2pgm/Samples/CTEXT-HEBREW \
+			     hyaku/*.html hyaku/GIF )
+
+#EOF

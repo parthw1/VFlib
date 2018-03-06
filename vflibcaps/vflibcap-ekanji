@@ -1,0 +1,488 @@
+;; -*-Lisp-*-
+
+;;
+;; an example of 'vflibcap'
+;; by h.kakugawa@computer.org
+;;
+
+
+;; This vflibcap file defines fonts for Japanese pTeX System by ASCII Coop.
+;;  * Regular Japanese fonts (min, goth, tmin, and tgoth) are defined
+;;    to use eKanji bitmap font files.
+;;  * Optional Kanji fonts (ekan10??, ekan20??, and ekan30??) are defined 
+;;    to use ekan0010.d24, ekan0020.d24, and ekan0030.d24 font files,
+;;    respectively.
+;;  * See $VFLIB/ascii-jtex/eKanji/ directory for macro definition files
+;;    to use these fonts. (You must install macro packages and TFM files.)
+
+
+;; -----------------------------------------------------------------
+;;   VFlib Default
+;; -----------------------------------------------------------------
+(define-default  VFlib
+  ;; hint to find font class from font name for fast font open
+  (extension-hints  ("pk" TeX) ("gf" gf) ("tfm" tfm)
+		    (".d24" ekanji) (".D24" ekanji))
+  ;; implicit font classes
+  (implicit-font-classes  ekanji)
+
+  ;; uncompression programs
+  (uncompression-programs  (".Z" "zcat") (".gz" "gzip -cd"))
+
+  ;; a list of default values of variables
+  ;; *Note* "variable-values" must come before variable uses
+  (variable-values  (TeX_DPI               "300")
+		    (TeX_USE_KPATHSEA      "Yes")
+		    (TeX_KPATHSEA_MODE     "cx") 
+		    (TeX_KPATHSEA_PROGRAM  "vflserver"))
+
+  ;; kpathsea: enabled/disabled 
+  (use-kpathsea           $TeX_USE_KPATHSEA)
+  ;; kpathsea device mode (e.g., "cx")
+  (kpathsea-mode          $TeX_KPATHSEA_MODE)
+  ;; kpathsea device dpi (e.g., 300)
+  (kpathsea-dpi           $TeX_DPI)
+  ;; kpathsea program name (e.g., "/usr/local/bin/xdvi")
+  (kpathsea-program-name  $TeX_KPATHSEA_PROGRAM)
+
+  ;; encoding/charset conversion files
+  (code-conversion-files  
+   "iso8859-1_unicode.ccv" "iso8859-2_unicode.ccv" "iso8859-3_unicode.ccv"
+   "iso8859-4_unicode.ccv" "iso8859-5_unicode.ccv" "iso8859-6_unicode.ccv"
+   "iso8859-7_unicode.ccv" "iso8859-8_unicode.ccv" "iso8859-9_unicode.ccv"
+   "iso8859-10_unicode.ccv" "iso8859-13_unicode.ccv" 
+   "iso8859-14_unicode.ccv" "iso8859-15_unicode.ccv"
+   "jisx0208_unicode.ccv" "jisx0208sjis_unicode.ccv" 
+   "jisx0201_unicode.ccv" "jisx0212_unicode.ccv" 
+   "ksc5601_unicode.ccv" "ksx1001_unicode.ccv"
+   "gb12345_unicode.ccv" "gb2312_unicode.ccv"
+   "big5_unicode.ccv" "cns11643-1_unicode.ccv" "cns11643-2_unicode.ccv"
+   "iso8859-5_koi8-r.ccv" "koi8-r_iso8859-5.ccv" "koi8-r_unicode.ccv"))
+
+
+;; -----------------------------------------------------------------
+;;   eKanji Font Class Default 
+;;   See also http://www.zinbun.kyoto-u.ac.jp/~ekanji/
+;; -----------------------------------------------------------------
+(define-default  ekanji
+  ;; font directories
+  (font-directories "/usr/local/share/fonts/eKanji"
+		    "/usr/local/share/fonts/ekanji"
+		    "/usr/share/fonts/eKanji"
+		    "/usr/share/fonts/ekanji" )
+  ;; dot size of font files
+  (font-dot-size  24)
+  ;; pixel size
+  (pixel-size  24)
+  ;; point size, dpi
+  (point-size  10) (dpi 72.27)
+  ;; writing direction
+  (writing-direction  horizontal)
+  ;; debug
+  ;;(debug "cCf")
+  ;; properties for all fonts of this font class
+  (properties  ("FONT_CLASS" "EKANJI")))
+
+;; -----------------------------------------------------------------
+;;   TeX-related Font Class Default and TeX Font Mapper
+;; -----------------------------------------------------------------
+(define-default  TeX
+  ;; TFM file directories
+  (tfm-directories  "TEXMF"
+		    "/usr/local/share/fonts/bakoma/tfm/")
+  ;; possible extensions of TFM files
+  (tfm-filename-extensions  ".tfm" ".ofm")
+  ;; font name mapping rules
+  (font-mapping
+   ((ascii-jtex-kanji "%f.jtex") 
+    "min*" "goth*" "tmin*" "tgoth*" "ekan*" "tekan*")
+   ((pk "%f.%dpk") *)
+   ((gf "%f.%dgf") *)
+   ;;((type1 "%f.pfb" point-size-from-tfm (magnification-adjustment 1.0)) *)
+   ;;((truetype "%f.ttf" point-size-from-tfm (magnification-adjustment 1.0)) *)
+   ;;((vf "%f.vf") *)
+   ((tfm "%f.%dtfm")  *))
+  ;; accuracy of device resolutions, used with 'resolution-corrections'
+  (resolution-accuracy 0.02)
+  ;; font resolution values for each device resolutions.
+  (resolution-corrections
+   (240  ;; epson, canonlbp
+    240  263  288  312  346  415  498  597)
+   (300  ;; cx
+    300  329  360  432  518  622  746  896 1075 1290  240 270)
+   (400  ;; sparcptr
+    400  438  480  576  691  829  995 1194 1433 1720  320 360)
+   (600  ;; ljfour
+    600  657  720  864 1037 1244 1493 1792 2150 2580  480 540))
+  ;; default device resolution
+  (dpi $TeX_DPI))
+
+;; -----------------------------------------------------------------
+;;   TeX GF Font Class Default
+;; -----------------------------------------------------------------
+(define-default  gf
+  ;; font directories
+  (font-directories  "TEXMF" 
+		     "/usr/local/TeX/gf//")
+  ;; properties for all fonts of this font class
+  (properties  ("FONT_CLASS" "GF")) )
+
+;; -----------------------------------------------------------------
+;;   TeX PK Font Class Default
+;; -----------------------------------------------------------------
+(define-default  pk
+  ;;(debug "m")  ;; debug flag
+  ;; font directories
+  (font-directories  "TEXMF"
+		     "/usr/local/TeX/pk//")
+  ;; properties for all fonts of this font class
+  (properties  ("FONT_CLASS" "PK")) )
+
+;; -----------------------------------------------------------------
+;;   TeX TFM Font Class Default
+;; -----------------------------------------------------------------
+(define-default  tfm
+  ;; font directories
+  (font-directories  "TEXMF"
+		     "/usr/local/TeX/tfm//")
+  ;; glyph style: "fill" (all pixels black) or "empty" (all pixels white)
+  (glyph-style  "fill")
+  ;; properties for all fonts of this font class
+  (properties  ("FONT_CLASS" "TFM")) )
+
+;; -----------------------------------------------------------------
+;;   ASCII-jTeX Kanji Font Class Default
+;; -----------------------------------------------------------------
+(define-default  ascii-jtex-kanji
+  ;; TFM file directories
+  (tfm-directories  "TEXMF")
+  ;; possible extensions of TFM files
+  (tfm-filename-extensions ".tfm")
+  ;; Suffix for name mapping
+  ;; (e.g., implicit font "min10.300pk" is mapped to "min10.jtex")
+  (implicit-font-mapping-suffix ".jtex"))
+
+
+
+
+;; -----------------------------------------------------------------
+
+;;
+;; Direct Access to eKanji Font Files.
+;;
+
+;; Unicode
+(define-font  ekan0010    (font-class ekanji) (font-file "ekan0010.d24"))
+;; KangXi
+(define-font  ekan0020    (font-class ekanji) (font-file "ekan0020.d24"))
+;; Morohashi
+(define-font  ekan0030    (font-class ekanji) (font-file "ekan0030.d24"))
+;; JIS X 0208
+(define-font  jisx9052    (font-class ekanji) (font-file "jisx9052.d24"))
+
+
+;; -----------------------------------------------------------------
+
+;;
+;; Example Font Definitions
+;;
+
+;; JISX0208 font (using Unicode font file).
+(define-font  ek-jisx0208
+  (font-class ekanji)  (font-file "jisx9052.d24")
+  (character-set "eKanji")      (encoding "ISO2022")
+  (font-character-set "eKanji") (font-encoding "SEQUENTIAL2-1"))
+
+;; JISX0212 font (using Unicode font file).
+(define-font  ek-jisx0212
+  (font-class ekanji) (font-file "ekan0010.d24")
+  (mock-font-encoding with-offset -0x4dff)
+  (character-set "JISX0212")      (encoding "ISO2022")
+  (font-character-set "Unicode") (font-encoding "Unicode"))
+
+;; Unicode font (using Unicode font file).
+(define-font  ek-unicode
+  (font-class ekanji) (font-file "ekan0010.d24")
+  (mock-font-encoding with-offset -0x4dff))
+
+;; Morohashi Dai-Kanwa Dictionary characters. 94x94 scheme.
+(define-font  ek3b-0 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x94 0))
+(define-font  ek3b-1 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x94 1))
+(define-font  ek3b-2 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x94 2))
+(define-font  ek3b-3 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x94 3))
+(define-font  ek3b-4 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x94 4))
+(define-font  ek3b-5 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x94 5))
+
+;; Morohashi Dai-Kanwa Dictionary characters. 94x60 scheme.
+(define-font  ek3a-0 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 0))
+(define-font  ek3a-1 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 1))
+(define-font  ek3a-2 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 2))
+(define-font  ek3a-3 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 3))
+(define-font  ek3a-4 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 4))
+(define-font  ek3a-5 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 5))
+(define-font  ek3a-6 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 6))
+(define-font  ek3a-7 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 7))
+(define-font  ek3a-8 (font-class ekanji) (font-file "ekan0030.d24")
+  (mock-font-encoding subblocks-94x60 8))
+
+
+
+;; -----------------------------------------------------------------
+;; Font Definitions for Japanese pTeX by ASCII Coop.
+
+;; *** Horizontal 
+
+;; Definitions for "min10.jtex" and other fonts.  (JISX0208) 
+(define-macro min-goth-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-min-goth)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "ekanji.adj"))
+(define-font min5.jtex     (kanji-font-point-size  5) min-goth-common)
+(define-font min6.jtex     (kanji-font-point-size  6) min-goth-common)
+(define-font min7.jtex     (kanji-font-point-size  7) min-goth-common)
+(define-font min8.jtex     (kanji-font-point-size  8) min-goth-common)
+(define-font min9.jtex     (kanji-font-point-size  9) min-goth-common)
+(define-font min10.jtex    (kanji-font-point-size 10) min-goth-common)
+(define-font goth5.jtex    (kanji-font-point-size  5) min-goth-common)
+(define-font goth6.jtex    (kanji-font-point-size  6) min-goth-common)
+(define-font goth7.jtex    (kanji-font-point-size  7) min-goth-common)
+(define-font goth8.jtex    (kanji-font-point-size  8) min-goth-common)
+(define-font goth9.jtex    (kanji-font-point-size  9) min-goth-common)
+(define-font goth10.jtex   (kanji-font-point-size 10) min-goth-common)
+(define-macro ekanji-jisx0208-common-h
+  (font-class ekanji) 
+  (font-file "jisx9052.d24")
+  (writing-direction "holizontal")
+  ;;(vector-to-bbx-upper-left 0.00 0.87)
+  (character-set "eKanji")      (encoding "ISO2022")
+  (font-character-set "eKanji") (font-encoding "SEQUENTIAL2-1"))
+(define-font  jtex-min-goth      ekanji-jisx0208-common-h)
+
+;; Definitions for "minh10.jtex" and other fonts. (JISX0212) 
+(define-macro minh-gothh-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-minh-gothh)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "ekanji.adj"))
+(define-font minh5.jtex     (kanji-font-point-size  5) minh-gothh-common)
+(define-font minh6.jtex     (kanji-font-point-size  6) minh-gothh-common)
+(define-font minh7.jtex     (kanji-font-point-size  7) minh-gothh-common)
+(define-font minh8.jtex     (kanji-font-point-size  8) minh-gothh-common)
+(define-font minh9.jtex     (kanji-font-point-size  9) minh-gothh-common)
+(define-font minh10.jtex    (kanji-font-point-size 10) minh-gothh-common)
+(define-font gothh5.jtex    (kanji-font-point-size  5) minh-gothh-common)
+(define-font gothh6.jtex    (kanji-font-point-size  6) minh-gothh-common)
+(define-font gothh7.jtex    (kanji-font-point-size  7) minh-gothh-common)
+(define-font gothh8.jtex    (kanji-font-point-size  8) minh-gothh-common)
+(define-font gothh9.jtex    (kanji-font-point-size  9) minh-gothh-common)
+(define-font gothh10.jtex   (kanji-font-point-size 10) minh-gothh-common)
+(define-macro ekanji-jisx0212-common-h
+  (font-class ekanji)  (font-file "ekan0010.d24")
+  (writing-direction "horizontal")
+  ;;(vector-to-bbx-upper-left 0.00 0.87)
+  (mock-font-encoding with-offset -0x4dff)
+  (character-set "JISX0212")      (encoding "ISO2022")
+  (font-character-set "Unicode") (font-encoding "Unicode"))
+(define-font  jtex-minh-gothh      ekanji-jisx0212-common-h)
+
+;; Definitions for "ekan10??.pk" 
+(define-macro ekan10-common
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "ekanji.adj"))
+(define-font ekan1000.jtex   ekan10-common  (kanji-font ek1000))
+(define-font ekan1001.jtex   ekan10-common  (kanji-font ek1001))
+(define-font ekan1002.jtex   ekan10-common  (kanji-font ek1002))
+(define-font ekan1003.jtex   ekan10-common  (kanji-font ek1003))
+(define-font ekan1004.jtex   ekan10-common  (kanji-font ek1004))
+(define-macro ek10-common  (font-class ekanji) 
+  (writing-direction "horizontal") (font-file "ekan0010.d24"))
+(define-font ek1000  ek10-common (mock-font-encoding subblocks-94x60 0))
+(define-font ek1001  ek10-common (mock-font-encoding subblocks-94x60 1))
+(define-font ek1002  ek10-common (mock-font-encoding subblocks-94x60 2))
+(define-font ek1003  ek10-common (mock-font-encoding subblocks-94x60 3))
+(define-font ek1004  ek10-common (mock-font-encoding subblocks-94x60 4))
+
+;; Definitions for "ekan20??.pk" 
+(define-macro ekan20-common
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "ekanji.adj"))
+(define-font ekan2000.jtex   ekan20-common  (kanji-font ek2000))
+(define-font ekan2001.jtex   ekan20-common  (kanji-font ek2001))
+(define-font ekan2002.jtex   ekan20-common  (kanji-font ek2002))
+(define-font ekan2003.jtex   ekan20-common  (kanji-font ek2003))
+(define-font ekan2004.jtex   ekan20-common  (kanji-font ek2004))
+(define-font ekan2005.jtex   ekan20-common  (kanji-font ek2005))
+(define-font ekan2006.jtex   ekan20-common  (kanji-font ek2006))
+(define-font ekan2007.jtex   ekan20-common  (kanji-font ek2007))
+(define-font ekan2008.jtex   ekan20-common  (kanji-font ek2008))
+(define-macro ek20-common  (font-class ekanji) 
+  (writing-direction "horizontal") (font-file "ekan0020.d24"))
+(define-font ek2000  ek20-common (mock-font-encoding subblocks-94x60 0))
+(define-font ek2001  ek20-common (mock-font-encoding subblocks-94x60 1))
+(define-font ek2002  ek20-common (mock-font-encoding subblocks-94x60 2))
+(define-font ek2003  ek20-common (mock-font-encoding subblocks-94x60 3))
+(define-font ek2004  ek20-common (mock-font-encoding subblocks-94x60 4))
+(define-font ek2005  ek20-common (mock-font-encoding subblocks-94x60 5))
+(define-font ek2006  ek20-common (mock-font-encoding subblocks-94x60 6))
+(define-font ek2007  ek20-common (mock-font-encoding subblocks-94x60 7))
+(define-font ek2008  ek20-common (mock-font-encoding subblocks-94x60 8))
+
+;; Definitions for "ekan30??.pk" 
+(define-macro ekan30-common
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "ekanji.adj"))
+(define-font ekan3000.jtex   ekan30-common  (kanji-font ek3000))
+(define-font ekan3001.jtex   ekan30-common  (kanji-font ek3001))
+(define-font ekan3002.jtex   ekan30-common  (kanji-font ek3002))
+(define-font ekan3003.jtex   ekan30-common  (kanji-font ek3003))
+(define-font ekan3004.jtex   ekan30-common  (kanji-font ek3004))
+(define-font ekan3005.jtex   ekan30-common  (kanji-font ek3005))
+(define-font ekan3006.jtex   ekan30-common  (kanji-font ek3006))
+(define-font ekan3007.jtex   ekan30-common  (kanji-font ek3007))
+(define-font ekan3008.jtex   ekan30-common  (kanji-font ek3008))
+(define-macro ek30-common  (font-class ekanji) 
+  (writing-direction "horizontal") (font-file "ekan0030.d24"))
+(define-font ek3000  ek30-common (mock-font-encoding subblocks-94x60 0))
+(define-font ek3001  ek30-common (mock-font-encoding subblocks-94x60 1))
+(define-font ek3002  ek30-common (mock-font-encoding subblocks-94x60 2))
+(define-font ek3003  ek30-common (mock-font-encoding subblocks-94x60 3))
+(define-font ek3004  ek30-common (mock-font-encoding subblocks-94x60 4))
+(define-font ek3005  ek30-common (mock-font-encoding subblocks-94x60 5))
+(define-font ek3006  ek30-common (mock-font-encoding subblocks-94x60 6))
+(define-font ek3007  ek30-common (mock-font-encoding subblocks-94x60 7))
+(define-font ek3008  ek30-common (mock-font-encoding subblocks-94x60 8))
+
+
+;; *** Vertical 
+
+;; Definitions for "min10.jtex" and other fonts.  (JISX0208) 
+(define-macro tmin-tgoth-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-tmin-tgoth)  
+  (kanji-font-magnification 0.85) (metric-adjustment-file "tekanji.adj"))
+(define-font tmin5.jtex    (kanji-font-point-size  5) tmin-tgoth-common)
+(define-font tmin6.jtex    (kanji-font-point-size  6) tmin-tgoth-common)
+(define-font tmin7.jtex    (kanji-font-point-size  7) tmin-tgoth-common)
+(define-font tmin8.jtex    (kanji-font-point-size  8) tmin-tgoth-common)
+(define-font tmin9.jtex    (kanji-font-point-size  9) tmin-tgoth-common)
+(define-font tmin10.jtex   (kanji-font-point-size 10) tmin-tgoth-common)
+(define-font tgoth5.jtex   (kanji-font-point-size  5) tmin-tgoth-common)
+(define-font tgoth6.jtex   (kanji-font-point-size  6) tmin-tgoth-common)
+(define-font tgoth7.jtex   (kanji-font-point-size  7) tmin-tgoth-common)
+(define-font tgoth8.jtex   (kanji-font-point-size  8) tmin-tgoth-common)
+(define-font tgoth9.jtex   (kanji-font-point-size  9) tmin-tgoth-common)
+(define-font tgoth10.jtex  (kanji-font-point-size 10) tmin-tgoth-common)
+(define-macro ekanji-jisx0208-common-v
+  (font-class ekanji) 
+  (font-file "jisx9052.d24")
+  (writing-direction "vertical")
+  ;;(vector-to-bbx-upper-left -0.50 0.00)
+  (character-set "eKanji")      (encoding "ISO2022")
+  (font-character-set "eKanji") (font-encoding "SEQUENTIAL2-1"))
+(define-font  jtex-tmin-tgoth    ekanji-jisx0208-common-v)
+
+;; Definitions for "tminh10.jtex" and other fonts. (JISX0212) 
+(define-macro tminh-tgothh-common
+  (font-class ascii-jtex-kanji) (kanji-font jtex-tminh-tgothh)  
+  (kanji-font-magnification 0.85) (metric-adjustment-file "tekanji.adj"))
+(define-font tminh5.jtex    (kanji-font-point-size  5) tminh-tgothh-common)
+(define-font tminh6.jtex    (kanji-font-point-size  6) tminh-tgothh-common)
+(define-font tminh7.jtex    (kanji-font-point-size  7) tminh-tgothh-common)
+(define-font tminh8.jtex    (kanji-font-point-size  8) tminh-tgothh-common)
+(define-font tminh9.jtex    (kanji-font-point-size  9) tminh-tgothh-common)
+(define-font tminh10.jtex   (kanji-font-point-size 10) tminh-tgothh-common)
+(define-font tgothh5.jtex   (kanji-font-point-size  5) tminh-tgothh-common)
+(define-font tgothh6.jtex   (kanji-font-point-size  6) tminh-tgothh-common)
+(define-font tgothh7.jtex   (kanji-font-point-size  7) tminh-tgothh-common)
+(define-font tgothh8.jtex   (kanji-font-point-size  8) tminh-tgothh-common)
+(define-font tgothh9.jtex   (kanji-font-point-size  9) tminh-tgothh-common)
+(define-font tgothh10.jtex  (kanji-font-point-size 10) tminh-tgothh-common)
+(define-macro ekanji-jisx0212-common-v
+  (font-class ekanji)  (font-file "ekan0010.d24")
+  (writing-direction "vertical")
+  ;;(vector-to-bbx-upper-left -0.50 0.00)
+  (mock-font-encoding with-offset -0x4dff)
+  (character-set "JISX0212")      (encoding "ISO2022")
+  (font-character-set "Unicode") (font-encoding "Unicode"))
+(define-font  jtex-tminh-tgothh    ekanji-jisx0212-common-v)
+
+;; Definitions for "tekan10??.pk" 
+(define-macro tekan10-common
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "tekanji.adj"))
+(define-font tekan1000.jtex   tekan10-common  (kanji-font tek1000))
+(define-font tekan1001.jtex   tekan10-common  (kanji-font tek1001))
+(define-font tekan1002.jtex   tekan10-common  (kanji-font tek1002))
+(define-font tekan1003.jtex   tekan10-common  (kanji-font tek1003))
+(define-font tekan1004.jtex   tekan10-common  (kanji-font tek1004))
+(define-macro tek10-common  (font-class ekanji) 
+  (writing-direction "horizontal") (font-file "ekan0010.d24"))
+(define-font tek1000  tek10-common (mock-font-encoding subblocks-94x60 0))
+(define-font tek1001  tek10-common (mock-font-encoding subblocks-94x60 1))
+(define-font tek1002  tek10-common (mock-font-encoding subblocks-94x60 2))
+(define-font tek1003  tek10-common (mock-font-encoding subblocks-94x60 3))
+(define-font tek1004  tek10-common (mock-font-encoding subblocks-94x60 4))
+
+;; Definitions for "tekan20??.pk" 
+(define-macro tekan20-common
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "tekanji.adj"))
+(define-font tekan2000.jtex   tekan20-common  (kanji-font tek2000))
+(define-font tekan2001.jtex   tekan20-common  (kanji-font tek2001))
+(define-font tekan2002.jtex   tekan20-common  (kanji-font tek2002))
+(define-font tekan2003.jtex   tekan20-common  (kanji-font tek2003))
+(define-font tekan2004.jtex   tekan20-common  (kanji-font tek2004))
+(define-font tekan2005.jtex   tekan20-common  (kanji-font tek2005))
+(define-font tekan2006.jtex   tekan20-common  (kanji-font tek2006))
+(define-font tekan2007.jtex   tekan20-common  (kanji-font tek2007))
+(define-font tekan2008.jtex   tekan20-common  (kanji-font tek2008))
+(define-macro tek20-common  (font-class ekanji) 
+  (writing-direction "horizontal") (font-file "ekan0020.d24"))
+(define-font tek2000  tek20-common (mock-font-encoding subblocks-94x60 0))
+(define-font tek2001  tek20-common (mock-font-encoding subblocks-94x60 1))
+(define-font tek2002  tek20-common (mock-font-encoding subblocks-94x60 2))
+(define-font tek2003  tek20-common (mock-font-encoding subblocks-94x60 3))
+(define-font tek2004  tek20-common (mock-font-encoding subblocks-94x60 4))
+(define-font tek2005  tek20-common (mock-font-encoding subblocks-94x60 5))
+(define-font tek2006  tek20-common (mock-font-encoding subblocks-94x60 6))
+(define-font tek2007  tek20-common (mock-font-encoding subblocks-94x60 7))
+(define-font tek2008  tek20-common (mock-font-encoding subblocks-94x60 8))
+
+;; Definitions for "tekan30??.pk" 
+(define-macro tekan30-common
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (kanji-font-magnification 0.85) (metric-adjustment-file "tekanji.adj"))
+(define-font tekan3000.jtex   tekan30-common  (kanji-font tek3000))
+(define-font tekan3001.jtex   tekan30-common  (kanji-font tek3001))
+(define-font tekan3002.jtex   tekan30-common  (kanji-font tek3002))
+(define-font tekan3003.jtex   tekan30-common  (kanji-font tek3003))
+(define-font tekan3004.jtex   tekan30-common  (kanji-font tek3004))
+(define-font tekan3005.jtex   tekan30-common  (kanji-font tek3005))
+(define-font tekan3006.jtex   tekan30-common  (kanji-font tek3006))
+(define-font tekan3007.jtex   tekan30-common  (kanji-font tek3007))
+(define-font tekan3008.jtex   tekan30-common  (kanji-font tek3008))
+(define-macro tek30-common  (font-class ekanji) 
+  (writing-direction "horizontal") (font-file "ekan0030.d24"))
+(define-font tek3000  tek30-common (mock-font-encoding subblocks-94x60 0))
+(define-font tek3001  tek30-common (mock-font-encoding subblocks-94x60 1))
+(define-font tek3002  tek30-common (mock-font-encoding subblocks-94x60 2))
+(define-font tek3003  tek30-common (mock-font-encoding subblocks-94x60 3))
+(define-font tek3004  tek30-common (mock-font-encoding subblocks-94x60 4))
+(define-font tek3005  tek30-common (mock-font-encoding subblocks-94x60 5))
+(define-font tek3006  tek30-common (mock-font-encoding subblocks-94x60 6))
+(define-font tek3007  tek30-common (mock-font-encoding subblocks-94x60 7))
+(define-font tek3008  tek30-common (mock-font-encoding subblocks-94x60 8))
+
+
+;; -----------------------------------------------------------------
+;; EOF

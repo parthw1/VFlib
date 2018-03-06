@@ -1,0 +1,19 @@
+COMMENT VFlib 3.
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  mincho
+open1  goth13
+open1  maru08
+open1  min08
+open1  min12
+
+bitmap1 !0 0x4567 
+bitmap1 !1 0x4567 
+bitmap1 !2 0x4567 
+bitmap1 !3 0x4567 
+bitmap1 !4 0x4567 
+
+quit

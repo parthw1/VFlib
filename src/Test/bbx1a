@@ -1,0 +1,13 @@
+open1 f5ajchm3.ttf
+fontbbx1 !!
+
+open1 timR24.pcf
+fontbbx1 !!
+
+open2 f5ajchm3.ttf
+fontbbx2 !!
+
+open2 timR24.pcf
+fontbbx2 !!
+
+quit

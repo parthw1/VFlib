@@ -1,0 +1,74 @@
+; tdfkaimd.adj (DynaFont "Kaisyo Medium Bold" font)
+;   Metric adjustment file for Kanji TrueType font file.
+
+; See tminXX.pl (or generete it by tftopl command) to see 
+; the relation between code point and char-type.
+;   Shift bitmap to right:  give positive value for delta-X
+;   Shift bitmap to up:  give positive value for delta-Y
+
+;--------------------------------------------------------
+; Writing direction and Rotation semantics
+;--------------------------------------------------------
+(direction vertical)        ;; "vertical" or "horizontal"
+(rotation-semantics ptex)   ;; "ptex" or "jisx0208"
+
+;--------------------------------------------------------
+; Semantics for delta-X and delta-Y
+;--------------------------------------------------------
+(semantics design-size)
+
+;--------------------------------------------------------
+;  global shift
+;--------------------------------------------------------
+(char-all -0.06 0.06)
+
+;--------------------------------------------------------
+;  char-type & delta
+;--------------------------------------------------------
+;        char-type  delta-X  delta-Y
+(char-type   0     -0.48    -0.85 )  ; Kanji
+(char-type   1      0.15    -0.30 )  ; Comma and Period
+(char-type   2      0.15    -0.30 )  ; Touten and Kuten
+(char-type   3     -0.38    -0.60 )  ; small Kana
+(char-type   4     -0.45    -0.85 )  ; ? and ! 
+(char-type   5      0.00     0.00 )  ; Zenkaku-Yakubutsu 
+(char-type   6     -0.28     0.50 )  ; opening Kakko
+(char-type   7     -0.52    -0.63 )  ; Nakatsuki-Yakubutsu 
+(char-type   8     -0.28    -0.10 )  ; closing Kakko
+;--------------------------------------------------------
+
+;--------------------------------------------------------
+; char-code and delta
+;    --- "char-type & delta" given above is overridden
+;--------------------------------------------------------
+;          char-code  delta-X  delta-Y
+(char-code  0x2133   -0.45    -0.75 ) ; Chon
+(char-code  0x2134   -0.45    -0.83 ) ; Chon Tenten
+(char-code  0x2135   -0.45    -0.75 ) ; Chon
+(char-code  0x2136   -0.45    -0.80 ) ; Chon Tenten
+(char-code  0x2137   -0.45    -0.75 ) ; Onaji
+(char-code  0x2139   -0.52    -0.73 ) ; No-Ma (Onaji)
+
+(char-code  0x213d   -0.28     0.00 ) ; hyphen (long)
+(char-code  0x2144   -0.28    -0.10 ) ; 3ten
+(char-code  0x2145   -0.28    -0.10 ) ; 2ten
+
+(char-code  0x213e   -0.28     0.25 ) ; hyphen (short)
+(char-code  0x2142   -0.28     0.25 ) ; Heikou Bou
+(char-code  0x2143   -0.28     0.25 ) ; Tate Bou
+
+(char-code  0x2146   -1.20    -0.90 ) ; '
+(char-code  0x2148   -1.10    -0.90 ) ; `
+(char-code  0x2147    0.20    -0.90 ) ; '' 
+(char-code  0x2149    0.10    -0.90 ) ; ``
+
+(char-code  0x213c   -0.32     0.00 ) ; ChoOn
+(char-code  0x2141   -0.28     0.05 ) ; Nami
+
+(char-code  0x2154   -0.28     0.50 ) ; <<
+(char-code  0x2155   -0.28    -0.10 ) ; >>
+
+(char-code  0x2161   -0.28     0.00 ) ; =
+
+;--------------------------------------------------------
+;EOF

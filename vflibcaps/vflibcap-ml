@@ -1,0 +1,865 @@
+;;; -*-Lisp-*-
+
+;;
+;; vflibcap for testing various character stes
+;; by h.kakugawa@computer.org
+;;
+
+
+;; -----------------------------------------------------------------
+;;   VFlib Default
+;; -----------------------------------------------------------------
+(define-default VFlib
+  (extension-hints  ("pk" TeX) ("pcf" pcf) 
+		    (".ttf" truetype) (".ttc" truetype)
+		    (".pfb" type1) (".pfa" type1) )
+  (implicit-font-classes)
+  (uncompression-programs  (".Z" "zcat") (".gz" "gzip -cd"))
+  (variable-values  (TeX_USE_KPATHSEA      "Yes")
+		    (TeX_DPI               "300")  ;; or "600"
+		    (TeX_KPATHSEA_MODE     "cx")   ;; or "ljfour"
+		    (TeX_KPATHSEA_PROGRAM  "vflserver"))
+  (use-kpathsea           $TeX_USE_KPATHSEA)
+  (kpathsea-mode          $TeX_KPATHSEA_MODE)
+  (kpathsea-dpi           $TeX_DPI)
+  (kpathsea-program-name  $TeX_KPATHSEA_PROGRAM)
+  (code-conversion-files  
+   "iso8859-1_unicode.ccv" "iso8859-2_unicode.ccv" "iso8859-3_unicode.ccv"
+   "iso8859-4_unicode.ccv" "iso8859-5_unicode.ccv" "iso8859-6_unicode.ccv"
+   "iso8859-7_unicode.ccv" "iso8859-8_unicode.ccv" "iso8859-9_unicode.ccv"
+   "iso8859-10_unicode.ccv" "iso8859-13_unicode.ccv" 
+   "iso8859-14_unicode.ccv" "iso8859-15_unicode.ccv"
+   "jisx0208_unicode.ccv" "jisx0208sjis_unicode.ccv" 
+   "jisx0201_unicode.ccv" "jisx0212_unicode.ccv" 
+   "ksc5601_unicode.ccv" "ksx1001_unicode.ccv"
+   "gb12345_unicode.ccv" "gb2312_unicode.ccv"
+   "big5_unicode.ccv" "cns11643-1_unicode.ccv" "cns11643-2_unicode.ccv"
+   "iso8859-5_koi8-r.ccv" "koi8-r_iso8859-5.ccv" "koi8-r_unicode.ccv"))
+
+
+;; -----------------------------------------------------------------
+;;   TeX-related Font Class Default and TeX Font Mapper
+;; -----------------------------------------------------------------
+(define-default  TeX
+  (tfm-directories  "TEXMF")
+  (tfm-filename-extensions  ".tfm")
+  (font-mapping
+   ;; Japanese Kanji fonts
+   ((ascii-jtex-kanji "%f.jtex")
+    "min*" "goth*" "tmin*" "tgoth*" "fj*" "tfj*" "df*" "tdf*" "rc*" "trc*")
+   ;; PK, GF fonts
+   ((pk "%f.%dpk") (gf "%f.%dgf") *)
+   ;; Type 1 fonts (probably found in /usr/local/share/texmf/fonts/type1/ )
+   ((type1 "%f.pfb" point-size-from-tfm (magnification-adjustment 1.0)) *)
+   ;; VF fonts
+   ((vf "%f.vf") *)
+   ;; If everything fails, use "black square" as substitue of request fonts
+   ((tfm "%f.%dtfm") *))
+  (resolution-accuracy 0.02)
+  (resolution-corrections
+   (240  ;; epson, canonlbp
+    240  263  288  312  346  415  498  597)
+   (300  ;; cx
+    300  329  360  432  518  622  746  896 1075 1290  240 270)
+   (400  ;; sparcptr
+    400  438  480  576  691  829  995 1194 1433 1720  320 360)
+   (600  ;; ljfour
+    600  657  720  864 1037 1244 1493 1792 2150 2580  480 540))
+  (dpi $TeX_DPI))
+
+;; -----------------------------------------------------------------
+;;   GF Font Class Default
+;; -----------------------------------------------------------------
+(define-default gf
+  (font-directories  "TEXMF"))
+
+;; -----------------------------------------------------------------
+;;   PK Font Class Default
+;; -----------------------------------------------------------------
+(define-default pk
+  (font-directories  "TEXMF"))
+
+;; -----------------------------------------------------------------
+;;   VF Font Class Default
+;; -----------------------------------------------------------------
+(define-default vf
+  (font-directories  "TEXMF")
+  (font-mapping
+   ((* "%f.%dpk") (type1 "%f.pfb" point-size-from-tfm)  *) )
+  (open-style "try")     ;; "none", "try", or "require"
+  (glyph-style "fill"))  ;; "fill", or "empty"
+
+;; -----------------------------------------------------------------
+;;   TFM Font Class Default
+;; -----------------------------------------------------------------
+(define-default tfm
+  (glyph-style  "fill"))
+
+;; -----------------------------------------------------------------
+;;   ASCII-jTeX Kanji fonts
+;; -----------------------------------------------------------------
+(define-default  ascii-jtex-kanji
+  (tfm-directories  "TEXMF")
+  (tfm-filename-extensions ".tfm")
+  (implicit-font-mapping-suffix ".jtex"))
+
+;; -----------------------------------------------------------------
+;; Type1 Font Class Default
+;; -----------------------------------------------------------------
+(define-default type1
+  (font-directories  "TEXMF")
+  (afm-directories   "TEXMF")
+  (log-level "none")
+  (dpi $TeX_DPI))
+
+;; -----------------------------------------------------------------
+;; TrueType Font Class Default
+;; -----------------------------------------------------------------
+(define-default truetype
+  (font-directories
+     "TEXMF"
+     "/usr/local/share/fonts/FontCity2//"
+     "/usr/local/share/fonts/DynaFont-Premium30//"
+     "/usr/local/share/fonts/DynaFont-SpecialPack1//"
+     "/usr/local/share/fonts/TrueTypeWorld-ValueFont141//"
+     "/usr/local/share/fonts/HanYang//"
+     "/usr/local/share/fonts/UnionWay//" )
+  (dpi $TeX_DPI))
+  
+;; -----------------------------------------------------------------
+;;   PCF Font Class Default
+;; -----------------------------------------------------------------
+(define-default  pcf
+  (font-directories  "/usr/X11R6/lib/X11/fonts//"
+		     "/usr/local/X11R6/lib/X11/fonts//"
+		     "/usr/openwin/lib/X11/fonts//"
+		     "/usr/X386/lib/X11/fonts//"
+		     "/usr/XFree86/lib/X11/fonts//"
+		     "/usr/X11/lib/X11/fonts//"
+		     "/usr/local/lib/X11/fonts//"
+		     "/usr/X11R5/lib/X11/fonts//"
+		     "/usr/local/X11R5/lib/X11/fonts//"
+		     "/usr/local/share/emacs/fonts//"
+		     "/usr/local/share/fonts/X11//")
+  (compression-extensions ".gz" ".Z")
+  (dpi $TeX_DPI))
+
+
+;; -----------------------------------------------------------------
+;;  sample font definitions for Japanese TeX
+ 
+(define-font jtex-min
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "JISX0208") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "f5ajchm3.ttf"))
+(define-font jtex-goth
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "JISX0208") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "f5ajchg5.ttf"))
+(define-font jtex-tmin
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "JISX0208") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "f5ajchm3.ttf"))
+(define-font jtex-tgoth
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "JISX0208") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "f5ajchg5.ttf"))
+
+(define-macro min-common
+  (font-class ascii-jtex-kanji)
+  (kanji-font jtex-min)  (kanji-font-magnification 0.95)
+  (metric-adjustment-file "f5ajchm3.adj"))
+(define-macro goth-common
+  (font-class ascii-jtex-kanji)
+  (kanji-font jtex-goth) (kanji-font-magnification 0.95)
+  (metric-adjustment-file "f5ajchg5.adj"))
+(define-macro tmin-common
+  (font-class ascii-jtex-kanji)
+  (kanji-font jtex-tmin)  (kanji-font-magnification 0.95)
+  (metric-adjustment-file "tf5ajchm3.adj"))
+(define-macro tgoth-common
+  (font-class ascii-jtex-kanji)
+  (kanji-font jtex-tgoth) (kanji-font-magnification 0.95)
+  (metric-adjustment-file "tf5ajchg5.adj"))
+(define-font min5.jtex     (kanji-font-point-size  5)  min-common)
+(define-font min6.jtex     (kanji-font-point-size  6)  min-common)
+(define-font min7.jtex     (kanji-font-point-size  7)  min-common)
+(define-font min8.jtex     (kanji-font-point-size  8)  min-common)
+(define-font min9.jtex     (kanji-font-point-size  9)  min-common)
+(define-font min10.jtex    (kanji-font-point-size 10)  min-common)
+(define-font goth5.jtex    (kanji-font-point-size  5)  goth-common)
+(define-font goth6.jtex    (kanji-font-point-size  6)  goth-common)
+(define-font goth7.jtex    (kanji-font-point-size  7)  goth-common)
+(define-font goth8.jtex    (kanji-font-point-size  8)  goth-common)
+(define-font goth9.jtex    (kanji-font-point-size  9)  goth-common)
+(define-font goth10.jtex   (kanji-font-point-size 10)  goth-common)
+(define-font tmin5.jtex    (kanji-font-point-size  5)  tmin-common)
+(define-font tmin6.jtex    (kanji-font-point-size  6)  tmin-common)
+(define-font tmin7.jtex    (kanji-font-point-size  7)  tmin-common)
+(define-font tmin8.jtex    (kanji-font-point-size  8)  tmin-common)
+(define-font tmin9.jtex    (kanji-font-point-size  9)  tmin-common)
+(define-font tmin10.jtex   (kanji-font-point-size 10)  tmin-common)
+(define-font tgoth5.jtex   (kanji-font-point-size  5)  tgoth-common)
+(define-font tgoth6.jtex   (kanji-font-point-size  6)  tgoth-common)
+(define-font tgoth7.jtex   (kanji-font-point-size  7)  tgoth-common)
+(define-font tgoth8.jtex   (kanji-font-point-size  8)  tgoth-common)
+(define-font tgoth9.jtex   (kanji-font-point-size  9)  tgoth-common)
+(define-font tgoth10.jtex  (kanji-font-point-size 10)  tgoth-common)
+
+
+
+;; -----------------------------------------------------------------
+;; non-standard Kanji fonts
+
+(define-macro jtex-common
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (metric-adjustment-file "f5ajchm3.adj"))
+(define-macro jtex-tcommon
+  (font-class ascii-jtex-kanji) (kanji-font-point-size 10)
+  (metric-adjustment-file "tf5ajchm3.adj"))
+(define-macro ttf-kanji-common
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "JISX0208") (encoding "ISO2022") (dpi $TeX_DPI))
+
+(define-font fjminmaa.jtex  jtex-common (kanji-font fjminmaa))
+(define-font fjminmaa       ttf-kanji-common (font-file "f5ajcfm2.ttf"))
+(define-font tfjminmaa.jtex jtex-tcommon (kanji-font tfjminmaa))
+(define-font tfjminmaa      ttf-kanji-common (font-file "f5ajcfm2.ttf"))
+
+(define-font fjminsaa.jtex  jtex-common (kanji-font fjminsaa))
+(define-font fjminsaa       ttf-kanji-common (font-file "f5ajcfm8.ttf"))
+(define-font tfjminsaa.jtex jtex-tcommon (kanji-font tfjminsaa))
+(define-font tfjminsaa      ttf-kanji-common (font-file "f5ajcfm8.ttf"))
+
+(define-font fjhsmmaa.jtex  jtex-common (kanji-font fjhsmmaa))
+(define-font fjhsmmaa       ttf-kanji-common (font-file "f5ajchm3.ttf"))
+(define-font tfjhsmmaa.jtex jtex-tcommon (kanji-font tfjhsmmaa))
+(define-font tfjhsmmaa      ttf-kanji-common (font-file "f5ajchm3.ttf"))
+
+(define-font fjhsmraa.jtex  jtex-common (kanji-font fjhsmraa))
+(define-font fjhsmraa       ttf-kanji-common (font-file "f5ajchm6.ttf"))
+(define-font tfjhsmraa.jtex jtex-tcommon (kanji-font tfjhsmraa))
+(define-font tfjhsmraa      ttf-kanji-common (font-file "f5ajchm6.ttf"))
+
+(define-font fjhsmvaa.jtex  jtex-common (kanji-font fjhsmvaa))
+(define-font fjhsmvaa       ttf-kanji-common (font-file "f5ajchm9.ttf"))
+(define-font tfjhsmvaa.jtex jtex-tcommon (kanji-font tfjhsmvaa))
+(define-font tfjhsmvaa      ttf-kanji-common (font-file "f5ajchm9.ttf"))
+
+(define-font fjgotmaa.jtex  jtex-common (kanji-font fjgotmaa))
+(define-font fjgotmaa       ttf-kanji-common (font-file "f5ajcfg3.ttf"))
+(define-font tfjgotmaa.jtex jtex-tcommon (kanji-font tfjgotmaa))
+(define-font tfjgotmaa      ttf-kanji-common (font-file "f5ajcfg3.ttf"))
+
+(define-font fjgotpaa.jtex  jtex-common (kanji-font fjgotpaa))
+(define-font fjgotpaa       ttf-kanji-common (font-file "f5ajcfg7.ttf"))
+(define-font tfjgotpaa.jtex jtex-tcommon (kanji-font tfjgotpaa))
+(define-font tfjgotpaa      ttf-kanji-common (font-file "f5ajcfg7.ttf"))
+
+(define-font fjgotsaa.jtex  jtex-common (kanji-font fjgotsaa))
+(define-font fjgotsaa       ttf-kanji-common (font-file "f5ajcfg9.ttf"))
+(define-font tfjgotsaa.jtex jtex-tcommon (kanji-font tfjgotsaa))
+(define-font tfjgotsaa      ttf-kanji-common (font-file "f5ajcfg9.ttf"))
+
+(define-font fjgotxaa.jtex  jtex-common (kanji-font fjgotxaa))
+(define-font fjgotxaa       ttf-kanji-common (font-file "f5ajcfgd.ttf"))
+(define-font tfjgotxaa.jtex jtex-tcommon (kanji-font tfjgotxaa))
+(define-font tfjgotxaa      ttf-kanji-common (font-file "f5ajcfgd.ttf"))
+
+(define-font fjhsgpaa.jtex  jtex-common (kanji-font fjhsgpaa))
+(define-font fjhsgpaa       ttf-kanji-common (font-file "f5ajchg5.ttf"))
+(define-font tfjhsgpaa.jtex jtex-tcommon (kanji-font tfjhsgpaa))
+(define-font tfjhsgpaa      ttf-kanji-common (font-file "f5ajchg5.ttf"))
+
+(define-font fjhsgsaa.jtex  jtex-common (kanji-font fjhsgsaa))
+(define-font fjhsgsaa       ttf-kanji-common (font-file "f5ajchg7.ttf"))
+(define-font tfjhsgsaa.jtex jtex-tcommon (kanji-font tfjhsgsaa))
+(define-font tfjhsgsaa      ttf-kanji-common (font-file "f5ajchg7.ttf"))
+
+(define-font fjhsgvaa.jtex  jtex-common (kanji-font fjhsgvaa))
+(define-font fjhsgvaa       ttf-kanji-common (font-file "f5ajchg9.ttf"))
+(define-font tfjhsgvaa.jtex jtex-tcommon (kanji-font tfjhsgvaa))
+(define-font tfjhsgvaa      ttf-kanji-common (font-file "f5ajchg9.ttf"))
+
+(define-font fjmrgmaa.jtex  jtex-common (kanji-font fjmrgmaa))
+(define-font fjmrgmaa       ttf-kanji-common (font-file "f5ajcfr3.ttf"))
+(define-font tfjmrgmaa.jtex jtex-tcommon (kanji-font tfjmrgmaa))
+(define-font tfjmrgmaa      ttf-kanji-common (font-file "f5ajcfr3.ttf"))
+
+(define-font fjmrgpaa.jtex  jtex-common (kanji-font fjmrgpaa))
+(define-font fjmrgpaa       ttf-kanji-common (font-file "f5ajcfr5.ttf"))
+(define-font tfjmrgpaa.jtex jtex-tcommon (kanji-font tfjmrgpaa))
+(define-font tfjmrgpaa      ttf-kanji-common (font-file "f5ajcfr5.ttf"))
+
+(define-font fjmrgsaa.jtex  jtex-common (kanji-font fjmrgsaa))
+(define-font fjmrgsaa       ttf-kanji-common (font-file "f5ajcfr7.ttf"))
+(define-font tfjmrgsaa.jtex jtex-tcommon (kanji-font tfjmrgsaa))
+(define-font tfjmrgsaa      ttf-kanji-common (font-file "f5ajcfr7.ttf"))
+
+(define-font fjmrgxaa.jtex  jtex-common (kanji-font fjmrgxaa))
+(define-font fjmrgxaa       ttf-kanji-common (font-file "f5ajcfrd.ttf"))
+(define-font tfjmrgxaa.jtex jtex-tcommon (kanji-font tfjmrgxaa))
+(define-font tfjmrgxaa      ttf-kanji-common (font-file "f5ajcfrd.ttf"))
+
+(define-font fjhrgoaa.jtex  jtex-common (kanji-font fjhrgoaa))
+(define-font fjhrgoaa       ttf-kanji-common (font-file "f5ajchr4.ttf"))
+(define-font tfjhrgoaa.jtex jtex-tcommon (kanji-font tfjhrgoaa))
+(define-font tfjhrgoaa      ttf-kanji-common (font-file "f5ajchr4.ttf"))
+
+(define-font fjashxaa.jtex  jtex-common (kanji-font fjashxaa))
+(define-font fjashxaa       ttf-kanji-common (font-file "f5ajckrh.ttf"))
+(define-font tfjashxaa.jtex jtex-tcommon (kanji-font tfjashxaa))
+(define-font tfjashxaa      ttf-kanji-common (font-file "f5ajckrh.ttf"))
+
+(define-font fjkykmaa.jtex  jtex-common (kanji-font fjkykmaa))
+(define-font fjkykmaa       ttf-kanji-common (font-file "f5ajcky1.ttf"))
+(define-font tfjkykmaa.jtex jtex-tcommon (kanji-font tfjkykmaa))
+(define-font tfjkykmaa      ttf-kanji-common (font-file "f5ajcky1.ttf"))
+
+(define-font fjkykpaa.jtex  jtex-common (kanji-font fjkykpaa))
+(define-font fjkykpaa       ttf-kanji-common (font-file "f5ajcky2.ttf"))
+(define-font tfjkykpaa.jtex jtex-tcommon (kanji-font tfjkykpaa))
+(define-font tfjkykpaa      ttf-kanji-common (font-file "f5ajcky2.ttf"))
+
+(define-font fjfdkmaa.jtex  jtex-common (kanji-font fjfdkmaa))
+(define-font fjfdkmaa       ttf-kanji-common (font-file "f5ajcfdk.ttf"))
+(define-font tfjfdkmaa.jtex jtex-tcommon (kanji-font tfjfdkmaa))
+(define-font tfjfdkmaa      ttf-kanji-common (font-file "f5ajcfdk.ttf"))
+
+(define-font fjgykmaa.jtex  jtex-common (kanji-font fjgykmaa))
+(define-font fjgykmaa       ttf-kanji-common (font-file "f5ajcgyk.ttf"))
+(define-font tfjgykmaa.jtex jtex-tcommon (kanji-font tfjgykmaa))
+(define-font tfjgykmaa      ttf-kanji-common (font-file "f5ajcgyk.ttf"))
+
+(define-font fjreipaa.jtex  jtex-common (kanji-font fjreipaa))
+(define-font fjreipaa       ttf-kanji-common (font-file "f5ajcrei.ttf"))
+(define-font tfjreipaa.jtex jtex-tcommon (kanji-font tfjreipaa))
+(define-font tfjreipaa      ttf-kanji-common (font-file "f5ajcrei.ttf"))
+
+(define-font fjkedxaa.jtex  jtex-common (kanji-font fjkedxaa))
+(define-font fjkedxaa       ttf-kanji-common (font-file "f5ajcked.ttf"))
+(define-font tfjkedxaa.jtex jtex-tcommon (kanji-font tfjkedxaa))
+(define-font tfjkedxaa      ttf-kanji-common (font-file "f5ajcked.ttf"))
+
+(define-font fjhigxaa.jtex  jtex-common (kanji-font fjhigxaa))
+(define-font fjhigxaa       ttf-kanji-common (font-file "f5ajchig.ttf"))
+(define-font tfjhigxaa.jtex jtex-tcommon (kanji-font tfjhigxaa))
+(define-font tfjhigxaa      ttf-kanji-common (font-file "f5ajchig.ttf"))
+
+(define-font fjtrepaa.jtex  jtex-common (kanji-font fjtrepaa))
+(define-font fjtrepaa       ttf-kanji-common (font-file "f5ajctre.ttf"))
+(define-font tfjtrepaa.jtex jtex-tcommon (kanji-font tfjtrepaa))
+(define-font tfjtrepaa      ttf-kanji-common (font-file "f5ajctre.ttf"))
+
+(define-font fjtkosaa.jtex  jtex-common (kanji-font fjtkosaa))
+(define-font fjtkosaa       ttf-kanji-common (font-file "f5ajctko.ttf"))
+(define-font tfjtkosaa.jtex jtex-tcommon (kanji-font tfjtkosaa))
+(define-font tfjtkosaa      ttf-kanji-common (font-file "f5ajctko.ttf"))
+
+(define-font fjcpemaa.jtex  jtex-common (kanji-font fjcpemaa))
+(define-font fjcpemaa       ttf-kanji-common (font-file "f5ajccpe.ttf"))
+(define-font tfjcpemaa.jtex jtex-tcommon (kanji-font tfjcpemaa))
+(define-font tfjcpemaa      ttf-kanji-common (font-file "f5ajccpe.ttf"))
+
+(define-font fjhikmaa.jtex  jtex-common (kanji-font fjhikmaa))
+(define-font fjhikmaa       ttf-kanji-common (font-file "f5ajchik.ttf"))
+(define-font tfjhikmaa.jtex jtex-tcommon (kanji-font tfjhikmaa))
+(define-font tfjhikmaa      ttf-kanji-common (font-file "f5ajchik.ttf"))
+
+(define-font fjmarpaa.jtex  jtex-common (kanji-font fjmarpaa))
+(define-font fjmarpaa       ttf-kanji-common (font-file "f5ajcmar.ttf"))
+(define-font tfjmarpaa.jtex jtex-tcommon (kanji-font tfjmarpaa))
+(define-font tfjmarpaa      ttf-kanji-common (font-file "f5ajcmar.ttf"))
+
+(define-font fjimapaa.jtex  jtex-common (kanji-font fjimapaa))
+(define-font fjimapaa       ttf-kanji-common (font-file "f5ajci18.ttf"))
+(define-font tfjimapaa.jtex jtex-tcommon (kanji-font tfjimapaa))
+(define-font tfjimapaa      ttf-kanji-common (font-file "f5ajci18.ttf"))
+
+(define-font fjimbmaa.jtex  jtex-common (kanji-font fjimbmaa))
+(define-font fjimbmaa       ttf-kanji-common (font-file "f5ajci25.ttf"))
+(define-font tfjimbmaa.jtex jtex-tcommon (kanji-font tfjimbmaa))
+(define-font tfjimbmaa      ttf-kanji-common (font-file "f5ajci25.ttf"))
+
+(define-font fjimcraa.jtex  jtex-common (kanji-font fjimcraa))
+(define-font fjimcraa       ttf-kanji-common (font-file "f5ajci3a.ttf"))
+(define-font tfjimcraa.jtex jtex-tcommon (kanji-font tfjimcraa))
+(define-font tfjimcraa      ttf-kanji-common (font-file "f5ajci3a.ttf"))
+
+(define-font fjimdsaa.jtex  jtex-common (kanji-font fjimdsaa))
+(define-font fjimdsaa       ttf-kanji-common (font-file "f5ajci47.ttf"))
+(define-font tfjimdsaa.jtex jtex-tcommon (kanji-font tfjimdsaa))
+(define-font tfjimdsaa      ttf-kanji-common (font-file "f5ajci47.ttf"))
+
+(define-font fjimevaa.jtex  jtex-common (kanji-font fjimevaa))
+(define-font fjimevaa       ttf-kanji-common (font-file "f5ajci5d.ttf"))
+(define-font tfjimevaa.jtex jtex-tcommon (kanji-font tfjimevaa))
+(define-font tfjimevaa      ttf-kanji-common (font-file "f5ajci5d.ttf"))
+
+(define-font dfhsmmaa.jtex  jtex-common (kanji-font dfhsmmaa))
+(define-font dfhsmmaa       ttf-kanji-common (font-file "dfhsmw3.ttc"))
+(define-font tdfhsmmaa.jtex jtex-tcommon (kanji-font tdfhsmmaa))
+(define-font tdfhsmmaa      ttf-kanji-common (font-file "dfhsmw3.ttc"))
+
+(define-font dfhsmpaa.jtex  jtex-common (kanji-font dfhsmpaa))
+(define-font dfhsmpaa       ttf-kanji-common (font-file "dfhsmw5.ttc"))
+(define-font tdfhsmpaa.jtex jtex-tcommon (kanji-font tdfhsmpaa))
+(define-font tdfhsmpaa      ttf-kanji-common (font-file "dfhsmw5.ttc"))
+
+(define-font dfhsmsaa.jtex  jtex-common (kanji-font dfhsmsaa))
+(define-font dfhsmsaa       ttf-kanji-common (font-file "dfhsmw7.ttc"))
+(define-font tdfhsmsaa.jtex jtex-tcommon (kanji-font tdfhsmsaa))
+(define-font tdfhsmsaa      ttf-kanji-common (font-file "dfhsmw7.ttc"))
+
+(define-font dfhsmvaa.jtex  jtex-common (kanji-font dfhsmvaa))
+(define-font dfhsmvaa       ttf-kanji-common (font-file "dfhsmw9.ttc"))
+(define-font tdfhsmvaa.jtex jtex-tcommon (kanji-font tdfhsmvaa))
+(define-font tdfhsmvaa      ttf-kanji-common (font-file "dfhsmw9.ttc"))
+
+(define-font dfminzaa.jtex  jtex-common (kanji-font dfminzaa))
+(define-font dfminzaa       ttf-kanji-common (font-file "dfminub.ttc"))
+(define-font tdfminzaa.jtex jtex-tcommon (kanji-font tdfminzaa))
+(define-font tdfminzaa      ttf-kanji-common (font-file "dfminub.ttc"))
+
+(define-font dfhsgmaa.jtex  jtex-common (kanji-font dfhsgmaa))
+(define-font dfhsgmaa       ttf-kanji-common (font-file "dfhsgw3.ttc"))
+(define-font tdfhsgmaa.jtex jtex-tcommon (kanji-font tdfhsgmaa))
+(define-font tdfhsgmaa      ttf-kanji-common (font-file "dfhsgw3.ttc"))
+
+(define-font dfhsgpaa.jtex  jtex-common (kanji-font dfhsgpaa))
+(define-font dfhsgpaa       ttf-kanji-common (font-file "dfhsgw5.ttc"))
+(define-font tdfhsgpaa.jtex jtex-tcommon (kanji-font tdfhsgpaa))
+(define-font tdfhsgpaa      ttf-kanji-common (font-file "dfhsgw5.ttc"))
+
+(define-font dfhsgsaa.jtex  jtex-common (kanji-font dfhsgsaa))
+(define-font dfhsgsaa       ttf-kanji-common (font-file "dfhsgw7.ttc"))
+(define-font tdfhsgsaa.jtex jtex-tcommon (kanji-font tdfhsgsaa))
+(define-font tdfhsgsaa      ttf-kanji-common (font-file "dfhsgw7.ttc"))
+
+(define-font dfhsgvaa.jtex  jtex-common (kanji-font dfhsgvaa))
+(define-font dfhsgvaa       ttf-kanji-common (font-file "dfhsgw9.ttc"))
+(define-font tdfhsgvaa.jtex jtex-tcommon (kanji-font tdfhsgvaa))
+(define-font tdfhsgvaa      ttf-kanji-common (font-file "dfhsgw9.ttc"))
+
+(define-font dfgotxaa.jtex  jtex-common (kanji-font dfgotxaa))
+(define-font dfgotxaa       ttf-kanji-common (font-file "dfgoteb.ttc"))
+(define-font tdfgotxaa.jtex jtex-tcommon (kanji-font tdfgotxaa))
+(define-font tdfgotxaa      ttf-kanji-common (font-file "dfgoteb.ttc"))
+
+(define-font dfgotzaa.jtex  jtex-common (kanji-font dfgotzaa))
+(define-font dfgotzaa       ttf-kanji-common (font-file "dfgotub.ttc"))
+(define-font tdfgotzaa.jtex jtex-tcommon (kanji-font tdfgotzaa))
+(define-font tdfgotzaa      ttf-kanji-common (font-file "dfgotub.ttc"))
+
+(define-font dfhrgoaa.jtex  jtex-common (kanji-font dfhrgoaa))
+(define-font dfhrgoaa       ttf-kanji-common (font-file "dfhsrw4.ttc"))
+(define-font tdfhrgoaa.jtex jtex-tcommon (kanji-font tdfhrgoaa))
+(define-font tdfhrgoaa      ttf-kanji-common (font-file "dfhsrw4.ttc"))
+
+(define-font dfmrgmaa.jtex  jtex-common (kanji-font dfmrgmaa))
+(define-font dfmrgmaa       ttf-kanji-common (font-file "dfmrglt.ttc"))
+(define-font tdfmrgmaa.jtex jtex-tcommon (kanji-font tdfmrgmaa))
+(define-font tdfmrgmaa      ttf-kanji-common (font-file "dfmrglt.ttc"))
+
+(define-font dfmrgpaa.jtex  jtex-common (kanji-font dfmrgpaa))
+(define-font dfmrgpaa       ttf-kanji-common (font-file "dfmrgmd.ttc"))
+(define-font tdfmrgpaa.jtex jtex-tcommon (kanji-font tdfmrgpaa))
+(define-font tdfmrgpaa      ttf-kanji-common (font-file "dfmrgmd.ttc"))
+
+(define-font dfmrgsaa.jtex  jtex-common (kanji-font dfmrgsaa))
+(define-font dfmrgsaa       ttf-kanji-common (font-file "dfmrgbd.ttc"))
+(define-font tdfmrgsaa.jtex jtex-tcommon (kanji-font tdfmrgsaa))
+(define-font tdfmrgsaa      ttf-kanji-common (font-file "dfmrgbd.ttc"))
+
+(define-font dfgyopaa.jtex  jtex-common (kanji-font dfgyopaa))
+(define-font dfgyopaa       ttf-kanji-common (font-file "dfgyomd.ttc"))
+(define-font tdfgyopaa.jtex jtex-tcommon (kanji-font tdfgyopaa))
+(define-font tdfgyopaa      ttf-kanji-common (font-file "dfgyomd.ttc"))
+
+(define-font dfkaimaa.jtex  jtex-common (kanji-font dfkaimaa))
+(define-font dfkaimaa       ttf-kanji-common (font-file "dfkailt.ttc"))
+(define-font tdfkaimaa.jtex jtex-tcommon (kanji-font tdfkaimaa))
+(define-font tdfkaimaa      ttf-kanji-common (font-file "dfkailt.ttc"))
+
+(define-font dfkaipaa.jtex  jtex-common (kanji-font dfkaipaa))
+(define-font dfkaipaa       ttf-kanji-common (font-file "dfkaimd.ttc"))
+(define-font tdfkaipaa.jtex jtex-tcommon (kanji-font tdfkaipaa))
+(define-font tdfkaipaa      ttf-kanji-common (font-file "dfkaimd.ttc"))
+
+(define-font dfkairaa.jtex  jtex-common (kanji-font dfkairaa))
+(define-font dfkairaa       ttf-kanji-common (font-file "dfkaisb.ttc"))
+(define-font tdfkairaa.jtex jtex-tcommon (kanji-font tdfkairaa))
+(define-font tdfkairaa      ttf-kanji-common (font-file "dfkaisb.ttc"))
+
+(define-font dfkaisaa.jtex  jtex-common (kanji-font dfkaisaa))
+(define-font dfkaisaa       ttf-kanji-common (font-file "dfkaibd.ttc"))
+(define-font tdfkaisaa.jtex jtex-tcommon (kanji-font tdfkaisaa))
+(define-font tdfkaisaa      ttf-kanji-common (font-file "dfkaibd.ttc"))
+
+(define-font dfleipaa.jtex  jtex-common (kanji-font dfleipaa))
+(define-font dfleipaa       ttf-kanji-common (font-file "dfleimd.ttc"))
+(define-font tdfleipaa.jtex jtex-tcommon (kanji-font tdfleipaa))
+(define-font tdfleipaa      ttf-kanji-common (font-file "dfleimd.ttc"))
+
+(define-font dfktrxaa.jtex  jtex-common (kanji-font dfktrxaa))
+(define-font dfktrxaa       ttf-kanji-common (font-file "dfktrxb.ttc"))
+(define-font tdfktrxaa.jtex jtex-tcommon (kanji-font tdfktrxaa))
+(define-font tdfktrxaa      ttf-kanji-common (font-file "dfktrxb.ttc"))
+
+(define-font dfpopmaa.jtex  jtex-common (kanji-font dfpopmaa))
+(define-font dfpopmaa       ttf-kanji-common (font-file "dfpopw3.ttc"))
+(define-font tdfpopmaa.jtex jtex-tcommon (kanji-font tdfpopmaa))
+(define-font tdfpopmaa      ttf-kanji-common (font-file "dfpopw3.ttc"))
+
+(define-font dfpoppaa.jtex  jtex-common (kanji-font dfpoppaa))
+(define-font dfpoppaa       ttf-kanji-common (font-file "dfpopw5.ttc"))
+(define-font tdfpoppaa.jtex jtex-tcommon (kanji-font tdfpoppaa))
+(define-font tdfpoppaa      ttf-kanji-common (font-file "dfpopw5.ttc"))
+
+(define-font dfpopraa.jtex  jtex-common (kanji-font dfpopraa))
+(define-font dfpopraa       ttf-kanji-common (font-file "dfpop1.ttc"))
+(define-font tdfpopraa.jtex jtex-tcommon (kanji-font tdfpopraa))
+(define-font tdfpopraa      ttf-kanji-common (font-file "dfpop1.ttc"))
+
+(define-font dfpopvaa.jtex  jtex-common (kanji-font dfpopvaa))
+(define-font dfpopvaa       ttf-kanji-common (font-file "dfpopw9.ttc"))
+(define-font tdfpopvaa.jtex jtex-tcommon (kanji-font tdfpopvaa))
+(define-font tdfpopvaa      ttf-kanji-common (font-file "dfpopw9.ttc"))
+
+(define-font dfmrmpaa.jtex  jtex-common (kanji-font dfmrmpaa))
+(define-font dfmrmpaa       ttf-kanji-common (font-file "dfmrmw3.ttc"))
+(define-font tdfmrmpaa.jtex jtex-tcommon (kanji-font tdfmrmpaa))
+(define-font tdfmrmpaa      ttf-kanji-common (font-file "dfmrmw3.ttc"))
+
+(define-font dfmrmmaa.jtex  jtex-common (kanji-font dfmrmmaa))
+(define-font dfmrmmaa       ttf-kanji-common (font-file "dfmrmmd.ttc"))
+(define-font tdfmrmmaa.jtex jtex-tcommon (kanji-font tdfmrmmaa))
+(define-font tdfmrmmaa      ttf-kanji-common (font-file "dfmrmmd.ttc"))
+
+(define-font dfmrmsaa.jtex  jtex-common (kanji-font dfmrmsaa))
+(define-font dfmrmsaa       ttf-kanji-common (font-file "dfmrmw7.ttc"))
+(define-font tdfmrmsaa.jtex jtex-tcommon (kanji-font tdfmrmsaa))
+(define-font tdfmrmsaa      ttf-kanji-common (font-file "dfmrmw7.ttc"))
+
+(define-font dfmrmvaa.jtex  jtex-common (kanji-font dfmrmvaa))
+(define-font dfmrmvaa       ttf-kanji-common (font-file "dfmrmw9.ttc"))
+(define-font tdfmrmvaa.jtex jtex-tcommon (kanji-font tdfmrmvaa))
+(define-font tdfmrmvaa      ttf-kanji-common (font-file "dfmrmw9.ttc"))
+
+(define-font dfsokmaa.jtex  jtex-common (kanji-font dfsokmaa))
+(define-font dfsokmaa       ttf-kanji-common (font-file "dfsokn3.ttc"))
+(define-font tdfsokmaa.jtex jtex-tcommon (kanji-font tdfsokmaa))
+(define-font tdfsokmaa      ttf-kanji-common (font-file "dfsokn3.ttc"))
+
+(define-font dfsgypaa.jtex  jtex-common (kanji-font dfsgypaa))
+(define-font dfsgypaa       ttf-kanji-common (font-file "dfsgyo5.ttc"))
+(define-font tdfsgypaa.jtex jtex-tcommon (kanji-font tdfsgypaa))
+(define-font tdfsgypaa      ttf-kanji-common (font-file "dfsgyo5.ttc"))
+
+(define-font dfgihsaa.jtex  jtex-common (kanji-font dfgihsaa))
+(define-font dfgihsaa       ttf-kanji-common (font-file "dfgihi7.ttc"))
+(define-font tdfgihsaa.jtex jtex-tcommon (kanji-font tdfgihsaa))
+(define-font tdfgihsaa      ttf-kanji-common (font-file "dfgihi7.ttc"))
+
+(define-font dfkykmaa.jtex  jtex-common (kanji-font dfkykmaa))
+(define-font dfkykmaa       ttf-kanji-common (font-file "dfkyks3.ttc"))
+(define-font tdfkykmaa.jtex jtex-tcommon (kanji-font tdfkykmaa))
+(define-font tdfkykmaa      ttf-kanji-common (font-file "dfkyks3.ttc"))
+
+(define-font dfkykoaa.jtex  jtex-common (kanji-font dfkykoaa))
+(define-font dfkykoaa       ttf-kanji-common (font-file "dfkyks4.ttc"))
+(define-font tdfkykoaa.jtex jtex-tcommon (kanji-font tdfkykoaa))
+(define-font tdfkykoaa      ttf-kanji-common (font-file "dfkyks4.ttc"))
+
+(define-font dftlepaa.jtex  jtex-common (kanji-font dftlepaa))
+(define-font dftlepaa       ttf-kanji-common (font-file "dftlei5.ttc"))
+(define-font tdftlepaa.jtex jtex-tcommon (kanji-font tdftlepaa))
+(define-font tdftlepaa      ttf-kanji-common (font-file "dftlei5.ttc"))
+
+(define-font dftlesaa.jtex  jtex-common (kanji-font dftlesaa))
+(define-font dftlesaa       ttf-kanji-common (font-file "dftlei7.ttc"))
+(define-font tdftlesaa.jtex jtex-tcommon (kanji-font tdftlesaa))
+(define-font tdftlesaa      ttf-kanji-common (font-file "dftlei7.ttc"))
+
+(define-font dftlevaa.jtex  jtex-common (kanji-font dftlevaa))
+(define-font dftlevaa       ttf-kanji-common (font-file "dftlei9.ttc"))
+(define-font tdftlevaa.jtex jtex-tcommon (kanji-font tdftlevaa))
+(define-font tdftlevaa      ttf-kanji-common (font-file "dftlei9.ttc"))
+
+(define-font dfrulpaa.jtex  jtex-common (kanji-font dfrulpaa))
+(define-font dfrulpaa       ttf-kanji-common (font-file "dfrule5.ttc"))
+(define-font tdfrulpaa.jtex jtex-tcommon (kanji-font tdfrulpaa))
+(define-font tdfrulpaa      ttf-kanji-common (font-file "dfrule5.ttc"))
+
+(define-font dfrulsaa.jtex  jtex-common (kanji-font dfrulsaa))
+(define-font dfrulsaa       ttf-kanji-common (font-file "dfrule7.ttc"))
+(define-font tdfrulsaa.jtex jtex-tcommon (kanji-font tdfrulsaa))
+(define-font tdfrulsaa      ttf-kanji-common (font-file "dfrule7.ttc"))
+
+(define-font dfsumzaa.jtex  jtex-common (kanji-font dfsumzaa))
+(define-font dfsumzaa       ttf-kanji-common (font-file "dfsumoc.ttc"))
+(define-font tdfsumzaa.jtex jtex-tcommon (kanji-font tdfsumzaa))
+(define-font tdfsumzaa      ttf-kanji-common (font-file "dfsumoc.ttc"))
+
+(define-font dfkoioaa.jtex  jtex-common (kanji-font dfkoioaa))
+(define-font dfkoioaa       ttf-kanji-common (font-file "dfkoin4.ttc"))
+(define-font tdfkoioaa.jtex jtex-tcommon (kanji-font tdfkoioaa))
+(define-font tdfkoioaa      ttf-kanji-common (font-file "dfkoin4.ttc"))
+
+(define-font dfsogpaa.jtex  jtex-common (kanji-font dfsogpaa))
+(define-font dfsogpaa       ttf-kanji-common (font-file "dfsoge5.ttc"))
+(define-font tdfsogpaa.jtex jtex-tcommon (kanji-font tdfsogpaa))
+(define-font tdfsogpaa      ttf-kanji-common (font-file "dfsoge5.ttc"))
+
+(define-font dfsogsaa.jtex  jtex-common (kanji-font dfsogsaa))
+(define-font dfsogsaa       ttf-kanji-common (font-file "dfsoge7.ttc"))
+(define-font tdfsogsaa.jtex jtex-tcommon (kanji-font tdfsogsaa))
+(define-font tdfsogsaa      ttf-kanji-common (font-file "dfsoge7.ttc"))
+
+(define-font dfsogvaa.jtex  jtex-common (kanji-font dfsogvaa))
+(define-font dfsogvaa       ttf-kanji-common (font-file "dfsoge9.ttc"))
+(define-font tdfsogvaa.jtex jtex-tcommon (kanji-font tdfsogvaa))
+(define-font tdfsogvaa      ttf-kanji-common (font-file "dfsoge9.ttc"))
+
+(define-font rcgyopaa.jtex  jtex-common (kanji-font rcgyopaa))
+(define-font rcgyopaa       ttf-kanji-common (font-file "hgrgysj.ttc"))
+(define-font trcgyopaa.jtex jtex-tcommon (kanji-font trcgyopaa))
+(define-font trcgyopaa      ttf-kanji-common (font-file "hgrgysj.ttc"))
+
+(define-font rckykmaa.jtex  jtex-common (kanji-font rckykmaa))
+(define-font rckykmaa       ttf-kanji-common (font-file "hgrkksj.ttc"))
+(define-font trckykmaa.jtex jtex-tcommon (kanji-font trckykmaa))
+(define-font trckykmaa      ttf-kanji-common (font-file "hgrkksj.ttc"))
+
+(define-font rckaipaa.jtex  jtex-common (kanji-font rckaipaa))
+(define-font rckaipaa       ttf-kanji-common (font-file "hgrsksj.ttc"))
+(define-font trckaipaa.jtex jtex-tcommon (kanji-font trckaipaa))
+(define-font trckaipaa      ttf-kanji-common (font-file "hgrsksj.ttc"))
+
+(define-font rckkapaa.jtex  jtex-common (kanji-font rckkapaa))
+(define-font rckkapaa       ttf-kanji-common (font-file "hgraksj.ttc"))
+(define-font trckkapaa.jtex jtex-tcommon (kanji-font trckkapaa))
+(define-font trckkapaa      ttf-kanji-common (font-file "hgraksj.ttc"))
+
+(define-font rchkgpaa.jtex  jtex-common (kanji-font rchkgpaa))
+(define-font rchkgpaa       ttf-kanji-common (font-file "hgrhkgsj.ttc"))
+(define-font trchkgpaa.jtex jtex-tcommon (kanji-font trchkgpaa))
+(define-font trchkgpaa      ttf-kanji-common (font-file "hgrhkgsj.ttc"))
+
+(define-font rchkfsaa.jtex  jtex-common (kanji-font rchkfsaa))
+(define-font rchkfsaa       ttf-kanji-common (font-file "hgrhkfsj.ttc"))
+(define-font trchkfsaa.jtex jtex-tcommon (kanji-font trchkfsaa))
+(define-font trchkfsaa      ttf-kanji-common (font-file "hgrhkfsj.ttc"))
+
+(define-font rctfkpaa.jtex  jtex-common (kanji-font rctfkpaa))
+(define-font rctfkpaa       ttf-kanji-common (font-file "hgrbfksj.ttf"))
+(define-font trctfkpaa.jtex jtex-tcommon (kanji-font trctfkpaa))
+(define-font trctfkpaa      ttf-kanji-common (font-file "hgrbfksj.ttf"))
+
+(define-font rctrepaa.jtex  jtex-common (kanji-font rctrepaa))
+(define-font rctrepaa       ttf-kanji-common (font-file "hgrbresj.ttf"))
+(define-font trctrepaa.jtex jtex-tcommon (kanji-font trctrepaa))
+(define-font trctrepaa      ttf-kanji-common (font-file "hgrbresj.ttf"))
+
+(define-font rchagmaa.jtex  jtex-common (kanji-font rchagmaa))
+(define-font rchagmaa       ttf-kanji-common (font-file "hgrhalsj.ttf"))
+(define-font trchagmaa.jtex jtex-tcommon (kanji-font trchagmaa))
+(define-font trchagmaa      ttf-kanji-common (font-file "hgrhalsj.ttf"))
+
+(define-font rchagpaa.jtex  jtex-common (kanji-font rchagpaa))
+(define-font rchagpaa       ttf-kanji-common (font-file "hgrhamsj.ttf"))
+(define-font trchagpaa.jtex jtex-tcommon (kanji-font trchagpaa))
+(define-font trchagpaa      ttf-kanji-common (font-file "hgrhamsj.ttf"))
+
+(define-font rchagsaa.jtex  jtex-common (kanji-font rchagsaa))
+(define-font rchagsaa       ttf-kanji-common (font-file "hgrhabsj.ttf"))
+(define-font trchagsaa.jtex jtex-tcommon (kanji-font trchagsaa))
+(define-font trchagsaa      ttf-kanji-common (font-file "hgrhabsj.ttf"))
+
+(define-font rchagvaa.jtex  jtex-common (kanji-font rchagvaa))
+(define-font rchagvaa       ttf-kanji-common (font-file "hgrhaesj.ttf"))
+(define-font trchagvaa.jtex jtex-tcommon (kanji-font trchagvaa))
+(define-font trchagvaa      ttf-kanji-common (font-file "hgrhaesj.ttf"))
+
+(define-font rcckssaa.jtex  jtex-common (kanji-font rcckssaa))
+(define-font rcckssaa       ttf-kanji-common (font-file "hgrcksj.ttc"))
+(define-font trcckssaa.jtex jtex-tcommon (kanji-font trcckssaa))
+(define-font trcckssaa      ttf-kanji-common (font-file "hgrcksj.ttc"))
+
+(define-font rcspnmaa.jtex  jtex-common (kanji-font rcspnmaa))
+(define-font rcspnmaa       ttf-kanji-common (font-file "hgrpn1sj.ttc"))
+(define-font trcspnmaa.jtex jtex-tcommon (kanji-font trcspnmaa))
+(define-font trcspnmaa      ttf-kanji-common (font-file "hgrpn1sj.ttc"))
+
+(define-font rchkpmaa.jtex  jtex-common (kanji-font rchkpmaa))
+(define-font rchkpmaa       ttf-kanji-common (font-file "hgrhkpsj.ttc"))
+(define-font trchkpmaa.jtex jtex-tcommon (kanji-font trchkpmaa))
+(define-font trchkpmaa      ttf-kanji-common (font-file "hgrhkpsj.ttc"))
+
+(define-font rcppkvaa.jtex  jtex-common (kanji-font rcppkvaa))
+(define-font rcppkvaa       ttf-kanji-common (font-file "hgrpp1sj.ttc"))
+(define-font trcppkvaa.jtex jtex-tcommon (kanji-font trcppkvaa))
+(define-font trcppkvaa      ttf-kanji-common (font-file "hgrpp1sj.ttc"))
+
+(define-font rcppmvaa.jtex  jtex-common (kanji-font rcppmvaa))
+(define-font rcppmvaa       ttf-kanji-common (font-file "hgrpp2sj.ttc"))
+(define-font trcppmvaa.jtex jtex-tcommon (kanji-font trcppmvaa))
+(define-font trcppmvaa      ttf-kanji-common (font-file "hgrpp2sj.ttc"))
+
+(define-font rcaguxaa.jtex  jtex-common (kanji-font rcaguxaa))
+(define-font rcaguxaa       ttf-kanji-common (font-file "hgragusj.ttc"))
+(define-font trcaguxaa.jtex jtex-tcommon (kanji-font trcaguxaa))
+(define-font trcaguxaa      ttf-kanji-common (font-file "hgragusj.ttc"))
+
+(define-font rcashxaa.jtex  jtex-common (kanji-font rcashxaa))
+(define-font rcashxaa       ttf-kanji-common (font-file "hgrashsj.ttf"))
+(define-font trcashxaa.jtex jtex-tcommon (kanji-font trcashxaa))
+(define-font trcashxaa      ttf-kanji-common (font-file "hgrashsj.ttf"))
+
+(define-font rcapfxaa.jtex  jtex-common (kanji-font rcapfxaa))
+(define-font rcapfxaa       ttf-kanji-common (font-file "hgrapsj.ttf"))
+(define-font trcapfxaa.jtex jtex-tcommon (kanji-font trcapfxaa))
+(define-font trcapfxaa      ttf-kanji-common (font-file "hgrapsj.ttf"))
+
+(define-font rcaplxaa.jtex  jtex-common (kanji-font rcaplxaa))
+(define-font rcaplxaa       ttf-kanji-common (font-file "hgraplsj.ttf"))
+(define-font trcaplxaa.jtex jtex-tcommon (kanji-font trcaplxaa))
+(define-font trcaplxaa      ttf-kanji-common (font-file "hgraplsj.ttf"))
+
+(define-font rcapsxaa.jtex  jtex-common (kanji-font rcapsxaa))
+(define-font rcapsxaa       ttf-kanji-common (font-file "hgrapssj.ttf"))
+(define-font trcapsxaa.jtex jtex-tcommon (kanji-font trcapsxaa))
+(define-font trcapsxaa      ttf-kanji-common (font-file "hgrapssj.ttf"))
+
+(define-font rckedxaa.jtex  jtex-common (kanji-font rckedxaa))
+(define-font rckedxaa       ttf-kanji-common (font-file "hgrkrsj.ttc"))
+(define-font trckedxaa.jtex jtex-tcommon (kanji-font trckedxaa))
+(define-font trckedxaa      ttf-kanji-common (font-file "hgrkrsj.ttc"))
+
+(define-font rcaegxaa.jtex  jtex-common (kanji-font rcaegxaa))
+(define-font rcaegxaa       ttf-kanji-common (font-file "hgraesj.ttf"))
+(define-font trcaegxaa.jtex jtex-tcommon (kanji-font trcaegxaa))
+(define-font trcaegxaa      ttf-kanji-common (font-file "hgraesj.ttf"))
+
+(define-font rcadhxaa.jtex  jtex-common (kanji-font rcadhxaa))
+(define-font rcadhxaa       ttf-kanji-common (font-file "hgradhsj.ttc"))
+(define-font trcadhxaa.jtex jtex-tcommon (kanji-font trcadhxaa))
+(define-font trcadhxaa      ttf-kanji-common (font-file "hgradhsj.ttc"))
+
+(define-font rchigxaa.jtex  jtex-common (kanji-font rchigxaa))
+(define-font rchigxaa       ttf-kanji-common (font-file "hgrah2sj.ttc"))
+(define-font trchigxaa.jtex jtex-tcommon (kanji-font trchigxaa))
+(define-font trchigxaa      ttf-kanji-common (font-file "hgrah2sj.ttc"))
+
+(define-font rcakgxaa.jtex  jtex-common (kanji-font rcakgxaa))
+(define-font rcakgxaa       ttf-kanji-common (font-file "hgrakgsj.ttc"))
+(define-font trcakgxaa.jtex jtex-tcommon (kanji-font trcakgxaa))
+(define-font trcakgxaa      ttf-kanji-common (font-file "hgrakgsj.ttc"))
+
+(define-font rccremaa.jtex  jtex-common (kanji-font rccremaa))
+(define-font rccremaa       ttf-kanji-common (font-file "hgrcresj.ttc"))
+(define-font trccremaa.jtex jtex-tcommon (kanji-font trccremaa))
+(define-font trccremaa      ttf-kanji-common (font-file "hgrcresj.ttc"))
+
+(define-font rccbkpaa.jtex  jtex-common (kanji-font rccbkpaa))
+(define-font rccbkpaa       ttf-kanji-common (font-file "hgrcbsj.ttc"))
+(define-font trccbkpaa.jtex jtex-tcommon (kanji-font trccbkpaa))
+(define-font trccbkpaa      ttf-kanji-common (font-file "hgrcbsj.ttc"))
+
+(define-font rcamgvaa.jtex  jtex-common (kanji-font rcamgvaa))
+(define-font rcamgvaa       ttf-kanji-common (font-file "hgramgsj.ttc"))
+(define-font trcamgvaa.jtex jtex-tcommon (kanji-font trcamgvaa))
+(define-font trcamgvaa      ttf-kanji-common (font-file "hgramgsj.ttc"))
+
+(define-font rcaigxaa.jtex  jtex-common (kanji-font rcaigxaa))
+(define-font rcaigxaa       ttf-kanji-common (font-file "hgraigsj.ttc"))
+(define-font trcaigxaa.jtex jtex-tcommon (kanji-font trcaigxaa))
+(define-font trcaigxaa      ttf-kanji-common (font-file "hgraigsj.ttc"))
+
+(define-font rcaisxaa.jtex  jtex-common (kanji-font rcaisxaa))
+(define-font rcaisxaa       ttf-kanji-common (font-file "hgraissj.ttc"))
+(define-font trcaisxaa.jtex jtex-tcommon (kanji-font trcaisxaa))
+(define-font trcaisxaa      ttf-kanji-common (font-file "hgraissj.ttc"))
+
+(define-font rctsexaa.jtex  jtex-common (kanji-font rctsexaa))
+(define-font rctsexaa       ttf-kanji-common (font-file "hgrtsesj.ttc"))
+(define-font trctsexaa.jtex jtex-tcommon (kanji-font trctsexaa))
+(define-font trctsexaa      ttf-kanji-common (font-file "hgrtsesj.ttc"))
+
+(define-font rchmnmaa.jtex  jtex-common (kanji-font rchmnmaa))
+(define-font rchmnmaa       ttf-kanji-common (font-file "hgrhm3sj.ttc"))
+(define-font trchmnmaa.jtex jtex-tcommon (kanji-font trchmnmaa))
+(define-font trchmnmaa      ttf-kanji-common (font-file "hgrhm3sj.ttc"))
+
+(define-font rchmnvaa.jtex  jtex-common (kanji-font rchmnvaa))
+(define-font rchmnvaa       ttf-kanji-common (font-file "hgrhm9sj.ttc"))
+(define-font trchmnvaa.jtex jtex-tcommon (kanji-font trchmnvaa))
+(define-font trchmnvaa      ttf-kanji-common (font-file "hgrhm9sj.ttc"))
+
+(define-font rchgopaa.jtex  jtex-common (kanji-font rchgopaa))
+(define-font rchgopaa       ttf-kanji-common (font-file "hgrhg5sj.ttc"))
+(define-font trchgopaa.jtex jtex-tcommon (kanji-font trchgopaa))
+(define-font trchgopaa      ttf-kanji-common (font-file "hgrhg5sj.ttc"))
+
+(define-font rchgovaa.jtex  jtex-common (kanji-font rchgovaa))
+(define-font rchgovaa       ttf-kanji-common (font-file "hgrhg9sj.ttc"))
+(define-font trchgovaa.jtex jtex-tcommon (kanji-font trchgovaa))
+(define-font trchgovaa      ttf-kanji-common (font-file "hgrhg9sj.ttc"))
+
+(define-font rchglvaa.jtex  jtex-common (kanji-font rchglvaa))
+(define-font rchglvaa       ttf-kanji-common (font-file "hgrg9lsj.ttf"))
+(define-font trchglvaa.jtex jtex-tcommon (kanji-font trchglvaa))
+(define-font trchglvaa      ttf-kanji-common (font-file "hgrg9lsj.ttf"))
+
+(define-font rchgsvaa.jtex  jtex-common (kanji-font rchgsvaa))
+(define-font rchgsvaa       ttf-kanji-common (font-file "hgrg9ssj.ttf"))
+(define-font trchgsvaa.jtex jtex-tcommon (kanji-font trchgsvaa))
+(define-font trchgsvaa      ttf-kanji-common (font-file "hgrg9ssj.ttf"))
+
+(define-font rchrgoaa.jtex  jtex-common (kanji-font rchrgoaa))
+(define-font rchrgoaa       ttf-kanji-common (font-file "hgrhr4sj.ttc"))
+(define-font trchrgoaa.jtex jtex-tcommon (kanji-font trchrgoaa))
+(define-font trchrgoaa      ttf-kanji-common (font-file "hgrhr4sj.ttc"))
+
+
+;; -----------------------------------------------------------------
+(define-macro illust-common
+  (font-class ascii-jtex-kanji) (kanji-font-magnification 0.95)
+  (metric-adjustment-file "none.adj"))
+(define-macro illust-tcommon
+  (font-class ascii-jtex-kanji) (kanji-font-magnification 0.95)
+  (metric-adjustment-file "tnone.adj"))
+
+(define-font fjillmaa.jtex  illust-common (kanji-font fjillmaa))
+(define-font fjillmaa       ttf-kanji-common (font-file "f5ajcsxx.ttf"))
+(define-font tfjillmaa.jtex illust-tcommon (kanji-font tfjillmaa))
+(define-font tfjillmaa      ttf-kanji-common (font-file "f5ajcsxx.ttf"))
+
+;; -----------------------------------------------------------------
+;; Hangle Font from HanYang (http://www.hanyang.co.kr/)
+(define-font hangleh      
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "KSC5601") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "Web_bt_w.ttc"))
+
+;; -----------------------------------------------------------------
+;; Fonts From UnionWay (http://www.unionway.com/)
+(define-font uw-kr
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "KSC5601") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "uwkmjf.ttf"))
+(define-font uw-ch-trad
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "BIG5") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "uwcxmf.ttf"))
+(define-font uw-ch-simp
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "GB2312") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "uwpstj.ttf"))
+(define-font uw-ja
+  (font-class truetype) (platform-id "microsoft")
+  (character-set "JISX0208") (encoding "ISO2022") (dpi $TeX_DPI)
+  (font-file "uwkmjf.ttf"))
+
+;; -----------------------------------------------------------------
+;EOF

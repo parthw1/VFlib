@@ -1,0 +1,1146 @@
+/*
+ * VFlib.c - a main file for VFlib 
+ *
+ * Programmed by Hirotsugu Kakugawa
+ *
+ *  5 Mar 1997  VFlib 3.1.4
+ * 20 Mar 1997  VFlib 3.1.5
+ * 22 Mar 1997  VFlib 3.2
+ *  1 Oct 1997  VFlib 3.2.6  Changed encoding & charset conversion module.
+ *  4 Aug 1997  VFlib 3.3    Changed API.
+ *  9 Jan 1998  VFlib 3.4    Changed vflibcap syntax. 
+ * 17 Sep 1999  VFlib 3.6
+ * 18 Oct 2001     Fixed memory leak.
+ */
+
+/*
+ * Copyright (C) 1996-2001 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * This file is part of the VFlib Library.  This library is free
+ * software; you can redistribute it and/or modify it under the terms of
+ * the GNU Library General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  This library is distributed in the hope
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Library General Public License for more details.
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
+
+#include  "config.h"
+#include  <stdio.h>
+#include  <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#include  <ctype.h>
+#include  "VFlib-3_6.h"
+#include  "VFsys.h"
+#include  "consts.h"
+#include  "vflpaths.h"
+#include  "params.h"
+#include  "vflibcap.h"
+#include  "str.h"
+#include  "sexp.h"
+#include  "metric.h"
+#include  "bitmap.h"
+#include  "cache.h"
+#include  "ccv.h"
+
+
+Public int        vf_error;
+
+
+Private int       vf_initialized = 0;
+Private int       open_nesting = 0;
+
+Private VF_TABLE  font_class_table = NULL;
+Private VF_TABLE  font_id_table = NULL;
+
+struct s_font_class {
+  char*    class_name;
+  int      (*driver_entry)(VF_FONT,char*,char*,int,void*);
+};
+typedef struct s_font_class  *FONT_CLASS;
+
+Glocal int  vf_dbg_font_open    = 0;
+Glocal int  vf_dbg_font_search  = 0;
+Glocal int  vf_dbg_kpathsea     = 0;
+Glocal int  vf_dbg_vfcap        = 0;
+Glocal int  vf_dbg_parameters   = 0;
+Glocal int  vf_dbg_ccv          = 0;
+Glocal int  vf_dbg_ccv_map      = 0;
+Glocal int  vf_dbg_log          = 0;
+Glocal FILE*vf_dbg_log_fp       = NULL;
+#define     DEBUG_LOG_FILE      "__dbg.tmp"
+
+struct s_open_arg_pack1 {
+  double  dpi_x, dpi_y;
+  double  point_size;
+  double  mag_x, mag_y;
+};
+struct s_open_arg_pack2 {
+  int     pixel_size;
+  double  mag_x, mag_y;
+};
+
+Private int  open_font(char *font_name, char *requested_font_class,
+		       struct s_open_arg_pack1 *arg_mode1, 
+		       struct s_open_arg_pack2 *arg_mode2);
+
+Private int  do_open_font(char *font_class_spec, 
+			  char* font_name, int implicit, int mode, 
+			  char *cache_key,
+			  VF_FONT font);
+
+Private VF_FONT  id2font(int);
+
+extern int  vf_drv_init(void);
+
+#define STRPARAM(s)    if ((s) != NULL){ fprintf(vf_dbg_log_fp, "\"%s\"", s); \
+                       } else { fprintf(vf_dbg_log_fp, "NULL"); }
+
+
+
+
+/**
+ **   VF_Init
+ **/
+Public int
+VF_Init(char *vflibcap_path, char *parameters)
+{
+  if (vf_initialized != 0)
+    return 0;
+
+  vf_initialized  = 1;
+  vf_error        = 0;
+  open_nesting    = 0;
+
+  /* Check Environment Variables for Debugging */
+  if (getenv(VF_ENV_DEBUG_FONT_OPEN) != NULL)
+    vf_dbg_font_open = 1;
+  if (getenv(VF_ENV_DEBUG_FONT_SEARCH) != NULL)
+    vf_dbg_font_search = 1;
+  if (getenv(VF_ENV_DEBUG_KPATHSEA) != NULL)
+    vf_dbg_kpathsea = 1;
+  if (getenv(VF_ENV_DEBUG_VFLIBCAP) != NULL)
+    vf_dbg_vfcap = 1;
+  if (getenv(VF_ENV_DEBUG_PARAMETERS) != NULL)
+    vf_dbg_parameters = 1;
+  if (getenv(VF_ENV_DEBUG_CCV) != NULL)
+    vf_dbg_ccv = 1;
+  if (getenv(VF_ENV_DEBUG_CCV_MAPPING) != NULL)
+    vf_dbg_ccv_map = 1;
+
+  if (getenv(VF_ENV_DEBUG_LOG) != NULL){
+    if ((vf_dbg_log = atoi(getenv(VF_ENV_DEBUG_LOG))) <= 0)
+      vf_dbg_log = 1;
+    if (vf_dbg_log > 1)
+      vf_dbg_log_fp = fopen(DEBUG_LOG_FILE, "w");
+    else
+      vf_dbg_log_fp = stdout;
+  }
+
+  if (vf_dbg_log > 0){
+    fprintf(vf_dbg_log_fp, "VF_Init(");
+    STRPARAM(vflibcap_path);
+    fprintf(vf_dbg_log_fp, ", ");
+    STRPARAM(parameters);
+    fprintf(vf_dbg_log_fp, ");\n");
+  }
+
+
+  /* Initialize File Stream Manager */
+  if (vf_fm_init() < 0)
+    return -1;
+
+  /* Initialize 'vflibcap' Database System */
+  if (vf_cap_init(vflibcap_path) < 0)
+    return -1;
+
+  /* set parameters (variable values for vflibcap) */
+  if (vf_params_init(parameters) < 0)
+    return -1;
+
+  /* Initialize Code Conversion Module */
+  vf_ccv_init();
+
+  /* Create a Table for Opened Font Table */
+  if (vf_defaults_init() < 0)
+    return -1;
+
+  /* Create a Table for Opened Font Table */
+  if ((font_id_table = vf_table_create()) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    return -1;
+  }
+
+  /* Create a Table for Font Drivers */
+  if ((font_class_table = vf_table_create()) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    return -1;
+  }
+
+  /* Call Initializer of Each Font Module (Install of Font Drivers) */ 
+  vf_drv_init();
+
+  return 0;
+}
+
+
+/**
+ **   VF_Version
+ **/
+Public char*
+VF_GetVersion(void)
+{
+  return VFLIB_VERSION;
+}
+
+
+/**
+ **   VF_ClearError
+ **/
+Public void
+VF_ClearError(void)
+{
+  vf_error = 0;
+}
+
+
+/**
+ **   VF_InstallFontDriver
+ **/
+Public int
+VF_InstallFontDriver(char *class_name,
+		     int(*driver_entry)(VF_FONT,char*,char*,int,void*))
+{
+  int         id;
+  FONT_CLASS  fclass;
+
+  vf_error = 0;
+
+#if 0
+  printf("** New font class: %s\n", class_name); 
+#endif
+
+  /* Check if a driver of the same name is installed or not. */
+  if ((font_class_table->get_obj_by_key)(font_class_table, class_name, 
+					 strlen(class_name)+1) != NULL){
+    vf_error = VF_ERR_USED_CLASS_NAME;
+    return -1;
+  }
+
+  /* Create font class object. */
+  ALLOC_IF_ERR(fclass, struct s_font_class){
+    vf_error = VF_ERR_NO_MEMORY;
+    return -1;
+  }
+  if ((fclass->class_name = vf_strdup(class_name)) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    vf_free(fclass);
+    return -1;
+  }
+  fclass->driver_entry = driver_entry;
+
+  /* Install font class object to font driver table. */
+  if ((id = (font_class_table->put)(font_class_table, fclass, 
+				    class_name, strlen(class_name)+1)) < 0){
+    vf_error = VF_ERR_NO_MEMORY;
+    vf_free(fclass->class_name);
+    vf_free(fclass);
+    return -1;
+  }
+
+  return id;
+}
+
+
+/**
+ **   VF_FontDriverList
+ **/
+Public char**
+VF_FontDriverList(void)
+{
+  int        n, i, j;
+  char       **drv_list;
+  FONT_CLASS fclass;
+
+  vf_error = 0;
+
+  /* Obtain the number of installed font drivers. */
+  n = (font_class_table->get_nelements)(font_class_table);
+
+  ALLOCN_IF_ERR(drv_list, char*, n+1){
+    vf_error = VF_ERR_NO_MEMORY;
+    return NULL;
+  }
+  
+  j = 0;
+  for (i = 0; j < n; i++){
+    fclass 
+      = (FONT_CLASS)(font_class_table->get_obj_by_id)(font_class_table, i);
+    if (fclass == NULL)
+      continue;
+    if ((drv_list[j] = vf_strdup(fclass->class_name)) == NULL){
+      vf_error = VF_ERR_NO_MEMORY;
+      for (j--; j >= 0; j--)
+	vf_free(drv_list[j]);
+      vf_free(drv_list);
+      return NULL;
+    }
+    j++;
+  }
+  drv_list[j] = NULL;
+
+  return drv_list;
+}
+
+
+/**
+ **   VF_OpenFont1
+ **/
+Public int
+VF_OpenFont1(char *font_name,
+	     double dpi_x, double dpi_y, double point_size, 
+	     double mag_x, double mag_y)
+{
+  if (vf_dbg_font_open == 1){
+    printf(">>Font Open: VF_OpenFont1(%s, %.2f, %.2f, %.2f, %.3f, %.3f);\n",
+	   font_name, dpi_x, dpi_y, point_size, mag_x, mag_y);
+  }
+
+  if (vf_dbg_log > 0){
+    if (vf_dbg_log > 1)
+      fprintf(vf_dbg_log_fp, "VF_OpenFont1(\"%s\", %f, %f, %f, %f, %f);\n", 
+	      font_name, dpi_x, dpi_y, point_size, mag_x, mag_y);
+    else
+      fprintf(vf_dbg_log_fp, "VF_OpenFont1(\"%s\", %f, %f, %f, %f, %f);\n", 
+	      font_name, dpi_x, dpi_y, point_size, mag_x, mag_y);
+  }
+
+  return  vf_openfont1(font_name, NULL, 
+		       dpi_x, dpi_y, point_size, mag_x, mag_y);
+}
+
+Glocal int
+vf_openfont1(char *font_name,
+	     char *requested_font_class, 
+	     double dpi_x, double dpi_y, double point_size, 
+	     double mag_x, double mag_y)
+{
+  struct s_open_arg_pack1  arg1;
+  
+  vf_error = 0;
+
+  /* Pack argments */
+  arg1.dpi_x = dpi_x;
+  arg1.dpi_y = dpi_y;
+  arg1.point_size = point_size;
+  arg1.mag_x = mag_x;
+  arg1.mag_y = mag_y;
+
+  return open_font(font_name, requested_font_class, &arg1, NULL);
+}
+
+
+/**
+ **   VF_OpenFont2
+ **/
+Public int
+VF_OpenFont2(char *font_name,
+	     int pixel_size, 
+	     double mag_x, double mag_y)
+{
+  if (vf_dbg_font_open == 1){
+    printf(">>Font Open: VF_OpenFont2(\"%s\", %d, %.3f, %.3f);\n",
+	   font_name, pixel_size, mag_x, mag_y);
+  }
+
+  if (vf_dbg_log > 0){
+    fprintf(vf_dbg_log_fp, "VF_OpenFont2(\"%s\", %d, %f, %f);\n", 
+	    font_name, pixel_size, mag_x, mag_y);
+  }
+
+  return  vf_openfont2(font_name, NULL, 
+		       pixel_size, mag_x, mag_y);
+}
+
+Glocal int
+vf_openfont2(char *font_name,
+	     char *requested_font_class, 
+	     int pixel_size, 
+	     double mag_x, double mag_y)
+{
+  struct s_open_arg_pack2  arg2;
+  
+  vf_error = 0;
+
+  /* Pack argments */
+  arg2.pixel_size = pixel_size;
+  arg2.mag_x = mag_x;
+  arg2.mag_y = mag_y;
+
+  return open_font(font_name, requested_font_class, NULL, &arg2);
+}
+
+
+
+Private int
+open_font(char *font_name,
+	  char *requested_font_class, 
+	  struct s_open_arg_pack1 *arg_mode1, 
+	  struct s_open_arg_pack2 *arg_mode2)
+{
+  VF_FONT  font = NULL;
+  int      font_id, mode;
+  char     *class, *ext, key[1024];
+  SEXP_ALIST  exh;
+  SEXP_LIST   ife, pair;
+
+  font = NULL;
+
+  /* Check nesting of font opens. */
+  open_nesting++;
+  if (open_nesting > VF_MAX_OPEN_NESTING){
+    fprintf(stderr, "VFlib: too many nesting levels for font open.\n"); 
+    vf_error = VF_ERR_OPEN_NESTING;
+    goto Error;
+  }
+
+  /* Check if the same font is opened. */
+  if (arg_mode1 != NULL){          /* mode 1: high-resolution oriented mode */
+    mode = 1;
+    sprintf(key, "<%s,%d,%s,%d,%d,%d,%d,%d>", 
+	    (requested_font_class != NULL) ? requested_font_class : "_",
+	    mode, font_name,
+	    toint(arg_mode1->dpi_x*100), toint(arg_mode1->dpi_y*100),
+	    toint(arg_mode1->point_size*100),
+	    toint(arg_mode1->mag_x*100), toint(arg_mode1->mag_y*100));
+  } else if (arg_mode2 != NULL){   /* mode 2: low-resolution oriented mode */
+    mode = 2;
+    sprintf(key, "<%s,%d,%s,%d,%d,%d>", 
+	    (requested_font_class != NULL) ? requested_font_class : "_",
+	    mode, font_name,
+	    arg_mode2->pixel_size,
+	    toint(arg_mode2->mag_x*100), toint(arg_mode2->mag_y*100));
+  } else {
+    fprintf(stderr, "VFlib internal error: Cannot happen in %s\n", 
+	    "open_font()");
+    abort();
+  }
+  font_id = (font_id_table->get_id_by_key)(font_id_table, 
+					   key, strlen(key)+1);
+  if (font_id >= 0){ 
+    /* Share the same font object. */
+    (font_id_table->link_by_id)(font_id_table, font_id);
+    goto Found;
+  }
+
+  /* Make a skeleton font object. */
+  ALLOC_IF_ERR(font, struct vf_s_font){
+    vf_error = VF_ERR_NO_MEMORY;
+    goto Error;
+  }
+  if (mode == 1){
+    font->font_name  = NULL;
+    font->mode       = 1;
+    font->point_size = arg_mode1->point_size;
+    font->pixel_size = -1;
+    font->mag_x      = arg_mode1->mag_x;
+    font->mag_y      = arg_mode1->mag_y;
+    font->dpi_x      = arg_mode1->dpi_x;
+    font->dpi_y      = arg_mode1->dpi_y;
+  } else if (mode == 2){
+    font->mode       = 2;
+    font->point_size = -1;
+    font->pixel_size = arg_mode2->pixel_size;
+    font->mag_x      = arg_mode2->mag_x;
+    font->mag_y      = arg_mode2->mag_y;
+    font->dpi_x      = -1;
+    font->dpi_y      = -1;
+  } else {
+    fprintf(stderr, "VFlib internal error: Cannot happen in %s\n", 
+	    "open_font()");
+    abort();
+  }
+
+  font->font_type       = 0;
+  font->get_metric1     = NULL;
+  font->get_metric2     = NULL;
+  font->get_fontbbx1    = NULL;
+  font->get_fontbbx2    = NULL;
+  font->get_bitmap1     = NULL;
+  font->get_bitmap2     = NULL;
+  font->get_outline     = NULL;
+  font->get_font_prop   = NULL;
+  font->query_font_type = NULL;
+  font->close           = NULL;
+
+  /* If 'requested_font_class' is given, we open a font by calling the 
+     corresponding font driver directly. */
+  if (requested_font_class != NULL){
+    /* try to open as an explicit font */
+    if ((font_id = do_open_font(requested_font_class, 
+				font_name, 0, mode, key, font)) >= 0)
+      goto Found;
+    if (vf_error != VF_ERR_NO_FONT_ENTRY)
+      goto Error;
+    /* try to open as an implicit font */
+    vf_error = 0;
+    if ((font_id = do_open_font(requested_font_class, 
+				font_name, 1, mode, key, font)) >= 0)
+      goto Found;
+    goto Error;
+  }
+
+  /* Try to open as an explicit font. */
+  if (vf_dbg_font_open == 1)
+    printf(">>Font Open: Try to open an explicit font %s.\n", font_name);
+  font_id = do_open_font(NULL, font_name, 0, mode, key, font);
+  if (font_id >= 0)      /* Opened as an explicit font. */
+    goto Found;
+
+  /* If it is not an explicit font, clear error code and try to
+     open as an implicit font. */
+  if (vf_error != VF_ERR_NO_FONT_ENTRY)
+    goto Error;
+
+  /* Search an implicit font. */
+  if (vf_dbg_font_open == 1)
+    printf(">>Font Open: Try to open an implicit font %s.\n", font_name);
+
+  /* First, try to make use of extension hint. */
+  for (exh = vf_extension_hints; vf_sexp_consp(exh); exh = vf_sexp_cdr(exh)){
+    pair = vf_sexp_car(exh);
+    if (!vf_sexp_consp(pair) 
+	|| ((ext = vf_sexp_get_cstring(vf_sexp_car(pair))) == NULL)
+	|| ((class = vf_sexp_get_cstring(vf_sexp_cadr(pair))) == NULL))
+      continue;
+    if (strlen(font_name) > strlen(ext)){
+      if (strcmp(ext, &font_name[strlen(font_name)-strlen(ext)]) == 0){
+	if (vf_dbg_font_open == 1)
+	  printf(">>Font Open: Try font class '%s' by hint '%s'\n", 
+		 class, ext);
+	vf_error = 0;
+	font_id = do_open_font(class, font_name, 1, mode, key, font);
+	if (font_id >= 0)    /* Font is found. */
+	  goto Found;
+      }	    
+    }
+  }
+  if (vf_dbg_font_open == 1)
+    printf(">>Extension hint does not work. Try other classes.\n");
+
+  /* Next, try other implict classes not in extension hints. */
+  ife = NULL;
+  for (ife = vf_implicit_font_classes; 
+       vf_sexp_consp(ife); 
+       ife = vf_sexp_cdr(ife)){
+    for (exh = vf_extension_hints; 
+	 vf_sexp_consp(exh);
+	 exh = vf_sexp_cdr(exh)){
+      ext = vf_sexp_get_cstring(vf_sexp_caar(exh));
+      if (strcmp(ext, vf_sexp_get_cstring(vf_sexp_car(ife))) == 0)
+	break;       /* Skip this font class since it is checked already. */
+    }
+    if (vf_sexp_consp(exh))
+      continue;
+
+    if (vf_dbg_font_open == 1)
+      printf(">>  ==> Trying %s\n", 
+	     vf_sexp_get_cstring(vf_sexp_car(ife)));
+    vf_error = 0;
+    font_id = do_open_font(vf_sexp_get_cstring(vf_sexp_car(ife)),
+			   font_name, 1, mode, key, font);
+    if (font_id >= 0)     /* Font is found. */
+      goto Found;
+  }
+
+  /* The font is not opened as an implicit font. Open error. */
+  vf_error = VF_ERR_NO_FONT_IMP;
+Error:
+  if (font != NULL)
+    vf_free(font);
+  if (vf_dbg_font_open == 1)
+    printf(">>Font Open Failure: %s\n", font_name);
+  open_nesting--;
+  return -1;
+
+
+  /* The font is opened. */
+Found:
+  vf_error = 0;
+  if (vf_dbg_font_open == 1)
+    printf(">>Font Open Success: %s fid=%d\n", font_name, font_id);
+  if ((font != NULL) && (font->font_name == NULL)){
+    font->font_name = vf_strdup(font_name);
+  }
+  open_nesting--;
+  return font_id;
+}
+
+Private int
+do_open_font(char *font_class_spec, 
+	     char *font_name, int implicit, int mode, 
+	     char *cache_key,
+	     VF_FONT font)
+{
+  int           font_id, font_class_id;
+  char         *class_name;
+  SEXP          entry, s;
+  FONT_CLASS    fclass;
+
+  /* Obtain font class name. */
+  if (implicit == 1){       /* open for implicit font. */
+    entry = NULL;
+    if ((class_name = font_class_spec) == NULL){
+      vf_error = VF_ERR_CLASS_UNKNOWN;
+      goto Error;
+    }
+  } else {                  /* open for explicit font. */
+    if ((entry = vf_cap_GetFontEntry(font_name)) == 0){
+      vf_error = VF_ERR_NO_FONT_ENTRY;
+      goto Error;
+    }
+    class_name = NULL;
+    for (s = vf_sexp_cddr(entry); vf_sexp_consp(s); s = vf_sexp_cdr(s)){
+      if (strcmp(vf_sexp_get_cstring(vf_sexp_caar(s)), 
+		 VF_CAPE_FONT_CLASS) == 0){
+	if (vf_sexp_stringp(vf_sexp_car(vf_sexp_cdar(s))))
+	  class_name = vf_sexp_get_cstring(vf_sexp_car(vf_sexp_cdar(s)));
+	break;
+      }
+    }
+    if (class_name == NULL){
+      vf_error = VF_ERR_CLASS_UNKNOWN;
+      goto Error;
+    }
+    if ((font_class_spec != NULL) 
+	&& (strcmp(font_class_spec, class_name) != 0)){ 
+      /* class name mismatch. */
+      if (vf_dbg_font_open == 1)
+	printf(">>%s: fontname: %s   requested class is %s but %s\n", 
+	       "Font Open: Font class name mismatch",
+	       font_name, font_class_spec, class_name);
+      vf_error = VF_ERR_NO_FONT_ENTRY;
+      goto Error;
+    }
+  }
+
+  /* Get font class object for the font class. */
+  if ((fclass 
+       = (font_class_table->get_obj_by_key)(font_class_table, class_name,
+					    strlen(class_name)+1)) == NULL){
+    if (vf_dbg_font_open == 1)
+      printf(">>Font Open: Unknown font class '%s'\n", class_name);
+    vf_error = VF_ERR_NO_FONT_CLASS;
+    goto Error;
+  }
+  if (vf_dbg_font_open == 1)
+    printf(">>Font Open: entry=%s class=%s\n", font_name, class_name);
+
+  /* Get font class object id. */
+  if ((font_class_id 
+       = (font_class_table->get_id_by_key)(font_class_table, class_name,
+					   strlen(class_name)+1)) < 0){
+    vf_error = VF_ERR_NO_FONT_CLASS;
+    goto Error;
+  }
+  font->font_class = font_class_id;
+
+  /* Call font open procedure in a font driver.
+     For an implicit font, the driver searches a font. */
+  if ((fclass->driver_entry)(font, class_name, 
+			     font_name, implicit, entry) < 0){
+    goto Error;
+  }
+
+  /* If a font is opened, install the font object. */
+  if ((font_id = (font_id_table->put)(font_id_table, font, 
+				      cache_key, strlen(cache_key)+1)) < 0){
+    vf_error = VF_ERR_NO_MEMORY;
+    goto Error;
+  }
+
+  /* Font is Opened. */
+  if (entry != NULL)
+    vf_sexp_free(&entry);
+  return font_id;
+
+
+Error:
+  if (entry != NULL)
+    vf_sexp_free(&entry);
+  return -1;
+}
+
+
+/**
+ **   VF_CloseFont
+ **/
+Public int
+VF_CloseFont(int font_id)
+{
+  VF_FONT  font;
+  int   v;
+
+  vf_error = 0;
+
+  if (vf_dbg_log > 0){
+    fprintf(vf_dbg_log_fp, "VF_CloseFont(%d);\n", font_id);
+  }
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return -1;
+
+  /* Discard cache */
+  (void)id2font(-1);
+
+  /* Unlink the font object. If link count is not zero, close is deferred. */
+  if ((font_id_table->unlink_by_id)(font_id_table, font_id) >= 1)
+    return 0;
+
+  /* No one use the font object. Do close it. */
+  v = (font->close)(font);
+
+  vf_free(font->font_name);
+  vf_free(font);
+
+  return v;
+}
+
+
+/**
+ **   VF_GetMetric1
+ **/
+Public VF_METRIC1
+VF_GetMetric1(int font_id, long code_point, VF_METRIC1 metric1,
+	      double mag_x, double mag_y)
+{
+  VF_FONT    font;
+  VF_METRIC1 met1;
+  int        val;
+
+  vf_error = 0;
+
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return NULL;
+
+  /* Check if this font is opened as mode 1. */
+  if (font->mode != 1){
+    vf_error = VF_ERR_ILL_MODE;
+    return NULL;
+  }
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_metric1 == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return NULL;
+  }
+
+  /* Allocate metric object if not given. */
+  if ((met1 = metric1) == NULL){
+    if ((met1 = vf_alloc_metric1()) == NULL){
+      vf_error = VF_ERR_NO_MEMORY;
+      return NULL;
+    }
+  }
+
+  /* Call a font driver's procedure. */
+  val = (font->get_metric1)(font, code_point, met1, mag_x, mag_y);
+  if (val < 0){
+    if (metric1 == NULL)
+      vf_free(met1);
+    return NULL;
+  }
+  
+  return met1;
+}
+
+/**
+ **   VF_GetMetric2
+ **/
+Public VF_METRIC2
+VF_GetMetric2(int font_id, long code_point, VF_METRIC2 metric2,
+	      double mag_x, double mag_y)
+{
+  VF_FONT    font;
+  VF_METRIC2 met2;
+  int        val;
+
+  vf_error = 0;
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return NULL;
+
+  /* Check if this font is opened as mode 2. */
+  if (font->mode != 2){
+    vf_error = VF_ERR_ILL_MODE;
+    return NULL;
+  }
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_metric1 == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return NULL;
+  }
+
+  /* Allocate metric object if not given. */
+  if ((met2 = metric2) == NULL){
+    if ((met2 = vf_alloc_metric2()) == NULL){
+      vf_error = VF_ERR_NO_MEMORY;
+      return NULL;
+    }
+  }
+
+  /* Call a font driver's procedure. */
+  val = (font->get_metric2)(font, code_point, met2, mag_x, mag_y);
+  if (val < 0){
+    if (metric2 == NULL)
+      vf_free(met2);
+    return NULL;
+  }
+  
+  return met2;
+}
+
+/**
+ **   VF_GetFontBoundingBox1
+ **/
+Public int
+VF_GetFontBoundingBox1(int font_id, double mag_x, double mag_y,
+		       double *width_p, double *height_p,
+		       double *xoff_p, double *yoff_p)
+{
+  VF_FONT   font;
+  double    d1, d2, d3, d4;
+
+  vf_error = 0;
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return -1;
+
+  /* Check if this font is opened as mode 1. */
+  if (font->mode != 1){
+    vf_error = VF_ERR_ILL_MODE;
+    return -1;
+  }
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_fontbbx1 == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return -1;
+  }
+
+  if (width_p == NULL)
+    width_p = &d1;
+  if (height_p == NULL)
+    height_p = &d2;
+  if (xoff_p == NULL)
+    xoff_p = &d3;
+  if (yoff_p == NULL)
+    yoff_p = &d4;
+  *width_p = *height_p = *xoff_p = *yoff_p = 0;
+
+  /* Call a font driver's procedure. */
+  return (font->get_fontbbx1)(font, mag_x, mag_y,
+			      width_p, height_p, xoff_p, yoff_p);
+}
+
+/**
+ **   VF_GetFontBoundingBox2
+ **/
+Public int
+VF_GetFontBoundingBox2(int font_id, double mag_x, double mag_y,
+		       int *width_p, int *height_p,
+		       int *xoff_p, int *yoff_p)
+{
+  VF_FONT   font;
+  int    d1, d2, d3, d4;
+
+  vf_error = 0;
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return -1;
+
+  /* Check if this font is opened as mode 2. */
+  if (font->mode != 2){
+    vf_error = VF_ERR_ILL_MODE;
+    return -1;
+  }
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_fontbbx2 == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return -1;
+  }
+
+  if (width_p == NULL)
+    width_p = &d1;
+  if (height_p == NULL)
+    height_p = &d2;
+  if (xoff_p == NULL)
+    xoff_p = &d3;
+  if (yoff_p == NULL)
+    yoff_p = &d4;
+  *width_p = *height_p = *xoff_p = *yoff_p = 0;
+
+  /* Call a font driver's procedure. */
+  return (font->get_fontbbx2)(font, mag_x, mag_y,
+			      width_p, height_p, xoff_p, yoff_p);
+}
+
+
+/**
+ ** VF_GetBitmap1
+ **/
+Public VF_BITMAP
+VF_GetBitmap1(int font_id, long code_point,
+	      double mag_x, double mag_y)
+{
+  VF_FONT   font;
+
+  vf_error = 0;
+
+  if (vf_dbg_log > 0){
+    if (vf_dbg_log > 1)
+      fprintf(vf_dbg_log_fp, 
+	      "VF_DumpBitmap(VF_GetBitmap1(%d, 0x%lx, %f, %f));\n",
+	      font_id, code_point, mag_x, mag_y);
+    else 
+      fprintf(vf_dbg_log_fp, "VF_GetBitmap1(%d, 0x%lx, %f, %f);\n",
+	      font_id, code_point, mag_x, mag_y);
+  }
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return NULL;
+
+  /* Check if this font is opened as mode 1. */
+  if (font->mode != 1){
+    vf_error = VF_ERR_ILL_MODE;
+    return NULL;
+  }
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_bitmap1 == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return NULL;
+  }
+
+  /* Call a font driver's procedure. */
+  return (font->get_bitmap1)(font, code_point, mag_x, mag_y);
+}
+
+
+/**
+ **   VF_GetBitmap2
+ **/
+Public VF_BITMAP
+VF_GetBitmap2(int font_id, long code_point,
+	      double mag_x, double mag_y)
+{
+  VF_FONT   font;
+
+  vf_error = 0;
+
+  if (vf_dbg_log > 0){
+    if (vf_dbg_log > 1)
+      fprintf(vf_dbg_log_fp, 
+	      "VF_DumpBitmap(VF_GetBitmap2(%d, 0x%lx, %f, %f));\n",
+	      font_id, code_point, mag_x, mag_y);
+    else 
+      fprintf(vf_dbg_log_fp, "VF_GetBitmap2(%d, 0x%lx, %f, %f);\n",
+	      font_id, code_point, mag_x, mag_y);
+  }
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return NULL;
+
+  /* Check if this font is opened as mode 2. */
+  if (font->mode != 2){
+    vf_error = VF_ERR_ILL_MODE;
+    return NULL;
+  }
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_bitmap2 == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return NULL;
+  }
+
+  /* Call a font driver's procedure. */
+  return (font->get_bitmap2)(font, code_point, mag_x, mag_y);
+}
+
+
+/**
+ **   VF_GetOutline
+ **/
+Public VF_OUTLINE
+VF_GetOutline(int font_id, long code_point,
+	      double mag_x, double mag_y)
+{
+  VF_FONT  font;
+
+  vf_error = 0;
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return NULL;
+
+  /* Check if this font is opened as mode 1. */
+  if (font->mode != 1){
+    vf_error = VF_ERR_ILL_MODE;
+    return NULL;
+  }
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_outline == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return NULL;
+  }
+
+  /* Call a font driver's procedure. */
+  return (font->get_outline)(font, code_point, mag_x, mag_y);
+}
+
+
+/**
+ **   VF_GetFontProp
+ **/
+Public char*
+VF_GetFontProp(int font_id, char *prop_name)
+{
+  VF_FONT  font;
+
+  vf_error = 0;
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return NULL;
+
+  /* Check if this operation is supported by a font driver. */ 
+  if (font->get_font_prop == NULL){
+    vf_error = VF_ERR_NOT_SUPPORTED_OP;
+    return NULL;
+  }
+
+  /* Call a font driver's procedure. */
+  return (font->get_font_prop)(font, prop_name);
+}
+
+
+/**
+ **   VF_QueryFontType
+ **/
+Public int
+VF_QueryFontType(int font_id, long code_point)
+{
+  VF_FONT  font;
+
+  vf_error = 0;
+
+  /* Obtain a font object for given font id. */ 
+  if ((font = id2font(font_id)) == NULL)
+    return -1;
+
+  switch (font->font_type){
+  case VF_FONT_TYPE_BITMAP:
+  case VF_FONT_TYPE_OUTLINE:
+    return font->font_type;
+  default:
+  case VF_FONT_TYPE_UNDEF:
+    /* Check if this operation is supported by a font driver. */ 
+    if (font->query_font_type == NULL){
+      vf_error = VF_ERR_NOT_SUPPORTED_OP;
+      return -1;
+    }
+    /* Call a font driver's procedure. */
+    return (font->query_font_type)(font, code_point);
+  }
+
+  return -1;
+}
+
+
+
+/* font ID  ==>  font obj */
+
+Private VF_FONT
+id2font(int font_id)
+{
+  VF_FONT           font;
+  static VF_FONT    last_font    = NULL;  /* 1st cache */
+  static int        last_font_id = -1;  
+
+  if (font_id < 0){
+    last_font    = NULL;
+    last_font_id = -1;
+    return NULL;
+  }
+
+  if ((font_id == last_font_id) && (last_font != NULL)
+      && (last_font_id >= 0)){    /* 1st cache hits. */
+    font = last_font;
+  } else {                        /* use 2nd cache. */
+    if ((font = (font_id_table->get_obj_by_id)(font_id_table, font_id))
+	== NULL){
+      vf_error = VF_ERR_ILL_FONTID;
+      goto Error;
+    }
+    /* reload 1st cache. */
+    last_font    = font;
+    last_font_id = font_id;
+  }
+  return font;
+
+Error:
+  /* discard 1st cache. */
+  last_font    = NULL;
+  last_font_id = -1;
+  return NULL;
+}
+
+
+/* For Debugging Purpose Only */
+Public void
+VF_DumpFontTable(void)
+{
+  VF_FONT    font;
+  FONT_CLASS fc; 
+  int        nfonts, r, i;
+
+  nfonts = (font_id_table->get_nelements)(font_id_table);
+
+  for (i = 0, r = nfonts; r > 0; i++){
+    font = (font_id_table->get_obj_by_id)(font_id_table, i);
+    if (font == NULL)
+      continue;
+    --r;
+
+    fc = (FONT_CLASS)(font_class_table->get_obj_by_id)(font_class_table, 
+						       font->font_class);
+    printf("#% 3d: \"%s\"\n", i, font->font_name);
+    printf("       font_class: %s, mode: %d\n", fc->class_name, font->mode);
+    if (font->mode == 1)
+      printf("       point size: %.3f, dpi_x: %.3f, dpi_y: %.3f\n",
+	     font->point_size, font->dpi_x, font->dpi_y);
+    else
+      printf("       point size: %.3f\n", font->point_size);
+    printf("       max_x: %.3f, max_y: %.3f \n", font->mag_x, font->mag_y);
+  }
+}
+
+/*EOF*/

@@ -1,0 +1,13 @@
+\ProvidesFile{jt1hag.fd}[1998/09/07]
+\DeclareKanjiFamily{JT1}{hag}{}
+\DeclareRelationFont{JT1}{hag}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JT1}{hag}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{hag}{sb}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JT1}{hag}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JT1}{hag}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT1}{hag}{sl}{n}{ <-> trchagmaa  }{}
+\DeclareFontShape{JT1}{hag}{m}{n}{ <-> trchagpaa  }{}
+\DeclareFontShape{JT1}{hag}{sb}{n}{ <-> trchagsaa  }{}
+\DeclareFontShape{JT1}{hag}{b}{n}{ <-> trchagvaa  }{}
+\DeclareFontShape{JT1}{hag}{bx}{n}{ <-> trchagvaa  }{}
+\endinput

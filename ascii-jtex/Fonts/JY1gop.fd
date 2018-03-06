@@ -1,0 +1,13 @@
+\ProvidesFile{jy1gop.fd}[1998/09/07 Karei Gothic (Horizontal)]
+\DeclareKanjiFamily{JY1}{gop}{}
+\DeclareRelationFont{JY1}{gop}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JY1}{gop}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{gop}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{gop}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JY1}{gop}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JY1}{gop}{sl}{n}{ <-> dfgopmaa  }{}
+\DeclareFontShape{JY1}{gop}{m}{n}{ <->  dfgoppaa  }{}
+\DeclareFontShape{JY1}{gop}{sb}{n}{ <-> dfgoppaa  }{}
+\DeclareFontShape{JY1}{gop}{b}{n}{ <->  dfgoppaa  }{}
+\DeclareFontShape{JY1}{gop}{bx}{n}{ <-> dfgoppaa  }{}
+\endinput

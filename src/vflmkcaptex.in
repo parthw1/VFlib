@@ -1,0 +1,685 @@
+#!/bin/sh
+
+# vflmkcaptex
+# by Hirotsugu Kakugawa
+# --- Generate vflibcap for TeX DVI drivers
+#     (Especially, DVIware of the TeX-Guy Project)
+#
+# 
+# 13 May 2001
+# 12 Oct 2001  Fixed bugs. Thanks to James Hirschorn.
+#              Changed to read modex.mf to obtain device resolution. 
+# 21 Jul 2005  Enhanced searching "config.ps" and type 1 font files.
+# 33 Jul 2005  Added -t1map option. Changed type1 mapping files used.
+
+# Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+# All rights reserved.
+# License: GPLv3 and FreeType Project License (FTL)
+
+version="1.1"
+
+vflibversion="@vflib_version@"
+prefix=@prefix@
+datadir=${prefix}/share
+
+
+k_mode_d="cx"
+k_dpi_d="300"
+k_prg_d="xgdvi"
+
+fclass_pk_def="pk vf type1 tfm"
+fclass_t1_def="type1 vf pk tfm"
+
+emit_portable="no"
+prefer_t1_="no"
+use_tex_mapper="no"
+gen_pk_otf="no"
+use_jtex="no"
+use_jtex_jisx0212="no"
+jtex_class="pcf"
+pcf_kanji_dir_extra=""
+ekanji_kanji_dir_extra=""
+ttf_kanji_dir_extra=""
+ttf_fontdef_opt=""
+ajt_ttf_fontdb=""
+use_jp_comic="no"
+jp_comic_fontdb=""
+
+t1_config_ps="config.ps"
+t1_config_ps_auxs="config.ps.ptex-tetex config.ps.tetex"
+t1_dmaps="psnfss.map psfonts.cm psfonts.ams xypic.map"
+
+k_mode=${k_mode_d}
+k_dpi=-1
+k_prg=${k_prg_d}
+
+fclass=""
+ccv=""
+
+
+cmdline=$*
+
+
+usage()
+{
+  echo "vflmkcaptex - make a vflibcap file of VFlib 3 for TeX DVI drivers." 
+  echo "Usage: vflmkcaptex [Options] [Class-list]" 
+  echo "    or vflmkcaptex [Shortcut] [Options]" 
+  echo "Class-list:  pk, gf, vf, type1, tfm"
+  echo "  A list of font class names."
+  echo "  Default class list: pk vf type1 tfm (with -pk option)"
+  echo "                      type1 vf pk tfm (with -t1 option)"
+  echo "Options:" 
+  echo "  -p PROG     Program name for kpathsea (default: ${k_prg_d})" 
+  echo "  -n MODE     Device mode name for kpathsea (default: ${k_mode_d})" 
+  echo "  -r DPI      Device resolution in DPI (default: ${k_dpi_d})" 
+  echo "  -g          Enable to generate PK on-the-fly" 
+  echo "  -pk         Search PK font before Type 1 (default)" 
+  echo "  -t1         Search Type1 font before PK" 
+  echo "  -i          Generate more portable font directory list" 
+  echo "  -t1map map  Font mapping file (.map) for dvips" 
+  echo "              Default map files: ${t1_dmaps}" 
+  echo "  --version   Print version number and exit" 
+  echo "  --help      Print help message" 
+  echo "Options for Japanese Kanji characters:" 
+  echo "  -jtex       Enable Japanese Kanji (JISX0208) font support" 
+  echo "  -jisx0212   Enable Japanese Hojo Kanji (JISX0212) font support" 
+  echo "  -jpcf       Use X11 PCF fonts (default)" 
+  echo "  -jttf       Use TrueType fonts" 
+  echo "  -jekanji    Use eKanji fonts" 
+  echo "  -jpfd DIR   Add PCF font directory" 
+  echo "  -jtfd DIR   Add TrueType font directory" 
+  echo "  -jefd DIR   Add eKanji font directory" 
+  echo "  -jtdb FILE  File for TeX font definition with TrueType font"
+  echo "        The format of a file for -jtdb option is a sequence of"
+  echo "        lines, each of which contains TeX font name and TrueType"
+  echo "        font file name."
+  echo "Shortcut:"
+  echo "  minimum       same as 'pk' (PK only)"
+  echo "  simple        same as '-g pk tfm' (PK and TFM only)"
+  echo "  standard      same as '-t1 -g' (use default class list)" 
+  echo "  simple-ja     same as '-g pk tfm -jtex -jisx0212 -jpcf'"
+  echo "  standard-ja   same as '-t1 -g -jtex -jisx0212 -jpcf'"
+  exit 0;
+}
+
+
+# Check shortcut
+shortcut=""
+if [ $# -ge 1 ] 
+then
+  case $1 in
+  minimum)
+    shift
+    shortcut="pk"
+    ;;
+  simple)
+    shift
+    shortcut="-g pk tfm"
+    ;;
+  simple-ja)
+    shift
+    shortcut="-g pk tfm -jtex -jisx0212 -jpcf"
+    ;;
+  standard)
+    shift
+    shortcut="-t1 -g"
+    ;;
+  standard-ja)
+    shift
+    shortcut="-t1 -g -jtex -jisx0212 -jpcf"
+    ;;
+  kakugawa)     # developer's preference B-)
+    shift
+    shortcut="-pk \
+              -jtex -jisx0212 \
+              -jttf \
+              -jtfd /usr/local/share/fonts/DynaFont-TypeMuseum//  \
+              -jtfd /usr/local/share/fonts/DynaFont-SpecialPack1//  \
+              -jtfd /usr/local/share/fonts/DynaFont-Premium30//  \
+              -jtfd /usr/local/share/fonts/FontCity2//  \
+              -jtfd /usr/local/share/fonts/TrueTypeWorld-ValueFont141//  \
+              -jtfd /usr/local/share/fonts/TrueTypeWorld-ValueFontDX//  \
+              -jtfd /usr/local/share/fonts/mika-chan//  \
+              -jtfd /usr/local/share/fonts/kotori//  \
+              -jtdb  ../ascii-jtex/fonts.lst \
+              -jpcdb ../ascii-jtex/fontsc.lst"
+    ;;
+  esac
+fi
+args_rest=$*
+
+set -- $shortcut $args_rest
+
+#echo $# $*
+#exit 1;
+
+# Command line argument
+fclass=""
+while [ $# -gt 0 ] 
+do
+  case "$1" in
+  -*=*) optarg=`echo "$1" | sed 's/[-_a-zA-Z0-9]*=//'` ;;
+  *) optarg= ;;
+  esac
+
+  case $1 in
+  --prefix=*)
+    prefix=$optarg
+    datadir=${prefix}/share
+    ;;
+  --datadir=*)
+    datadir=$optarg
+    ;;
+  pk|gf|tfm|vf|type1)
+    fclass="${fclass} $1"
+    ;;
+  -r)
+    k_dpi=$2
+    shift
+    ;;
+  -n)
+    k_mode=$2
+    shift
+    ;;
+  -p)
+    k_prg=$2
+    shift
+    ;;
+  -i)
+    emit_portable="yes"
+    ;;
+  -g)
+    gen_pk_otf="yes"
+    ;;
+  -t1)
+    prefer_t1="yes"
+    ;;
+  -t1map)
+    t1_dmaps="${t1_dmaps} $2"
+    shift
+    ;;
+  -pk)
+    prefer_t1="no"
+    ;;
+  -jtex)
+    use_jtex="yes"
+    ;;
+  -jisx0212)
+    use_jtex="yes"
+    use_jtex_jisx0212="yes"
+    ;;
+  -jpcf)
+    use_jtex="yes"
+    jtex_class="pcf"
+    ;;
+  -jekanji)
+    use_jtex="yes"
+    jtex_class="ekanji"
+    ;;
+  -jttf)
+    use_jtex="yes"
+    jtex_class="ttf"
+    ;;
+  -jtfd)
+    ttf_kanji_dir_extra="${ttf_kanji_dir_extra} $2"
+    shift
+    ;;
+  -jpfd)
+    pcf_kanji_dir_extra="${pcf_kanji_dir_extra} $2"
+    shift
+    ;;
+  -jefd)
+    ekanji_kanji_dir_extra="${ekanji_kanji_dir_extra} $2"
+    shift
+    ;;
+  -jtdb)
+    ajt_ttf_fontdb="${ajt_ttf_fontdb} -tf $2"
+    shift
+    ;;
+  -jpcdb)
+    use_jp_comic="yes"
+    jp_comic_fontdb="$2"
+    shift
+    ;;
+  --help|-help|-hel|-he|-h)
+    usage;
+    ;;
+  --ver*|-ver*|-v)
+    echo "${version}, VFlib ${vflibversion}"
+    exit 1
+    ;;
+  *)
+    echo "" >&2
+    echo "vflmkcaptex: Unknown option ${1}" >&2
+    echo "Use --help option for help" >&2
+    echo "Abort" >&2
+    exit 1
+    ;;
+  esac
+  shift
+done
+
+if [ "x-${fclass}" = "x-" ] ; then
+  if [ "x-${prefer_t1}" = "x-no" ]; then
+    fclass=${fclass_pk_def}
+  else
+    fclass=${fclass_t1_def}
+  fi
+fi
+
+for c in ${fclass}; 
+do
+  case $c in
+  vf|type1)
+    use_tex_mapper="yes"
+  esac
+done
+
+if [ "${use_jtex}" = "yes" ] ; then
+  ccv="${ccv} -c jisx0201_unicode.ccv "
+  ccv="${ccv} -c jisx0208_unicode.ccv "
+  ccv="${ccv} -c jisx0208sjis_unicode.ccv "
+  ccv="${ccv} -c jisx0212_unicode.ccv "
+fi
+
+
+# Checking kpathsea
+have_kpathsea=no
+kpsewhich texmf.cnf >/dev/null 2>/dev/null
+if [ $? = "0" ] ; then
+  have_kpathsea=yes
+fi
+if [ "x-${have_kpathsea}" = "x-no" ] ; then
+  echo "" >&2
+  echo "No kpathsea."  >&2
+  echo "Abort" >&2
+  exit 1;
+fi
+
+
+# Subroutines 
+
+type1_check_adobe()
+{
+  t1dir=" /usr/Acrobat3/Fonts \
+          /usr/Acrobat4/Resource/Font \
+          /usr/Acrobat5/Resource/Font \
+          /opt/Acrobat3/Fonts \
+          /opt/Acrobat4/Resource/Font \
+          /opt/Acrobat5/Resource/Font \
+          /usr/lpp/Acrobat3/Fonts \
+          /usr/lpp/Acrobat4/Resource/Font \
+          /usr/lpp/Acrobat5/Resource/Font \
+          /usr/local/Acrobat3/Fonts \
+          /usr/local/Acrobat4/Resource/Font \
+          /usr/local/Acrobat5/Resource/Font "
+  for f in ${t1dir}; do
+    if [ "x-${emit_portable}" = "x-yes" ] ; then
+      type1_opt="${type1_opt} -d ${f}"
+    else
+      ff=`echo ${f} | sed 's|//$||'`
+      if [ -d ${ff} ] ; then
+        type1_opt="${type1_opt} -d ${f}"
+      fi
+    fi
+  done
+}
+
+type1_check_gs()
+{
+  gs_fm=""
+  tmp=/tmp/vflmkcaptex$$
+  rm -f ${tmp}
+  echo '0 1 LIBPATH length 1 sub { 
+        LIBPATH exch get print (\n) print } for' > ${tmp}
+  d=`gs -q -DNODISPLAY ${tmp} quit.ps`
+  if [ $? -eq 0 ] ; then
+    for f in ${d}; do
+      if [ -f ${f}/Fontmap ] ; then
+        gs_fm="-gm ${f}/Fontmap"
+      fi
+      if [ "x-${f}" != "x-." ] ; then
+        type1_gs_opt="${type1_gs_opt} -gf ${f}"
+        type1_opt="${type1_opt} -a ${f}"
+      fi
+    done
+  fi
+  rm -f ${tmp}
+  type1_gs_opt="${type1_gs_opt} ${gs_fm}"
+}
+
+type1_check_fontmap()
+{
+  dc=`kpsewhich -format='dvips config' ${t1_config_ps}`
+  if [ $? -ne 0 ] ; then
+    echo "Warning: dvips config file ${t1_config_ps} not found" >&2
+    for c in ${t1_config_ps_auxs}
+    do
+      dc=`kpsewhich -format='dvips config' ${c}`
+      if [ $? -ne 0 ] ; then
+        echo "Abort" >&2
+        exit 1;
+      else
+        echo "Warning: use dvips config file ${c}" >&2
+        break
+      fi
+    done  
+  fi
+  sed 's/[[:blank:]]//' > /dev/null < /dev/null 2> /dev/null; 
+  if [ $? -eq 0 ]; then 
+    sedfiltregex='s/^p[[:blank:]]*[+]*\([^[:blank:]]*\)[:blank:]*/\1/'
+  else
+    sedfiltregex='s/^p[ 	]*[+]*\(.*map\).*/\1/'
+  fi
+  maps=`cat $dc | sed 's/%.*//' | grep '^p' | sed "$sedfiltregex"`
+  maps=`echo $maps ${t1_dmaps} | sort | uniq`
+  #echo $maps; exit
+  type1_fontmap=""
+  for m in $maps
+  do
+    f=`kpsewhich -format=map $m`
+    if [ $? -eq 0 ] ; then
+      type1_fontmap="${type1_fontmap} $m"
+    else
+      f=`kpsewhich -format='dvips config' $m`
+      if [ $? -eq 0 ] ; then
+        type1_fontmap="${type1_fontmap} $m"
+      else
+        echo "Warning: dvips fontmap file $m not found" >&2
+      fi
+    fi
+  done
+}
+
+pcf_check_dir()
+{
+  pcfdirs=" /usr/X11R6/lib/X11/fonts// \
+            /usr/X11R5/lib/X11/fonts// \
+            /usr/local/X11R6/lib/X11/fonts// \
+            /usr/openwin/lib/X11/fonts// \
+            /usr/X386/lib/X11/fonts// \
+            /usr/XFree86/lib/X11/fonts// \
+            /usr/X11/lib/X11/fonts// \
+            /usr/local/lib/X11/fonts// \
+            /usr/X11R6/lib/X11/fonts// \
+            /usr/X11R5/lib/X11/fonts// \
+            /usr/local/X11R6/lib/X11/fonts// \
+            /usr/local/X11R5/lib/X11/fonts// \
+            /usr/local/share/emacs/fonts// \
+            /usr/local/fonts/X11// \
+            /usr/local/share/fonts/X11// "
+  pcf_dir_opt=""
+  for f in ${pcfdirs} ${pcf_kanji_dir_extra}; do
+    if [ "x-${emit_portable}" = "x-yes" ] ; then
+      pcf_dir_opt="${pcf_dir_opt} -d ${f}"
+    else
+      ff=`echo ${f} | sed 's|//$||'`
+      if [ -d ${ff} ] ; then
+        pcf_dir_opt="${pcf_dir_opt} -d ${f}"
+      fi
+    fi
+  done
+}
+
+ekanji_check_dir()
+{
+  ekanjidirs=" /usr/local/fonts/ekanji// \
+               /usr/local/share/fonts/eKanji// "
+  ekanji_dir_opt=""
+  for f in ${ekanjidirs} ${ekanji_kanji_dir_extra}; do
+    if [ "x-${emit_portable}" = "x-yes" ] ; then
+      ekanji_dir_opt="${ekanji_dir_opt} -d ${f}"
+    else
+      ff=`echo ${f} | sed 's|//$||'`
+      if [ -d ${ff} ] ; then
+        ekanji_dir_opt="${ekanji_dir_opt} -d ${f}"
+      fi
+    fi
+  done
+}
+
+ttf_check_dir()
+{
+  ttfdirs=" "
+  ttf_dir_opt=""
+  for f in ${ttfdirs} ${ttf_kanji_dir_extra}; do
+    if [ "x-${emit_portable}" = "x-yes" ] ; then
+      ttf_dir_opt="${ttf_dir_opt} -d ${f}"
+    else
+      ff=`echo ${f} | sed 's|//$||'`
+      if [ -d ${ff} ] ; then
+        ttf_dir_opt="${ttf_dir_opt} -d ${f}"
+      fi
+    fi
+  done
+}
+
+get_device_resolution()
+{
+  modes_mf=`kpsewhich modes.mf`
+  if [ x-${modes_mf} = x- ] ; then
+    echo "Not found: modes.mf" >&2
+    exit;
+  fi
+  if [ ! -f ${modes_mf} ] ; then
+    echo "Not found: modes.mf" >&2
+    exit;
+  fi
+  devdpi=`cat ${modes_mf} \
+  | awk -v devname=${k_mode} '
+    BEGIN {
+      devdpi = "";
+    } 
+    END {
+      if (devdpi == ""){
+        printf("-1\n");  # not found
+      }
+      printf("%s\n", devdpi);
+    } 
+    # Line: e.g.,  mode_def ljfour =              % 600dpi HP LaserJet 4
+    /^mode_def/ { 
+      mode=$2; 
+      ppi=-1; 
+      ppiv=-1; 
+      asp=1.0;
+      i=index($0, "%");
+      x=substr($0, i);
+      desc=substr($0, i + match(x, "[[:alnum:]]") - 1);
+    }
+    # Line: e.g.,     mode_param (pixels_per_inch, 600);
+    /^[[:space:]]*mode_param[[:space:]]*\([[:space:]]*pixels_per_inch, [[:space:]]*[[:digit:].]+\);/ {
+      match($3, "[[:digit:].]*");
+      ppi=substr($3, 1, RLENGTH);
+      ppiv=-1; 
+    }
+    # Line: e.g.,     mode_param (aspect_ratio, 4/3);
+    # Currently, aspect ratio must be 1
+    /^[[:space:]]*mode_param[[:space:]]*\([[:space:]]*aspect_ratio[[:space:]]*,[[:space:]]*[[:digit:].\/]+[[:space:]]*\)[[:space:]]*;/ {
+      i=match($0, ",[[:space:]]*");
+      s0=i+RLENGTH;
+      x=substr($0, s0);
+      len=index(x, ")");
+      asp=substr($0, s0, len-1);
+      ppiv=asp*ppi;
+      ppi=-1; ### ignore this entry.
+    }
+    # Line: e.g.,   mode_param (aspect_ratio, 180 / pixels_per_inch);
+    /^[[:space:]]*mode_param[[:space:]]*\([[:space:]]*aspect_ratio[[:space:]]*,[[:space:]]*[[:digit:].\/]*[[:space:]]*\/[[:space:]]*pixels_per_inch[[:space:]]*\)/ {
+      i=match($0, ",[[:space:]]*[[:digit:].]");
+      x=substr($0, i+RLENGTH-1);
+      s0=i+RLENGTH-1;
+      match(x, "[[:space:]]*/");
+      ppiv=substr($0, s0, RSTART-1);
+      asp=ppi/ppiv;
+      ppi=-1; ### ignore this entry.
+    }
+    # Line: e.g., enddef;
+    /^enddef/ {
+      if ((mode != "") && (ppi > 0)){
+        if ((ppiv < 0) && (mode == devname)){
+          devdpi=ppi;
+        }
+        mode=""; 
+        ppi=-1; 
+        ppiv=-1; 
+        desc="";
+      }
+    } '`
+  if [ ${devdpi} -eq -1 ] ; then 
+    k_dpi=${k_dpi_d};
+  else
+    k_dpi=${devdpi}
+  fi
+}
+
+
+# end of subroutines
+
+
+
+# Emit vflibcap
+
+xd=`date`
+xh=`hostname`
+xu=`who am i | awk '{ print $1 }'`
+echo ";; a vflibcap file generated by 'vflmkcaptex' automatically"
+echo ";; at ${xd} "
+echo ";; on ${xh} by ${xu}"
+echo ";; "
+echo ";; command line arguments given to generate this vflibcap:"
+echo ";;   vflmkcaptex ${cmdline}"
+echo ";; "
+echo ""
+ 
+if [ ${k_dpi} -eq -1 ] ; then
+  get_device_resolution;
+fi
+# echo ${k_mode} ${k_dpi}; exit;
+
+# Emit VFlib default
+opt="-n ${k_mode} -r ${k_dpi} -p ${k_prg}"
+if [ "x-${have_kpathsea}" = "x-yes" ] ; then
+  opt="${opt} -k"
+fi
+if [ "x-${use_tex_mapper}" = "x-yes" ] ; then
+  opt="${opt} -i TeX"
+else
+  for c in ${fclass}; do
+    case ${c} in
+    pk|gf|tfm)
+      opt="${opt} -i ${c}"
+      ;;
+    esac
+  done
+fi
+vflmkvfl ${opt} ${ccv}
+
+
+# Emit TeX font mapper
+opt=""
+opt_map=""
+if [ "x-${use_tex_mapper}" = "x-yes" ] ; then
+  opt_map=""
+  for c in ${fclass}; do
+    case ${c} in
+    pk)
+      opt_map="${opt_map} -m ${c} %f.%dpk"
+      ;;
+    gf)
+      opt_map="${opt_map} -m ${c} %f.%dgk"
+      ;;
+    vf)
+      opt_map="${opt_map} -m ${c} %f.vf"
+      ;;
+    tfm)
+      opt_map="${opt_map} -m ${c} %f.%dtfm"
+      ;;
+    type1)
+      opt_map="${opt_map} -m ${c} %f.pfb"
+      ;;
+    ascii-jtex-kanji)
+      opt_map="${opt_map} -m ${c} %f.jtex"
+      ;;
+    esac 
+  done
+  opt="-r \$TeX_DPI"
+  opt="${opt} -d TEXMF"
+  vflmktex ${opt} ${opt_map}
+fi
+
+# Emit each class
+
+comopt1="-n \$TeX_KPATHSEA_MODE -d TEXMF"
+comopt2="-r \$TeX_DPI"
+for c in ${fclass}; do
+  opt=""
+  case ${c} in
+  pk)
+    if [ "x-${gen_pk_otf}" = "x-yes" ] ; then
+      opt="-g"
+    fi
+    vflmkpk  ${comopt1} ${comopt2} ${opt}
+    ;;
+  gf)
+    vflmkgf  ${comopt1} ${comopt2}
+    ;;
+  vf)
+    vflmkvf  ${comopt1} ${comopt2} -m any %f.pk
+    ;;
+  type1)
+    opt="${comopt1} ${comopt2}"
+    opt="${opt} -x .pk"
+    opt="${opt} -a TEXMF"
+    opt="${opt} -e ${datadir}/VFlib/${vflibversion}/t1lib"
+    opt="${opt} -e ${datadir}/VFlib/site"
+    opt="${opt} -e ${datadir}/VFlib/site/t1lib"
+    opt="${opt} -f -t"
+    type1_opt=""
+    type1_gs_opt=""
+    type1_fontmap=""
+    type1_check_adobe
+    type1_check_gs
+    type1_check_fontmap
+    opt="${opt} ${type1_opt} ${type1_gs_opt} ${type1_fontmap}" 
+    vflmkt1  ${opt} < /dev/null
+    ;;
+  tfm)
+    vflmktfm ${comopt1} ${comopt2}
+    ;;
+  esac 
+done
+
+opt="-r \$TeX_DPI"
+if [ "${use_jtex}" = "yes" ] ; then
+  jtex_opt="-c ${jtex_class}"
+  if [ "x-${use_jtex_jisx0212}" = "x-yes" ] ; then
+    jtex_opt="${jtex_opt} -jisx0212"
+  fi
+  case ${jtex_class} in
+  pcf)
+    pcf_check_dir
+    vflmkpcf ${opt} ${pcf_dir_opt}
+    ;;
+  ekanji)
+    ekanji_check_dir
+    vflmkekan ${ekanji_dir_opt}
+    ;;
+  ttf)
+    ttf_check_dir
+    vflmkttf ${opt} -d TEXMF ${ttf_opt} ${ttf_dir_opt}
+    jtex_opt="${jtex_opt} ${ajt_ttf_fontdb}"
+    ;;
+  esac
+  vflmkajt -d TEXMF -x .pk ${jtex_opt} 
+fi
+
+if [ "${use_jp_comic}" = "yes" ] ; then
+  vflmkjpc -x .pk ${jp_comic_fontdb}
+fi
+
+
+echo ""
+echo ";; end."
+
+# end

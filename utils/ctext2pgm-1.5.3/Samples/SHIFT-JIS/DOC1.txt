@@ -1,0 +1,4 @@
+こんにちは
+日本語 SJIS コード
+SJIS ｺｰﾄﾞ
+Japanese SJIS code

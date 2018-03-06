@@ -1,0 +1,203 @@
+/*
+ * bm2ol.c - a module for generating an outline from a bitmap
+ * by Hirotsugu Kakugawa
+ *
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#include <math.h>
+#include "config.h"
+#include "VFlib-3_7.h"
+#include "VFsys.h"
+#include "consts.h"
+
+#define DEFAULT_POINT_SIZE  10.0
+
+
+/**
+ **   VF_Bitmap2Outline
+ **/
+Public VF_OUTLINE
+VF_BitmapToOutline(VF_BITMAP bm)
+{
+  return vf_bitmap_to_outline(bm, bm->bbx_width, bm->bbx_height, 
+			      VF_DEFAULT_DPI, VF_DEFAULT_DPI,
+			      DEFAULT_POINT_SIZE, 1, 1);
+}
+
+/**
+ **   VF_FreeOutline
+ **/
+Public void
+VF_FreeOutline(VF_OUTLINE outline_data)
+{
+  vf_free(outline_data);
+}
+
+
+Glocal VF_OUTLINE
+vf_bitmap_to_outline(VF_BITMAP bm, int font_bbx_width, int font_bbx_height,
+		     double dpi_x, double dpi_y,
+		     double point_size, double mag_x, double mag_y)
+{
+  return vf_bitmap_to_outline2(bm, 
+			       BM2OL_DOT_SHAPE_SQUARE, BM2OL_DEFAULT_DOT_SIZE, 
+			       font_bbx_width, font_bbx_height, 
+			       dpi_x, dpi_y, 
+			       point_size, mag_x, mag_y);
+}
+
+Glocal VF_OUTLINE
+vf_bitmap_to_outline2(VF_BITMAP bm, int dot_shape, double dot_mag, 
+		      int font_bbx_width, int font_bbx_height, 
+		      double dpi_x, double dpi_y,
+		      double point_size, 
+		      double mag_x, double mag_y)
+{
+  int            x, y, xx, nbits, size, index;
+  int            xl, xr, yu, yl, xc, yc;
+  int            xl2, xr2, yu2, yl2;
+  double         bbx, fx, fy;
+  unsigned char  *p, *p0;
+  VF_OUTLINE     outline;
+  static unsigned char  bit_tbl[] = {
+    0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01};
+  static int            nbits_tbl[] = {
+    0, 1, 1, 2, 1, 2, 2, 3,     /* 0, 1, 2, 3, 4, 5, 6, 7 */
+    1, 2, 2, 3, 2, 3, 3, 4};    /* 8, 9, A, B, C, D, E, F */
+
+  if ((bm == NULL) || (bm->bitmap == NULL))
+    return NULL;
+
+  if ((bm->bbx_width <= 0) || (bm->bbx_height <= 0)
+      || (mag_x <= 0) || (mag_y <= 0)){
+    vf_error = VF_ERR_BITMAP2OUTLINE;
+    return NULL;
+  }
+
+  if ((dpi_x < 0) || (dpi_y < 0)){
+    dpi_x = VF_DEFAULT_DPI;
+    dpi_y = VF_DEFAULT_DPI;
+  }
+
+  if (dot_mag < 0)
+    dot_mag = 1.0;
+
+#if 0
+  printf("* BM->OL:   BBX: %d,%d\n", bm->bbx_width, bm->bbx_height);
+  printf("            FBBX: %d,%d  Pt: %.4fpt  DPI: (%.2f,%.2f)\n", 
+	 font_bbx_width, font_bbx_height, 
+	 point_size, dpi_x, dpi_y);
+#endif
+
+  /* scaling */
+  if (font_bbx_width > font_bbx_height){
+    bbx = font_bbx_width;
+  } else {
+    bbx = font_bbx_height;
+  }
+  fx = (double)VF_OL_COORD_RANGE / bbx;
+  fy = (double)VF_OL_COORD_RANGE / bbx;
+
+  /* count # of single bits */
+  nbits = 0;
+  p0 = bm->bitmap;
+  for (y = 0; y < bm->bbx_height; y++){
+    for (x = 0, p = p0; x < bm->raster; x++, p++){
+      nbits += nbits_tbl[*p/0x10];
+      nbits += nbits_tbl[*p%0x10];
+    }
+    p0 = p0 + bm->raster;
+  }
+
+  /* count outline data size */
+  if (dot_shape < 0)
+    dot_shape = BM2OL_DOT_SHAPE_SQUARE;
+  switch (dot_shape){
+  default:
+  case BM2OL_DOT_SHAPE_SQUARE:
+  case BM2OL_DOT_SHAPE_DIAMOND:
+    size = VF_OL_OUTLINE_HEADER_SIZE_TYPE0 + 5*nbits + 1;
+    break;
+  }
+
+  /* allocate outline data area */
+  if ((outline = (VF_OUTLINE)calloc(size, sizeof(VF_OUTLINE_ELEM))) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    return NULL;
+  }
+
+  /* make a header of outline data */
+  outline[VF_OL_HEADER_INDEX_HEADER_TYPE] = VF_OL_OUTLINE_HEADER_TYPE0;
+  outline[VF_OL_HEADER_INDEX_DATA_SIZE]   = size;
+  outline[VF_OL_HEADER_INDEX_DPI_X] = VF_OL_HEADER_ENCODE(dpi_x);
+  outline[VF_OL_HEADER_INDEX_DPI_Y] = VF_OL_HEADER_ENCODE(dpi_y);
+  outline[VF_OL_HEADER_INDEX_POINT_SIZE] = VF_OL_HEADER_ENCODE(point_size);
+  outline[VF_OL_HEADER_INDEX_EM]    = (double)bbx * fy;
+  outline[VF_OL_HEADER_INDEX_MAX_X] = (double)bm->bbx_width  * fx;
+  outline[VF_OL_HEADER_INDEX_MAX_Y] = (double)bm->bbx_height * fy;
+  outline[VF_OL_HEADER_INDEX_REF_X] = (0 - bm->off_x) * fx;
+  outline[VF_OL_HEADER_INDEX_REF_Y] = bm->off_y * fy;
+  outline[VF_OL_HEADER_INDEX_MV_X]  = bm->mv_x * fx;
+  outline[VF_OL_HEADER_INDEX_MV_Y]  = bm->mv_y * fy;
+
+  /* make outline data from bitmap */
+  index = VF_OL_OUTLINE_HEADER_SIZE_TYPE0;
+  for (y = 0, p0 = bm->bitmap; y < bm->bbx_height; y++, p0 += bm->raster){
+    yu = (y+0) * fy;
+    yl = (y+1) * fy;
+    yu2 = VF_OL_COORD_OFFSET + (yu+yl)/2 - dot_mag * (yl-yu)/2;
+    yl2 = VF_OL_COORD_OFFSET + (yu+yl)/2 + dot_mag * (yl-yu)/2 - 1;
+    yc  = VF_OL_COORD_OFFSET + (yu+yl)/2;
+    for (x = 0, p = p0; x < bm->raster; x++, p++){
+      if (*p == 0)
+	continue;
+      for (xx = 0; xx <= 7; xx++){
+	if ((bit_tbl[xx] & *p) == 0)
+	  continue;
+	xl = (8*x+xx+0) * fx;
+	xr = (8*x+xx+1) * fx;
+	xl2 = VF_OL_COORD_OFFSET + (xl+xr)/2 - dot_mag * (xr-xl)/2;
+	xr2 = VF_OL_COORD_OFFSET + (xl+xr)/2 + dot_mag * (xr-xl)/2 - 1;
+	xc  = VF_OL_COORD_OFFSET + (xl+xr)/2;
+	if (dot_shape == BM2OL_DOT_SHAPE_SQUARE){
+	  outline[index++] 
+	    = (VF_OUTLINE_ELEM)(VF_OL_INSTR_TOKEN 
+				| VF_OL_INSTR_CWCURV | VF_OL_INSTR_LINE);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xl2, yu2);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xl2, yl2);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xr2, yl2);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xr2, yu2);
+	} else { /* dot_shape == DOT_SHAPE_DIAMOND */
+	  outline[index++] 
+	    = (VF_OUTLINE_ELEM)(VF_OL_INSTR_TOKEN
+				| VF_OL_INSTR_CWCURV | VF_OL_INSTR_LINE);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xl2, yc);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xc,  yl2);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xr2, yc);
+	  outline[index++] = (VF_OUTLINE_ELEM)VF_OL_MAKE_XY(xc,  yu2);
+	}
+      }
+    }
+  }
+  if (index != VF_OL_OUTLINE_HEADER_SIZE_TYPE0)
+    outline[VF_OL_OUTLINE_HEADER_SIZE_TYPE0] |= VF_OL_INSTR_CHAR;
+
+ /* end of outline */
+  outline[index] = (VF_OUTLINE_ELEM)0L;
+
+  return outline;
+}
+
+/*EOF*/

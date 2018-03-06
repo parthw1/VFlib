@@ -1,0 +1,14 @@
+%% JT2mc.fd
+\ProvidesFile{JT2mc.fd}[1999/08/30 by H. Kakugawa]
+\DeclareKanjiFamily{JT2}{mc}{}
+\DeclareRelationFont{JT2}{mc}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT2}{mc}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT2}{mc}{m}{n}{<5> <6> <7> <8> <9> <10> sgen*tminh
+    <10.95><12><14.4><17.28><20.74><24.88> tminh10
+    <-> tminh10
+    }{}
+\DeclareFontShape{JT2}{mc}{bx}{n}{<->ssub*gt/m/n}{}
+\endinput
+%% EOF
+
+

@@ -1,0 +1,29 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  dfhsmw3-ttf
+open1  dfhsgw3-ttf
+open1  dfhsm3-comic
+
+bitmap1 !0 0x2422
+bitmap1 !0 0x2424
+bitmap1 !0 0x3026
+
+bitmap1 !1 0x2422
+bitmap1 !1 0x2424
+bitmap1 !1 0x3026
+
+bitmap1 !2 0x2422
+bitmap1 !2 0x2424
+bitmap1 !2 0x3026
+
+property !2 CHARSET_REGISTRY
+property !2 CHARSET_ENCODING
+property !2 POINT_SIZE
+property !2 FONT_CLASS
+
+
+quit

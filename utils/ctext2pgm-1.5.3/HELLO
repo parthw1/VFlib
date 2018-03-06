@@ -1,0 +1,48 @@
+This is a list of ways to say hello in various languages.
+Its purpose is to illustrate a number of scripts.
+
+---------------------------------------------------------
+Amharic ($(3"c!<!N"^(B)		$(3!A!,!>(B
+Arabic			(38R(47d(3T!JSa(4W(3W(B
+Czech (-Bèesky)-A			Dobr-Bı-A den
+Danish (Dansk)		Hej, Goddag
+English			Hello
+Esperanto			Saluton
+Estonian			Tere, Tervist
+FORTRAN			PROGRAM
+Finnish (Suomi)		Hei
+French (Français)		Bonjour, Salut
+German (Deutsch Nord)		Guten Tag
+German (Deutsch Süd)		Grüß Gott
+Greek (-FÅëëçíéêÜ)-A		-FÃåéÜ-A -Fóáò-A
+Hebrew			-Hùìåí-A
+Hindi			\t\I<not supported>\.
+Italiano			Ciao, Buon giorno
+Lao			\t\I<not supported>\.
+Maltese			Ciao
+Nederlands, Vlaams		Hallo, Dag
+Norwegian (Norsk)		Hei, God dag
+Polish			Dzie-Bñ-A dobry, Hej
+Russian (-LÀãááÚØÙ)-A		-L·ÔàĞÒáâÒãÙâÕ!-A
+Slovak			Dobr-Bı-A de-Bò-A
+Spanish (Español)		¡Hola!
+Swedish (Svenska)		Hej, Goddag
+Thai			\t\I<not supported>\.
+
+Tibetan 			\t\I<not supported>\.
+Tigrigna ($(3"8#r!N"^(B)		$(3!Q!,!<"8(B
+Turkish (Türkçe)		Merhaba
+Vietnamese (Ti-1ªng-A Vi-1®t)-A		Ch-1ào-A b-1Õn-A
+
+Japanese ($(BF|K\8l(B)		$(B$3$s$K$A$O(B, (I:]FAJ(B
+Chinese ($(AVPND(B,$(AFUM(;0(B,$(A::So(B)	$(ADc:C(B
+Cantonese ($(0GnM$(B,$(0N]0*Hd(B)		$(0*/=((B, $(0+$)p(B
+Korean ($(CGQ1[(B)			$(C>H3gGO<<?d(B, $(C>H3gGO=J4O1n(B
+
+Difference among chinese characters in GB, JIS, KSC, BIG5:
+	GB   -- $(AT*Fx(B  $(A?*7"(B
+	JIS  -- $(B855$(B  $(B3+H/(B
+	KSC  -- $(Cj*Q((B  $(CKR[!(B
+	BIG5 -- $(0&x86(B  $(0DeBv(B
+
+Just for a test of JISX0212: $(BqV$(DiQ(B (the second character is of JISX0212)

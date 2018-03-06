@@ -1,0 +1,216 @@
+%%%  *** This text is written in Japanese ***
+%%% 
+%%%  電気情報関係学会中国支部大会(1998年度)
+%%%
+%%%  「多言語情報処理システム向け汎用フォントライブラリ VFlib」
+%%%   角川裕次＠広島大学
+%%%
+%%%   Email: h.kakugawa@computer.org
+%%%   FAX:   +81-824-24-0757
+%%%
+%%%  Last Revised: 9 July 1998 
+%%%
+
+\documentclass[11pt,a4-paper]{jarticle}
+
+\usepackage{sect}
+\usepackage{wrapfig}
+\usepackage{graphicx}
+\usepackage{shortvrb}
+\usepackage{english}
+\usepackage{germanb}
+
+\setlength{\topmargin}{-12mm}
+\setlength{\evensidemargin}{-5mm}
+\setlength{\oddsidemargin}{-5mm}
+\setlength{\textwidth}{168mm}
+\setlength{\textheight}{242mm}
+
+\newcommand{\pkg}[1]{\textsf{#1}}
+\newcommand{\prog}[1]{\texttt{#1}}
+\newcommand{\file}[1]{\texttt{#1}}
+\newcommand{\var}[1]{\textit{#1}}
+\newcommand{\vflib}{\pkg{VFlib}}
+\newcommand{\freetype}{\pkg{FreeType}}
+\newcommand{\vflibcap}{\pkg{vflibcap}}
+\newcommand{\tlib}{\pkg{t1lib}}
+\newcommand{\hbfgf}{\prog{hbf2gf}}
+\newcommand{\ttfpk}{\prog{ttf2pk}}
+\MakeShortVerb{\|}
+
+%%%---
+\tolerance=10000
+
+%%%----
+\begin{document}
+\setlength{\baselineskip}{1.15em}
+
+\selectlanguage{american}
+\def\abstractname{概要}% Abstract
+\def\refname{参考文献}% Reference
+\def\bibname{参考文献}% Bibliography
+\def\figurename{図}% Figure
+\def\tablename{表}% Table
+
+
+
+\title{\textbf{多言語情報処理システム向け}\\
+       \textbf{汎用フォントライブラリ \vflib}}
+\author{\textbf{角川裕次 \quad (広島大学)}}
+\date{}
+\maketitle
+
+\thispagestyle{empty}
+\pagestyle{empty}
+
+
+\section{はじめに}
+レーザービームプリンタや高解像度グラフィックディスプレイが普及し、
+文書の表示$\cdot$印刷をより美しく行なえるようになった。
+それに伴い様々なフォントが入手可能となってきている。
+文書処理システムにおける表示$\cdot$印刷部の開発で問題となるのが、
+多くの種類のフォント形式の存在である。
+応用ソフトウエアの利用者にとっては、
+より多くのフォント形式がサポートされていることが望ましい。
+逆に開発者にとっては、
+フォント形式それぞれに対するフォントファイル読み出し部を作成する必要があり、
+開発の手間が増えてしまう。
+
+汎用フォントライブラリ \vflib~3.4.1 はC言語で記述されたライブラリで、
+フォント形式に依存しない形でフォントを利用可能とした関数群を提供する。
+(現在、BDF, PCF, HBF, 書体倶楽部, JG, TrueType, PK, GF, TFM 
+のフォント形式をサポートしている。)
+\vflib は組版の為の機能は持たないが、
+要求されたフォントと文字コードに対するビットマップを返す
+ラスタライザとしての機能を持つ。
+PostScript ファイルや DVI ファイルのプリンタドライバなど、
+組版済み文書を表示$\cdot$印刷するソフトウエア内部のフォントモジュールとして
+利用可能である。
+また対象とする文字集合には制限をしておらず、
+多言語情報処理ソフトウエアの部品としても利用可能である。
+本稿では \vflib~3.4.1 の概要と、
+\vflib を利用した応用ソフトウエアについて紹介する。
+
+
+\section{\vflib の関数と内部構造}
+\vflib はC言語で記述された関数群であり、
+ライブラリ (\verb|libVFlib3.a|) 
+として応用ソフトウエアにリンクされて使用される。
+\vflib は論理的なフォントを提供し、
+論理的なフォントと実際のフォントファイルの関係は
+\verb|vflibcap| と呼ばれるフォントデータベースに記述する。
+\vflib が提供する関数の一部を、以下に示す。
+\begin{myitemize}
+\item \prog{int VF\_Init(\mbox{char* \var{vflibcap}}, 
+                         \mbox{char* \var{variable\_list}})}\\
+  --- \vflib を初期化する。最初の引数は、|vflibcap| のパス名である。
+\item \prog{int VF\_OpenFont1(\mbox{char* \var{font\_name}},
+                              \mbox{double \var{dpi\_x}},      
+                              \mbox{double \var{dpi\_y}},
+                              \mbox{double \var{point\_size}},
+                              \mbox{double \var{mag\_x}},      
+                              \mbox{double \var{mag\_y}})}\\
+  --- フォント \var{font\_name} をオープンする。
+  フォントサイズは、実行時に引数で指定可能である。
+  オープンに成功すると、フォント識別子が返される。
+\item \prog{VF\_BITMAP VF\_GetBitmap1(\mbox{int \var{font\_id}}, 
+                                      \mbox{long \var{code\_point}},
+                                      \mbox{double \var{mag\_x},
+                                      \mbox{double \var{mag\_y}}})}\\
+  --- 指定したフォント識別子のフォントでの、
+      指定した文字コードのビットマップを得る。
+\end{myitemize}
+ 
+上記の \vflib 関数より分かるように、
+応用ソフトウエア側は論理的なフォント名を指定するだけで、
+フォント形式を指定する必要はない。
+論理的なフォントの具体的な定義は \verb|vflibcap| で記述する。
+図\ref{FIG:VFLIBCAP}にその例を示す。
+(この例では、二つのフォント |timR24| と |timR18| が定義されている。
+また、フォントファイルが圧縮されているかどうかを自動判別し、
+必要ならばフォントオープン時に解凍するよう記述している。)
+
+各種のフォント形式をサポート可能とするため、
+フォント形式それぞれに対応したフォントドライバを \vflib の内部で用意している。
+フォントがオープンされるときは \verb|vflibcap| を参照してフォント形式を調べ、
+フォント形式に対応したフォントドライバを呼び出してフォントをオープンする。
+ビットマップ要求に対しても、
+フォント形式に対応したフォントドライバを呼び出す。
+もしフォントがアウトラインフォントならば、
+アウトラインデータをラスタライズしビットマップを返す。
+ビットマップフォントの場合は、
+適切な大きさに拡大$\cdot$縮小をしたビットマップを作って返す。
+
+\begin{figure}
+\setlength{\baselineskip}{0.85em}
+\begin{verbatim}
+(define-default  VFlib    ;; VFlib 全体でのデフォルト値の定義
+  (uncompression-programs  (".Z" "zcat") (".gz" "gzip -cd")))
+(define-default  bdf      ;; BDF フォントクラスのデフォルト値の定義
+  (compression-extensions ".gz" ".Z")
+  (font-directories  "/usr/local/share/fonts/X11//"))
+(define-default  pcf      ;; PCF フォントクラスのデフォルト値の定義
+  (font-directories  "/usr/X11R6/lib/X11/fonts//") 
+  (compression-extensions ".gz" ".Z"))
+
+(define-font  timR24    ;; "timR24" フォントの定義 (BDF フォーマット)
+  (font-class bdf) (dpi 300) (point-size 24) (font-file "timR24.bdf"))
+(define-font  timR18    ;; "timR18" フォントの定義 (PCF フォーマット)
+  (font-class pcf) (dpi 300) (point-size 24) (font-file "timR18.pcf"))
+\end{verbatim}
+  \caption{\texttt{vflibcap}ファイルの例}
+  \label{FIG:VFLIBCAP}
+\end{figure}
+
+
+\section{応用ソフトウエアの例}
+コンパウンドテキストで符合化されているプレインテキストから
+画像ファイルを作るソフトウエア \prog{ctext2pgm} を作成した。
+文書内に指令を埋め込むことで、
+イタリックやボールドなどのフォントフェースの切替や、
+Helvetia や Times などのフォントファミリーの切替えが文書内で可能である。
+
+\begin{wrapfigure}[20]{r}[0cm]{9.0cm}
+  \resizebox{9.0cm}{!}{\includegraphics{ml-web-page.eps}}
+%%  \resizebox{9.0cm}{!}{\includegraphics[draft]{ml-web-page.eps}}
+  \caption{\prog{ctext2pgm} による多言語文書}
+  \label{FIG:CTEXT2PGM}
+\end{wrapfigure}
+
+コンパウンドテキストとは ISO-2022 符合化方式のサブセットのひとつであり、
+複数の文字集合の文字が混在可能なテキストの符合化方式である。
+\prog{ctext2pgm} では、英語、フランス語、ドイツ語、ロシア語、
+中国語、韓国語、日本語などの他、
+右から左へ文字を書いてゆくヘブライ語やアラビア語
+が混在したテキストもサポートしている。
+得られた画像ファイルを WWW ページに入れることで、
+図\ref{FIG:CTEXT2PGM}に示す様な多言語WWWページが作成可能となる。
+(テキストの入力には Mule エディタを使用した。)
+
+この他 \vflib を使った \TeX のプレビューアーやプリンタドライバも開発した。
+
+
+\section{結論}
+\vflib を応用ソフトウエアで使用する利点は、以下の通りである。
+1.~応用ソフトウエアにおいて容易に各種フォント形式が利用できる。
+2.~\vflib が新しいフォント形式をサポートすれば、
+応用ソフトウエアを変更することなくそのフォントが利用可能となる。
+3.~フォント定義を、利用システム側で自由に定義できる。
+高品位なアウトラインフォントがない場合はビットマップフォントで代用するよう、
+|vflibcap| でのフォント定義を変更すればよい。
+このとき、応用ソフトウエアや文書ファイルの変更は不要である。
+多言語文書処理においては各種言語のフォントが同一形式で揃わない場合が多いが、
+\vflib によりその問題が解決できる。
+
+\vflib~3.4.1 はC言語で書かれており、約2万8千行ある。
+動作確認は FreeBSD 2.2.2 と Solaris 2.5.1 で行なった。
+\vflib は GNU Library General Public License に従い、
+ソースコード一式を無料で配布している。詳細は 
+|http://|""|www.|""|se.|""|hiroshima-u.|""|ac.|""|jp/|""|~kakugawa/|""|VFlib/|
+を参照されたい。
+
+\bibliographystyle{plain}
+\bibliography{vflib-ja}
+\nocite{*}
+  
+\end{document}

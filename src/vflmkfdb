@@ -1,0 +1,99 @@
+#!/bin/sh
+
+# vflmkfdb
+# by Hirotsugu Kakugawa
+# --- Make a database for VFlib font file path
+# 
+# Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+# All rights reserved.
+# License: GPLv3 and FreeType Project License (FTL)
+
+
+DBFILE="VFlib.fdb"
+DBFILE_BAK="VFlib.fdb.bak"
+
+FIND_OPT_ARG=
+TARGETS=
+STDOUT="NO"
+
+for arg in $* 
+do
+  case ${arg} in
+  -h|--help)
+     echo "vflmkfdb --- make a VFlib font path hint database"  >&2
+     echo "Usage: vflmkfdb [options] [dir ...]"  >&2
+     echo "Options: "  >&2
+     echo "  -s   Follow symbolic links"  >&2
+     echo "  -z   Hints are printed to standard output, not to a file"  >&2
+     echo "  -h   Help"  >&2
+     exit
+     ;;
+  -s)
+     FIND_OPT_ARG="-L"
+     ;;
+  -z)
+     STDOUT="YES"
+     ;;
+  -*)
+     echo "vflmkdb: Unknown option: ${arg}"  >&2    
+     echo "Use -h option for help."  >&2    
+     exit
+     ;;
+  *)
+     TARGETS="${TARGETS} ${arg}"
+     ;;
+  esac
+done
+
+
+if test "X-${TARGETS}" = "X-" ; then
+  if test "X-${PWD:-unset}" != "X-unset" ; then
+    TARGETS=${PWD}
+  else
+    TARGETS="." 
+  fi
+fi
+
+if test ${STDOUT} = "NO" ; then
+  OUTPUT="${DBFILE}"
+else
+  OUTPUT="/dev/tty"
+fi
+
+for t in ${TARGETS}
+do
+  t=`echo ${t} | sed 's|^\(.*[^/]\)/*$|\1|'`
+  echo Making ${t}/${DBFILE}...
+  cd ${t}
+  if test ${STDOUT} = "NO" -a -f ${DBFILE} ; then
+    if test -f ${DBFILE_BAK} ; then
+      rm -f ${DBFILE_BAK}
+    fi
+    mv ${DBFILE} ${DBFILE_BAK}
+  fi
+  find ${FIND_OPT_ARG} -d . -type f -print \
+    | ( while read F; do  \
+          B=`basename $F`;
+          P=`echo $F | sed 's|^\./||'`;
+          case $B
+          in
+          ${DBFILE}|${DBFILE_BAK}|fonts.dir|fonts.alias|\
+          *\.tar|*\.tar\.*|*\.zip|*\.lzh|\
+	  *\.txt|*\.TXT|*\.doc|*\.DOC|\
+	  *\.ps|*\.ps\.*|*\.eps|*\.eps\.*|*\.pdf|*\.pdf\.*|*\.dvi|*\.dvi\.*|\
+	  *\.html|*\.HTML|*\.shtml|*\.SHTML|*\.htm|*\.HTM|\
+	  *\.gif|*\.GIF|*\.jpg|*\.JPG|*\.tiff|*\.TIFF|\
+	  *\.exe|*\.EXE|*\.com|*\.COM|\
+          Makefile*|makefile*|Imakefile*|*README*|*Readme*|*readme*|\
+          *\.c|*\.h|*\.sh|*\.log|*\.LOG|\
+          *~|*\.bak|core|*\.core)
+            continue
+            ;;
+          esac
+          echo "$B	$P"; \
+        done )   \
+    | sort \
+    > ${OUTPUT}
+done
+
+#EOF

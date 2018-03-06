@@ -1,0 +1,13 @@
+\ProvidesFile{jt1hsm.fd}[1998/09/07 Heisei Mincho (Vertical)]
+\DeclareKanjiFamily{JT1}{hsm}{}
+\DeclareRelationFont{JT1}{hsm}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JT1}{hsm}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{hsm}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{hsm}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JT1}{hsm}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT1}{hsm}{sl}{n}{ <-> tdfhsmmaa  }{}
+\DeclareFontShape{JT1}{hsm}{m}{n}{ <-> tdfhsmpaa  }{}
+\DeclareFontShape{JT1}{hsm}{sb}{n}{ <-> tdfhsmraa  }{}
+\DeclareFontShape{JT1}{hsm}{b}{n}{ <-> tdfhsmsaa  }{}
+\DeclareFontShape{JT1}{hsm}{bx}{n}{ <-> tdfhsmvaa  }{}
+\endinput

@@ -1,0 +1,29 @@
+open1 cmr10.pfb
+fontbbx1 !!
+
+open1 cmr10.pfb -1 2 2
+fontbbx1 !!
+
+open1 cmr10.pk
+fontbbx1 !!
+
+open1 cmr10.pk -1 2 2
+fontbbx1 !!
+
+open1 cmti10.pk -1 3 3 
+fontbbx1 !!
+
+
+open2 cmti10.pfb
+fontbbx2 !!
+
+open2 cmti10.pfb -1 2 2
+fontbbx2 !!
+
+open2 cmti10.pk
+fontbbx2 !!
+
+open2 cmti10.pk
+fontbbx2 !!
+
+quit

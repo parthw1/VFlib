@@ -1,0 +1,21 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  etl24-latin1.bdf
+open1  etl24-latin1.bdf -1 2 2
+open1  etl24-latin1.bdf -1 1 2
+open1  etl24-latin1.bdf -1 2 1
+
+bitmap1 !0 0x67
+bitmap1 !1 0x67
+bitmap1 !2 0x67
+bitmap1 !3 0x67
+
+property !0 CHARSET_REGISTRY
+property !0 CHARSET_ENCODING
+property !0 POINT_SIZE
+
+quit

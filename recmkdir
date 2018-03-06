@@ -1,0 +1,37 @@
+#! /bin/sh
+#
+# recmkdir - make directory recursively
+# by H.Kakugawa
+#
+
+case $# in
+0)
+  echo Usage: recmkdir DIR ...
+  exit 1
+  ;;
+*)
+  ;;
+esac
+
+for D in $* ; do
+  case $D in
+  /*) 
+    ;;
+  *) 
+    D=`pwd`/$D
+    ;;
+  esac
+  L=`echo $D | sed 's|/| |g'` 
+  set $L
+  X=""
+  for P in $* ; do
+    X=$X/$P 
+    if [ ! -d $X ] ; then
+      echo mkdir $X
+      mkdir $X
+    fi
+    shift
+  done
+done
+
+#EOF

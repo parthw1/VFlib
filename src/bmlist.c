@@ -1,0 +1,197 @@
+/*
+ * bmlist.c - bitmap list
+ * by Hirotsugu Kakugawa
+ */
+
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#include <math.h>
+#include "config.h"
+#include "VFlib-3_7.h"
+#include "VFsys.h"
+#include "bitmap.h"
+#include "bmlist.h"
+
+
+Private void  vf_bitmaplist_compose_accumlate(VF_BITMAP,VF_BITMAP,int,int);
+
+
+Public int
+VF_BitmapListInit(VF_BITMAPLIST bmlist)
+{
+  return vf_bitmaplist_init(bmlist);
+}
+ 
+Public int
+VF_BitmapListPut(VF_BITMAPLIST bmlist, VF_BITMAP bm, long xoff, long yoff)
+{
+  return vf_bitmaplist_put(bmlist, bm, xoff, yoff);
+}
+
+Public VF_BITMAP 
+VF_BitmapListCompose(VF_BITMAPLIST bmlist)
+{
+  return vf_bitmaplist_compose(bmlist);
+}
+
+Public int
+VF_BitmapListFinish(VF_BITMAPLIST bmlist)
+{
+  return vf_bitmaplist_finish(bmlist);
+}
+
+
+
+Glocal int
+vf_bitmaplist_init(VF_BITMAPLIST bmlist)
+{
+  bmlist->next = NULL;
+  return 0;
+}
+
+Glocal int
+vf_bitmaplist_finish(VF_BITMAPLIST bmlist)
+{
+  VF_BITMAPLIST  elem, elem_next;
+
+  elem = bmlist->next; 
+  while (elem != NULL){
+    elem_next = elem->next;
+    VF_FreeBitmap(elem->bitmap);
+    vf_free(elem);
+    elem = elem_next;
+  }
+
+  bmlist->next = NULL;
+
+  return 0;  
+}
+
+Glocal int
+vf_bitmaplist_put(VF_BITMAPLIST bmlist, VF_BITMAP bitmap,
+		  long off_x, long off_y)
+{
+  VF_BITMAPLIST  elem;
+
+  ALLOC_IF_ERR(elem, struct vf_s_bitmaplist){
+    vf_error = VF_ERR_NO_MEMORY;
+    return -1;
+  }
+  elem->off_x  = off_x;
+  elem->off_y  = off_y;
+  elem->bitmap = bitmap;
+  elem->next   = bmlist->next; 
+  bmlist->next = elem;
+
+  return 0;  
+}
+
+Glocal VF_BITMAP
+vf_bitmaplist_compose(VF_BITMAPLIST bmlist)
+{
+  VF_BITMAPLIST  elem, elem_a, elem_z;
+  VF_BITMAP      composed_bm;
+  int            bbx_llx, bbx_lly, bbx_urx, bbx_ury;
+  int            llx, lly, urx, ury;
+
+  if (bmlist->next == NULL){
+    if ((composed_bm = vf_alloc_bitmap(1, 1)) == NULL)
+      return NULL;
+    composed_bm->off_x = 0;
+    composed_bm->off_y = 0;
+    composed_bm->mv_x = 0;
+    composed_bm->mv_y = 0;
+    return composed_bm;
+  }
+  
+  elem_a = bmlist->next; 
+  for (elem_z = elem_a; elem_z->next != NULL; elem_z = elem_z->next)
+    ;
+
+  elem = elem_a;
+  bbx_llx = elem->off_x + elem->bitmap->off_x;
+  bbx_lly = elem->off_y + elem->bitmap->off_y - elem->bitmap->bbx_height;
+  bbx_urx = elem->off_x + elem->bitmap->off_x + elem->bitmap->bbx_width;
+  bbx_ury = elem->off_y + elem->bitmap->off_y;
+  for (elem = elem->next; elem != NULL; elem = elem->next){
+    llx = elem->off_x + elem->bitmap->off_x;
+    lly = elem->off_y + elem->bitmap->off_y - elem->bitmap->bbx_height;
+    urx = elem->off_x + elem->bitmap->off_x + elem->bitmap->bbx_width;
+    ury = elem->off_y + elem->bitmap->off_y;
+    if (llx < bbx_llx)
+      bbx_llx = llx;
+    if (lly < bbx_lly)
+      bbx_lly = lly;
+    if (urx > bbx_urx)
+      bbx_urx = urx;
+    if (ury > bbx_ury)
+      bbx_ury = ury;
+  }
+
+  composed_bm = vf_alloc_bitmap(bbx_urx - bbx_llx + 1, bbx_ury - bbx_lly + 1);
+  if (composed_bm == NULL)
+    return NULL;
+
+  composed_bm->off_x = bbx_llx;  /* == bbx_ulx */
+  composed_bm->off_y = bbx_ury;  /* == bbx_uly */
+  composed_bm->mv_x  = elem_a->off_x - elem_z->off_x + elem_a->bitmap->mv_x;
+  composed_bm->mv_y  = elem_a->off_y - elem_z->off_y + elem_a->bitmap->mv_y;
+
+  for (elem = bmlist->next; elem != NULL; elem = elem->next){
+    vf_bitmaplist_compose_accumlate(composed_bm, elem->bitmap,
+				    elem->off_x, elem->off_y);
+  }
+
+  return composed_bm;
+}
+
+Private void
+vf_bitmaplist_compose_accumlate(VF_BITMAP bm_acc, 
+				VF_BITMAP bm_put, int off_x, int off_y)
+{
+  int            asx, asy, asxw, asxmr, asxml, pxw, nb;
+  unsigned char  *al, *pl;
+  int            px, py, ay;
+  unsigned char  mask[] = { 
+    0xff, 0x80, 0xc0, 0xe0, 0xf0, 0xf8, 0xfc, 0xfe };
+
+  asx =   bm_put->off_x + off_x - bm_acc->off_x;
+  asy = -(bm_put->off_y + off_y - bm_acc->off_y);
+  asxw  = asx / 8;
+  asxmr = asx % 8;
+  asxml = 8 - asxmr;
+  pxw = (bm_put->bbx_width+7)/8;
+
+  if (asxmr == 0){
+    for (py = 0, ay = asy; py < bm_put->bbx_height; py++, ay++){
+      al = &bm_acc->bitmap[bm_acc->raster*ay + asxw];
+      pl = &bm_put->bitmap[bm_put->raster*py];
+      for (px = pxw; px > 0; --px)
+	*(al++) |= *(pl++);
+    }
+  } else {
+    nb = (asx + bm_put->bbx_width + 7)/8 - (asx/8);
+    for (py = 0, ay = asy; py < bm_put->bbx_height; py++, ay++){
+      al = &bm_acc->bitmap[bm_acc->raster*ay + asxw];
+      pl = &bm_put->bitmap[bm_put->raster*py];
+      for (px = nb; px > 1; --px){
+	*(al+1) |= (*pl     << asxml);
+	*(al++) |= (*(pl++) >> asxmr);
+      }
+      *al |= ((*pl >> asxmr) & mask[(asx + bm_put->bbx_width) % 8]);
+    }
+  }
+}
+
+/*EOF*/

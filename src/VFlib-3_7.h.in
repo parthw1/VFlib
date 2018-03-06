@@ -1,0 +1,438 @@
+/*
+ * VFlib-3_6.h - a header file for VFlib 
+ * by Hirotsugu Kakugawa
+ *
+ *   1 Mar 1997  VFlib 3.1.4
+ *   5 Mar 1997  VFlib 3.1.5  Added printing LGPL feature
+ *   2 Apr 1997  Added support for Omega (WL)
+ *   4 Aug 1997  VFlib 3.3  Changed API.
+ *   9 Jan 1998  VFlib 3.4  Changed vflibcap file syntax.
+ *  21 Aug 1998  VFlib 3.5
+ *  29 Jul 1999  VFlib 3.6
+ *   8 Nov 2006  VFlib 3.7
+ *  15 Sep 2017  VFlib 3.7.2
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#ifndef __VFLIB_VFLIB_H__
+#define __VFLIB_VFLIB_H__
+
+
+/**
+ ** DATA TYPES
+ **/
+
+/* Bitmap */
+struct vf_s_bitmap {
+  int              bbx_width, bbx_height;   /* in PIXEL */
+  int              off_x, off_y;            /* in PIXEL */
+  int              mv_x,  mv_y;             /* in PIXEL */
+  unsigned char    *bitmap;
+  int              raster;
+};
+typedef struct vf_s_bitmap  *VF_BITMAP;
+
+/* Font metric */
+struct vf_s_metric1 {
+  double    bbx_width, bbx_height;  /* in Point */
+  double    off_x, off_y;           /* in Point */
+  double    mv_x, mv_y;             /* in Point */
+};
+typedef struct vf_s_metric1 *VF_METRIC1;
+
+struct vf_s_metric2 {
+  int    bbx_width, bbx_height;     /* in Pixel */
+  int    off_x, off_y;              /* in Pixel */
+  int    mv_x, mv_y;                /* in Pixel */
+};
+typedef struct vf_s_metric2 *VF_METRIC2;
+
+/* Outline data */
+typedef @ol_elem_type@     VF_OUTLINE_ELEM;
+typedef VF_OUTLINE_ELEM   *VF_OUTLINE;
+
+/* Bitmap list */
+struct vf_s_bitmaplist {
+  long                 off_x, off_y; 
+  VF_BITMAP            bitmap;
+  struct vf_s_bitmaplist *next;
+};
+typedef struct vf_s_bitmaplist *VF_BITMAPLIST; 
+
+
+/*
+ * Font type
+ */
+#define VF_FONT_TYPE_UNDEF       0
+#define VF_FONT_TYPE_BITMAP      1
+#define VF_FONT_TYPE_OUTLINE     2
+
+
+/*
+ * Font object
+ */
+typedef struct vf_s_font   *VF_FONT;
+struct vf_s_font {
+                        /* font drivers must not modify the following */
+  char   *font_name;
+  int     mode;
+  double  point_size, dpi_x, dpi_y;   /* when mode==1 */
+  int     pixel_size;                 /* when mode==2 */
+  double  mag_x, mag_y;
+  int     font_class;
+  int     link_count;
+                        /* font drivers may modify the following */
+  int     font_type;
+  /* methods */
+  VF_BITMAP     (*get_bitmap1)(VF_FONT,long,double,double);
+  VF_BITMAP     (*get_bitmap2)(VF_FONT,long,double,double);
+  int           (*get_metric1)(VF_FONT,long,VF_METRIC1,double,double);
+  int           (*get_metric2)(VF_FONT,long,VF_METRIC2,double,double);
+  int           (*get_fontbbx1)(VF_FONT,double,double,
+				double*,double*,double*,double*);
+  int           (*get_fontbbx2)(VF_FONT,double,double,int*,int*,int*,int*);
+  VF_OUTLINE    (*get_outline)(VF_FONT,long,double,double);
+  char*         (*get_font_prop)(VF_FONT,char*);
+  int           (*query_font_type)(VF_FONT,long);
+  int           (*close)(VF_FONT);
+
+  /* private data (font class dependent) */
+  void  *private; 
+};
+
+
+
+/**
+ ** VFLIB API 
+ **/
+
+/*
+ * Initialization of VFlib
+ *    VF_Init(char* vflibcap_path, char *variable_list) 
+ *
+ *  The second argument 'variable_list' is a string of a form
+ *  "KEY1=VALUE1, KEY2=VALUE2, ...".  This is used for parameterized
+ *  vflibcap.
+ */
+extern int  VF_Init(char *vflibcap_path, char *variable_list);
+
+/*
+ * VFlib version number
+ */
+extern char   *VF_GetVersion(void);
+
+/*
+ * Get last error code   
+ */
+extern int   VF_GetLastError(void);  
+
+/*
+ * Clear errors in VFlib
+ */
+extern void  VF_ClearError(void);
+
+/*
+ * Open a font  
+ * Font ID (font_id) is returned
+ */
+/* high-resolution oriented  */
+extern int  VF_OpenFont1(char *font_name,
+			 double dpi_x, double dpi_y, 
+			 double point_size, double mag_x, double mag_y);
+/* low-resolution oriented */
+extern int  VF_OpenFont2(char *font_name, 
+			 int pixel_size, double mag_x, double mag_y);
+
+/* 
+ * Close a font
+ */
+extern int  VF_CloseFont(int font_id);
+
+/*
+ * Get a bitmap of a character
+ */
+/* high-resolution oriented */
+extern VF_BITMAP  VF_GetBitmap1(int font_id, long code_point,
+				double mag_x, double mag_y);
+/* low-resolution oriented */
+extern VF_BITMAP  VF_GetBitmap2(int font_id, long code_point,
+				double mag_x, double mag_y);
+
+/*
+ * Get a metric of a character
+ */
+/* high-resolution oriented */
+extern VF_METRIC1  VF_GetMetric1(int font_id, long code_point,
+				 VF_METRIC1 metric1,
+				 double mag_x, double mag_y);
+/* low-resolution oriented */
+extern VF_METRIC2  VF_GetMetric2(int font_id, long code_point,
+				 VF_METRIC2 metric2,
+				 double mag_x, double mag_y);
+
+/*
+ * Get bounding-box of a font
+ */
+/* high-resolution oriented */
+extern int  VF_GetFontBoundingBox1(int font_id, double mag_x, double mag_y,
+				   double *width_p, double *height_p,
+				   double *xoff_p, double *yoff_p);
+/* low-resolution oriented */
+extern int  VF_GetFontBoundingBox2(int font_id, double mag_x, double mag_y,
+				   int *width_p, int *height_p,
+				   int *xoff_p, int *yoff_p);
+
+
+/*
+ * Get an outline data of a character 
+ * (only for high-resolution oriented fonts)
+ */
+extern VF_OUTLINE  VF_GetOutline(int font_id, long code_point,
+				 double mag_x, double mag_y);
+/*
+ * Get font property (font class dependent)
+ * (Caller must release the resulting string area.)
+ */
+extern char   *VF_GetFontProp(int font_id, char *prop_name);
+
+/*
+ * Get font type (bitmap or outline):
+ */
+extern int   VF_QueryFontType(int font_id, long code_point);
+
+/*
+ * Make a copy of a bitmap
+ */
+extern VF_BITMAP  VF_CopyBitmap(VF_BITMAP bm);
+
+/*
+ * Make a rotated bitmap
+ */
+extern VF_BITMAP  VF_RotatedBitmap(VF_BITMAP bm, int rotate_angle);
+#define VF_BM_ROTATE_0      0
+#define VF_BM_ROTATE_90    90
+#define VF_BM_ROTATE_180  180
+#define VF_BM_ROTATE_270  270
+
+/*
+ * Make a reflected bitmap
+ */
+extern VF_BITMAP  VF_ReflectedBitmap(VF_BITMAP bm, int ref_x, int ref_y);
+
+/*
+ * Make a scaled bitmap
+ */
+extern VF_BITMAP  VF_MakeScaledBitmap(VF_BITMAP bm, 
+				      double mag_x, double mag_y);
+
+/* 
+ * Make a minimized bitmap (make a bitmap with minimum bounding box)
+ */
+extern VF_BITMAP  VF_MinimizeBitmap(VF_BITMAP bm);
+
+/* 
+ * Fill/Clear bitmap
+ */
+extern void       VF_FillBitmap(VF_BITMAP bm);
+extern void       VF_ClearBitmap(VF_BITMAP bm);
+
+/* 
+ * Make a copy of a metric
+ */
+extern VF_METRIC1 VF_CopyMetric1(VF_METRIC1 metric1);
+extern VF_METRIC2 VF_CopyMetric2(VF_METRIC2 metric2);
+
+/*
+ * Create a bitmap data from an outline data
+ */
+extern VF_BITMAP  VF_OutlineToBitmap(VF_OUTLINE outline, 
+				     double dpi_x, double dpi_y, 
+				     double point_size,
+				     double mag_x, double mag_y);
+
+/*
+ * Create an outline data from a bitmap data
+ */
+extern VF_OUTLINE  VF_BitmapToOutline(VF_BITMAP bm);
+
+/*
+ * Release bitmap, outline, matric objects:
+ */
+extern void  VF_FreeBitmap(VF_BITMAP bm);
+extern void  VF_FreeOutline(VF_OUTLINE outline);
+extern void  VF_FreeMetric1(VF_METRIC1 metric1);
+extern void  VF_FreeMetric2(VF_METRIC2 metric2);
+
+/* 
+ * Bitmap list
+ */
+extern int       VF_BitmapListInit(VF_BITMAPLIST);
+extern int       VF_BitmapListPut(VF_BITMAPLIST,VF_BITMAP,long,long);
+extern VF_BITMAP VF_BitmapListCompose(VF_BITMAPLIST);
+extern int       VF_BitmapListFinish(VF_BITMAPLIST);
+
+
+/*
+ * Installation of a font driver
+ */
+extern int  VF_InstallFontDriver(char* class_name, 
+				 int(*driver_entry)(VF_FONT font,
+						    char *class_name,
+						    char *font_name, 
+						    int implicit_flag,
+						    void *font_db_entry));
+
+/*
+ * Get a list of installed font driver names
+ */
+extern char **VF_FontDriverList(void);
+
+
+/*
+ * Output a bitmap to a file
+ */
+/* PBM ASCII format output */
+extern int  VF_ImageOut_PBMAscii(VF_BITMAP bm, FILE *fp, 
+				 int image_width, int image_height,
+				 int position_x, int position_y, 
+				 int margin_l, int margin_r, 
+				 int margin_t, int margin_b,
+				 int reverse, int shrink,
+				 char *prog, char *title);
+/* PGM ASCII format output */
+extern int  VF_ImageOut_PGMAscii(VF_BITMAP bm, FILE *fp, 
+				 int image_width, int image_height,
+				 int position_x, int position_y, 
+				 int margin_l, int margin_r,
+				 int margin_t, int margin_b,
+				 int reverse, int shrink,
+				 char *prog, char *title);
+/* PGM Row format output */
+extern int  VF_ImageOut_PGMRaw(VF_BITMAP bm, FILE *fp, 
+			       int image_width, int image_height,
+			       int position_x, int position_y, 
+			       int margin_l, int margin_r, 
+			       int margin_t, int margin_b,
+			       int reverse, int shrink,
+			       char *prog, char *title);
+/* EPS format output */
+extern int  VF_ImageOut_EPS(VF_BITMAP bm, FILE *fp, 
+			    int image_width, int image_height,
+			    int position_x, int position_y, 
+			    int margin_l, int margin_r,
+			    int margin_t, int margin_b,
+			    int reverse, int shrink,
+			    char *prog, char *title,
+			    double ptsize, int pixsize);
+/* ASCII Art format output */
+extern int  VF_ImageOut_ASCIIArt(VF_BITMAP bm, FILE *fp, 
+				 int image_width, int image_height,
+				 int position_x, int position_y, 
+				 int margin_l, int margin_r, 
+				 int margin_t, int margin_b,
+				 int reverse, int shrink);
+/* ASCII Art format output (rotated clockwise, 90 degree) */
+extern int  VF_ImageOut_ASCIIArtV(VF_BITMAP bm, FILE *fp, 
+				  int image_width, int image_height,
+				  int position_x, int position_y, 
+				  int margin_l, int margin_r, 
+				  int margin_t, int margin_b,
+				  int reverse, int shrink);
+
+#define VF_IMAGEOUT_POSITION_NONE    0
+#define VF_IMAGEOUT_POSITION_CENTER  1
+#define VF_IMAGEOUT_POSITION_TOP     2
+#define VF_IMAGEOUT_POSITION_BOTTOM  3
+#define VF_IMAGEOUT_POSITION_LEFT    4
+#define VF_IMAGEOUT_POSITION_RIGHT   5
+
+
+/*
+ * Display a bitmap as an ASCII art
+ */
+extern void VF_DumpBitmap(VF_BITMAP bm);
+
+
+
+/** 
+ ** Outline Data
+ **/
+#define VF_OL_INSTR_TOKEN       0x80000000L
+#define VF_OL_INSTR_CHAR        0x00000001L
+#define VF_OL_INSTR_CWCURV      0x00000002L
+#define VF_OL_INSTR_CCWCURV     0x00000004L
+#define VF_OL_INSTR_LINE        0x00000008L
+#define VF_OL_INSTR_ARC         0x00000010L
+#define VF_OL_INSTR_BEZ         0x00000020L
+#define VF_OL_GET_X(n)          (((n)&0x7fff0000L) >> 16)
+#define VF_OL_GET_Y(n)          (((n)&0x00007fffL))
+#define VF_OL_MAKE_XY(x,y)   (((VF_OUTLINE_ELEM)(x)<<16)|(VF_OUTLINE_ELEM)(y))
+#define	VF_OL_COORD_MAX               32768 
+#define	VF_OL_COORD_RANGE              8192
+#define	VF_OL_COORD_OFFSET      (VF_OL_COORD_MAX/2 - VF_OL_COORD_RANGE/2)
+
+#define	VF_OL_HEADER_ENCODE(x)  (VF_OUTLINE_ELEM)((double)(x)*(double)0x10000)
+#define	VF_OL_HEADER_DECODE(y)  ((VF_OUTLINE_ELEM)((y)/(double)0x10000))
+#define	VF_OL_OUTLINE_HEADER_SIZE_TYPE0  16
+#define	VF_OL_OUTLINE_HEADER_TYPE0        0
+
+#define	VF_OL_HEADER_INDEX_HEADER_TYPE  0  /* format type */
+#define	VF_OL_HEADER_INDEX_DATA_SIZE    1  /* data size, incl. header */
+#define	VF_OL_HEADER_INDEX_DPI_X        2  /* h-dpi (encoded) */
+#define	VF_OL_HEADER_INDEX_DPI_Y        3  /* v-dpi (encoded) */
+#define	VF_OL_HEADER_INDEX_POINT_SIZE   4  /* point size (encoded) */
+#define	VF_OL_HEADER_INDEX_EM           5  /* 1em, in outline coordinate */
+#define	VF_OL_HEADER_INDEX_MAX_X        6  /* in outline coordinate */
+#define	VF_OL_HEADER_INDEX_MAX_Y        7  /* in outline coordinate */
+#define	VF_OL_HEADER_INDEX_REF_X        8  /* in outline coordinate */
+#define	VF_OL_HEADER_INDEX_REF_Y        9  /* in outline coordinate */
+#define	VF_OL_HEADER_INDEX_MV_X        10  /* in outline coordinate */
+#define	VF_OL_HEADER_INDEX_MV_Y        11  /* in outline coordinate */
+
+
+/**
+ ** Error code
+ **/
+extern int  vf_error;
+#define  VF_ERR_INTERNAL             1  /* Internal error */
+#define  VF_ERR_NO_MEMORY            2  /* Out of memory */
+#define  VF_ERR_CANT_OPEN            3  /* Can't open a file */
+#define  VF_ERR_NOT_SUPPORTED_OP     4  /* Operation not supported */
+#define  VF_ERR_ILL_FONTID           5  /* Illegal font id */
+#define  VF_ERR_OPEN_NESTING         6  /* Too many nesting for font open */
+#define  VF_ERR_USED_CLASS_NAME      7  /* The class name is already used */
+#define  VF_ERR_ILL_MODE             8  /* Illegal font mode (high/low res.) */
+#define  VF_ERR_BITMAP2OUTLINE       9  /* Illegal bitmap for bitmap2outline */
+#define  VF_ERR_BOGUS_OUTLINE       10  /* Bogus outline data */
+#define  VF_ERR_NO_VFLIBCAP         11  /* Vflibcap file not found */
+#define  VF_ERR_UNCOMPRESS          12  /* Font uncompression error */
+#define  VF_ERR_ILL_FONT_FILE       13  /* Font file format error */
+#define  VF_ERR_TOO_MANY_OPEN       14  /* Too many open fonts */
+
+#define  VF_ERR_CLASS_UNKNOWN       20  /* Font class is unknown */
+#define  VF_ERR_NO_FONT_ENTRY       21  /* Font entry not found */
+#define  VF_ERR_NO_FONT_CLASS       22  /* No such font class name */
+#define  VF_ERR_NO_FONT_FILE_PATH   23  /* No font file path in vflibcap */
+#define  VF_ERR_NO_FONT_FILE        24  /* No font file */
+#define  VF_ERR_NO_METRIC_FILE      25  /* No metric file */
+#define  VF_ERR_NO_AUX_FONT_NAME    26  /* No auxiliary font name */
+#define  VF_ERR_NOT_JFM             27  /* Not a JFM file */
+#define  VF_ERR_NO_FONT_IMP         28  /* No font in implicit font classes */
+#define  VF_ERR_WRONG_OFM           29  /* Wrong OFM version */
+#define  VF_ERR_INVALID_METRIC      30  /* Invalid metric file */
+#define  VF_ERR_ILL_CODE_POINT      31  /* Illegal code point */
+#define  VF_ERR_NO_GLYPH            32  /* Glyph not found */
+
+#define  VF_ERR_FREETYPE_INIT       50  /* FreeType initialization error */
+#define  VF_ERR_T1LIB_INIT          51  /* T1Lib initialization error */
+
+
+#endif /*__VFLIB_VFLIB_H__*/ 
+
+/*EOF*/

@@ -1,0 +1,13 @@
+\ProvidesFile{jt1mip.fd}[1998/09/07 Karei Mincho (Vertical)]
+\DeclareKanjiFamily{JT1}{mip}{}
+\DeclareRelationFont{JT1}{mip}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JT1}{mip}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{mip}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{mip}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JT1}{mip}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT1}{mip}{sl}{n}{ <-> tdfmipmaa  }{}
+\DeclareFontShape{JT1}{mip}{m}{n}{  <-> tdfmippaa  }{}
+\DeclareFontShape{JT1}{mip}{sb}{n}{ <-> tdfmippaa  }{}
+\DeclareFontShape{JT1}{mip}{b}{n}{  <-> tdfmippaa  }{}
+\DeclareFontShape{JT1}{mip}{bx}{n}{ <-> tdfmippaa  }{}
+\endinput

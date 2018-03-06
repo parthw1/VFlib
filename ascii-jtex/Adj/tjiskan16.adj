@@ -1,0 +1,71 @@
+; tjiskan16.adj
+;   Metric adjustment file for "jiskan16.pcf" font file in X-Window.
+;   (Support for vertical writing)
+
+; See tminXX.pl (or generete it by tftopl command) to see 
+; the relation between code point and char-type.
+;   Shift bitmap to right:  give positive value for delta-X
+;   Shift bitmap to up:  give positive value for delta-Y
+
+;--------------------------------------------------------
+; Writing direction and Rotation semantics
+;--------------------------------------------------------
+(direction vertical)        ;; "vertical" or "horizontal"
+(rotation-semantics ptex)   ;; "ptex" or "jisx0208"
+
+;--------------------------------------------------------
+; Semantics for delta-X and delta-Y
+;--------------------------------------------------------
+(semantics design-size)     ;; "bitmap-size" or "design-size"
+
+;--------------------------------------------------------
+;  global shift
+;--------------------------------------------------------
+(char-all  0.00  0.00)
+
+;--------------------------------------------------------
+;  CharType       delta-X  delta-Y
+;--------------------------------------------------------
+(char-type   0     -0.45    -0.78 )  ; Kanji
+(char-type   1      0.00    -0.30 )  ; Comma and Period
+(char-type   2      0.00    -0.30 )  ; Touten and Kuten
+(char-type   3     -0.38    -0.57 )  ; small Kana
+(char-type   4     -0.45    -0.80 )  ; ? and ! 
+(char-type   5     -0.50    -1.00 )  ; Zenkaku-Yakubutsu 
+(char-type   6     -0.34     0.48 )  ; opening Kakko
+(char-type   7     -0.40    -0.72 )  ; Nakatsuki-Yakubutsu 
+(char-type   8     -0.34    -0.10 )  ; closing Kakko
+
+;--------------------------------------------------------
+; char-code and delta
+;    --- "char-type & delta" given above is overridden
+;--------------------------------------------------------
+;           char-code   delta-X  delta-Y
+(char-code  0x2126   -0.45    -0.60 )
+(char-code  0x2133   -0.40    -0.71 )
+(char-code  0x2134   -0.40    -0.71 )
+(char-code  0x2135   -0.40    -0.71 )
+(char-code  0x2136   -0.40    -0.71 )
+(char-code  0x2137   -0.40    -0.64 )
+(char-code  0x2139   -0.48    -0.65 )
+
+(char-code  0x213d   -0.35    -0.10 )
+(char-code  0x213e   -0.35     0.20 )
+
+(char-code  0x2144   -0.35    -0.05 )
+(char-code  0x2145   -0.35    -0.10 )
+
+(char-code  0x2142   -0.40     0.20 )
+(char-code  0x2143   -0.37     0.20 )
+
+(char-code  0x2146   -0.85    -0.84 )
+(char-code  0x2148   -0.80    -0.84 )
+(char-code  0x2147    0.00    -0.90 )
+(char-code  0x2149    0.00    -0.90 )
+
+(char-code  0x213c   -0.40    -0.10 )
+(char-code  0x2141   -0.40    -0.10 )
+(char-code  0x2161   -0.36    -0.10 )
+
+;--------------------------------------------------------
+;EOF

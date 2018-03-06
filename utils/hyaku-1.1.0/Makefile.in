@@ -1,0 +1,84 @@
+#
+# a Makefile for "hyaku" --- HyakuninIssyu
+#   by Hirotsugu Kakugawa
+#
+
+# -----------------------------------------------------------------------
+# For making sample GIFs
+GIF_FONT=tdfkaisaa
+GIF_VFLIBCAP=vflibcap-jtex
+GIF_DPI=300
+GIF_MODE=cx
+GIF_SHRINK=3
+GIF_PARAMS=$(GIF_FONT) $(GIF_VFLIBCAP) $(GIF_DPI) $(GIF_MODE) $(GIF_SHRINK)
+# -----------------------------------------------------------------------
+
+default all:: hyakubm hyakux11
+
+LIBTOOL=../../libtool
+include ../../make-sub
+
+X_CFLAGS=@X_CFLAGS@
+X_PRE_LIBS=@X_PRE_LIBS@
+X_LIBS=@X_LIBS@
+X_EXTRA_LIBS=@X_EXTRA_LIBS@
+
+    PROGRAMS = hyakubm     hyakux11
+        SRCS = hyakubm.c   hyakux11.c
+        OBJS = hyakubm.lo  hyakux11.lo
+   VFLIB_DIR = ../../src
+
+include ../../make-sub
+
+# hyakubm
+hyakubm: hyakubm.o
+	$(LIBTOOL) --mode=link \
+		$(CC) $(VFCFLAGS) -o hyakubm hyakubm.o \
+		  $(VFLIB_DIR)/libVFlib3.la
+hyakubm.o: hyakubm.c hyakubm.h
+	$(CC) -I$(VFLIB_DIR) $(VFCFLAGS) -c hyakubm.c 
+
+# hyakux11
+hyakux11: hyakux11.o
+	$(LIBTOOL) --mode=link \
+		$(CC) $(VFCFLAGS) -o hyakux11 hyakux11.o \
+		  $(LDFLAGS) $(VFLIB_DIR)/libVFlib3.la \
+		  $(X_LIBS) $(X_PRE_LIBS) $(X_EXTRA_LIBS) -lX11
+hyakux11.o: hyakubm.c hyakubm.h
+	-rm -f hyakux11.c
+	ln -s hyakubm.c hyakux11.c
+	$(CC) -I$(VFLIB_DIR) $(X_CFLAGS) $(VFCFLAGS) -DHYAKUX11 -c hyakux11.c 
+	-rm -f hyakux11.c
+
+install:: $(PROGRAMS)
+	@$(LIBTOOL) --mode=install \
+		../../$(INSTALL_PROGRAM) hyakubm  $(bindir)
+	@$(LIBTOOL) --mode=install \
+		../../$(INSTALL_PROGRAM) hyakux11 $(bindir)
+uninstall:: 
+	@$(LIBTOOL) --mode=uninstall $(RM) $(bindir)/hyakubm
+	@$(LIBTOOL) --mode=uninstall $(RM) $(bindir)/hyakux11
+
+clean::
+	-$(RM) $(PROGRAMS)
+
+veryclean:: clean
+distclean:: clean
+
+
+
+GIF: hyakubm
+	./mkgif $(GIF_PARAMS)
+samples: hyakubm
+	-rm -f GIF
+	./mkgif $(GIF_PARAMS) 1 5
+	ln -s GIF-$(FONT) GIF
+
+UPDATE: mkhdr
+	./mkhdr < hyaku.txt > hyakubm.h
+mkhdr: 
+	$(LIBTOOL) --mode-compile  $(CC) -o mkhdr mkhdr.lo
+mkhdr.lo: 
+	$(LIBTOOL) --mode-compile  $(CC) -c mkhdr.c
+
+#

@@ -1,0 +1,53 @@
+#!/bin/sh
+
+# Run "xmkmf"
+# Since invocation of Sun OpenWindow's "xmkmf" is different from 
+# X11R* "xmkmf", we need to check how to invoke it.
+
+XMKMF=''
+
+# Find xmkmf
+X=`echo $PATH | sed 's/:/ /g'`
+for d in $X ; do
+  if test -x $d/xmkmf; then
+    XMKMF=$d/xmkmf
+    break
+  fi
+done
+
+# Check if we have OpenWindow.
+NO_OPENWIN=1
+if test -d /usr/openwin; then 
+  NO_OPENWIN=0
+  # If OPENWINHOME is not set, we do not use OpenWindow
+  if test X-${OPENWINHOME+set} != X-set; then  
+    NO_OPENWIN=1
+  fi
+fi
+
+# In case we have OpenWindow but an "xmkmf" to be executed is not 
+# an OpenWindow's "xmkmf", we do not use OpenWindow. 
+if test ${NO_OPENWIN} = 0; then 
+  if [ X-$XMKMF != X-${OPENWINHOME}/bin/xmkmf ] ; then
+    NO_OPENWIN=1
+  fi
+fi
+
+# Run "xmkmf" accroding to the check result.
+case ${NO_OPENWIN} in
+0)
+  echo Use OpenWindow
+  echo "Running 'xmkmf $OPENWINHOME/lib .'"
+  xmkmf $OPENWINHOME/lib .
+  ;;
+1)
+  if [ X-$XMKMF != X- ] ; then
+    echo Use X11.
+    echo "Running 'xmkmf -a'"
+    xmkmf -a
+  else
+    echo Not found: xmkmf. No X11.
+    touch Makefile x11.mk
+  fi
+  ;;
+esac

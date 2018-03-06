@@ -1,0 +1,32 @@
+#(This file contains Japanese character set JISX0208.)
+
+# 
+# Optional Japanese Kanji Font (JISX0212) List
+#    The following is a list of Japanese Kanji font files in TrueType format 
+#
+
+#      L     M     B     E     H
+#  W:  3  4  5  6  7  8  9 10 11 12 
+#      m  o  p     s     v     x  z
+
+
+# FONT-NAME                             FILE-NAME	TeX-FONT-NAME
+
+### Ricoh TrueTypeWorld Value Font DX
+明朝L(補助漢字)				hgrmlh.ttf	rcgotsaah
+ゴシックB(補助漢字)			hgrgbh.ttf	rcminmaah
+平成明朝体W3(補助漢字)			hgrhm3h.ttf	rchmnmaah
+
+### DynaFont Type Museum
+DFP華康ゴシック体W3(補助漢字)		dfgot3_u.ttc	dfgopmaah
+DFP華康ゴシック体W5(補助漢字)		dfgot5_u.ttc	dfgoppaah
+DFP中楷書体(補助漢字)			dfkai5_u.ttc	dfkaipaah
+DFP中太楷書体(補助漢字)			dfkai7_u.ttc	dfkaisaah
+DFP太楷書体(補助漢字)			dfkai9_u.ttc	dfkaivaah
+DFP細明朝体(補助漢字)			dfmin3_u.ttc	dfminkaah
+DFP明朝体(補助漢字)			dfmin5_u.ttc	dfhsmmaah
+DFP中丸ゴシック体(補助漢字)		dfmrg5_u.ttc	dfmrgpaah
+DFP中太丸ゴシック体(補助漢字)		dfmrg7_u.ttc	dfmrgsaah
+DFP太丸ゴシック体(補助漢字)		dfmrg9_u.ttc	dfmrgvaah
+
+#EOF

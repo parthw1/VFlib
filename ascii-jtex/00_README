@@ -1,0 +1,22 @@
+This directory contains the following files that are related to
+Japanese TeX localized by ASCII Coop.
+
+   *.adj  ---  Font metric adjustment files for using font files
+               whose font metrics are different from Japanese fonts
+               used by Japanese TeX.
+
+
+If you want to use many Japanese fonts, see what will happen 
+if you run the following command sequence:
+
+  % su   (be a root user)
+  # make install-jfm
+
+It copies min10.tfm to another so that we can use new TFM (JFM) files
+for Japanese fonts. A file 'flist-ja.txt' is a font list to install.
+You can modify it for your system. After you modify it, run
+
+  % make update
+
+to update some files created from 'def.txt'. 
+Then, run "make install-jfm" again.

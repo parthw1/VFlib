@@ -1,0 +1,13 @@
+\ProvidesFile{jy1mip.fd}[1998/09/07 Karei Mincho (Horizontal)]
+\DeclareKanjiFamily{JY1}{mip}{}
+\DeclareRelationFont{JY1}{mip}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JY1}{mip}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{mip}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{mip}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JY1}{mip}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JY1}{mip}{sl}{n}{ <-> dfmipmaa  }{}
+\DeclareFontShape{JY1}{mip}{m}{n}{ <->  dfmippaa  }{}
+\DeclareFontShape{JY1}{mip}{sb}{n}{ <-> dfmippaa  }{}
+\DeclareFontShape{JY1}{mip}{b}{n}{ <->  dfmippaa  }{}
+\DeclareFontShape{JY1}{mip}{bx}{n}{ <-> dfmippaa  }{}
+\endinput

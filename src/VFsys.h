@@ -1,0 +1,140 @@
+/*
+ * VFsys.h - misc definitions for internals of VFlib
+ * 
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#ifndef __VFLIB_VFSYS_H__
+#define __VFLIB_VFSYS_H__
+
+#include "consts.h"
+
+
+#if !defined(TRUE) && !defined(FALSE)
+#  define   TRUE    (0==0)
+#  define   FALSE   (0==1)
+#endif
+
+#define    Public       /* public */
+#define    Glocal       /* public within VFlib */
+#define    Private      static
+#define    Import       extern
+
+
+
+#if STDC_HEADERS
+#  define memclr(a,n)      memset((a),0,(n))
+#else
+#  ifndef HAVE_MEMCMP
+#    define memcmp(a1,a2,n)    bcmp((a1),(a2),(n))
+#    define memcpy(dst,src,n)  bcopy((src),(dst),(n))
+#    define memclr(a,n)        bzero((a),(n))
+#  else
+#    define memclr(a,n)      memset((a),0,(n))
+#  endif /*HAVE_MEMCMP*/
+#endif 
+
+#if HAVE_STRING_H
+# include <string.h>
+#endif
+#if HAVE_STRINGS_H
+# include <strings.h>
+#endif
+
+#ifndef SEEK_SET
+#  define  SEEK_SET  0
+#  define  SEEK_CUR  1
+#  define  SEEK_END  2
+#endif
+
+#ifndef FOPEN_MODE_BIN
+#  if defined(VMS) || defined(VMCMS) || defined(DOS) || defined(OS2) \
+      || defined(WIN32) || defined(__DJGPP__) || defined(__CYGWIN32__)
+#    define   FOPEN_RD_MODE_BIN   "rb"
+#    define   FOPEN_RD_MODE_TEXT  "rt"
+#    define   FOPEN_WD_MODE_BIN   "wb"
+#    define   FOPEN_WD_MODE_TEXT  "wt"
+#  else
+#    define   FOPEN_RD_MODE_BIN   "r"
+#    define   FOPEN_RD_MODE_TEXT  "r"
+#    define   FOPEN_WR_MODE_BIN   "w"
+#    define   FOPEN_WR_MODE_TEXT  "w"
+#  endif
+#endif
+
+#define ALLOC_IF_ERR(v,t) \
+          if ((v = (t*)calloc(1, sizeof(t))) == NULL)
+#define ALLOCN_IF_ERR(v,t,n) \
+          if ((v = (t*)calloc(n, sizeof(t))) == NULL)
+#define xfree(p)             if ((p) != NULL){ free(p); }
+#define toint(x)  (int)(((x)>0)?(x+0.5):(x-0.5))
+
+#define DRIVER_FUNC_TYPE  int(*)(VF_FONT,char*,char*,int,void*)
+
+extern int  vf_openfont1(char *font_name, char *requested_font_class, 
+			 double dpi_x, double dpi_y, double point_size, 
+			 double mag_x, double mag_y);
+extern int  vf_openfont2(char *font_name, char *requested_font_class, 
+			 int pixel_size, double mag_x, double mag_y);
+
+
+extern int  vf_dbg_font_open;
+extern int  vf_dbg_font_search;
+extern int  vf_dbg_kpathsea;
+extern int  vf_dbg_vfcap;
+extern int  vf_dbg_parameters;
+extern int  vf_dbg_ccv;
+extern int  vf_dbg_ccv_map;
+
+typedef void*(*FM_OPEN_METHOD)(char*,long,long,void*,void*);
+typedef void (*FM_CLOSE_METHOD)(void*,long,long,void*,void*);
+extern int   vf_fm_init(void);
+extern FILE* vf_fm_OpenBinaryFileStream(char*);
+extern FILE* vf_fm_OpenTextFileStream(char*);
+extern void* vf_fm_OpenFileStreamApp(char *arg, long iarg1, long iarg2, 
+				     void *arg1, void *arg2, 
+				     FM_OPEN_METHOD open_method,
+				     FM_CLOSE_METHOD close_method,
+				     char* dbgmsg);
+extern void  vf_fm_CloseFileStreamApp(char *arg, long iarg1, long iarg2, 
+				      void *arg1, void *arg2, 
+				      FM_OPEN_METHOD open_method,
+				      FM_CLOSE_METHOD close_method,
+				      char* dbgmsg);
+
+
+#ifndef VAR_VAL_DELIMIT_CHAR
+#  define VAR_VAL_DELIMIT_CHAR     '='
+#endif
+
+
+/* raster.c, bm2ol.c */
+#define  BM2OL_DOT_SHAPE_SQUARE    0
+#define  BM2OL_DOT_SHAPE_DIAMOND   1
+#define  BM2OL_DEFAULT_DOT_SIZE    0.8
+extern int        vf_draw_outline(VF_BITMAP,VF_OUTLINE);
+extern VF_BITMAP  vf_outline_to_bitmap(VF_OUTLINE,double,double,
+				       double,double,double);
+extern VF_OUTLINE vf_bitmap_to_outline(VF_BITMAP,int,int,
+				       double,double,double,double,double);
+extern VF_OUTLINE vf_bitmap_to_outline2(VF_BITMAP,int,double,int,int,
+					double,double,double,double,double);
+
+/* defaults.c */
+#include "sexp.h"
+extern SEXP_ALIST  vf_extension_hints;
+extern SEXP_LIST   vf_implicit_font_classes;
+extern char       *vf_directory_delimiter;
+extern int         vf_defaults_init(void);
+
+#include "mem.h"
+
+#endif /*__VFLIB_VFSYS_H__*/ 
+
+/*EOF*/

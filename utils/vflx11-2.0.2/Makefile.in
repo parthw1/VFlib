@@ -1,0 +1,56 @@
+#
+# Makefile.in for vflx11
+#  by H.Kakugawa
+#
+
+#
+makedefault: default
+
+LIBTOOL = ../../libtool
+include ../../make-sub
+
+X_CFLAGS=@X_CFLAGS@
+X_PRE_LIBS=@X_PRE_LIBS@
+X_LIBS=@X_LIBS@
+X_EXTRA_LIBS=@X_EXTRA_LIBS@
+
+
+#
+VFLIB_DIR = ../../src
+
+ PROGRAMS = vflx11
+     SRCS = vflx11.c
+     OBJS = vflx11.o
+
+default all:: $(PROGRAMS)
+
+vflx11: $(OBJS) $(VFLIB_DIR)/libVFlib3.la
+	$(RM) $@
+	$(LIBTOOL) --mode=link \
+		$(CC) -o $@ $(OBJS) \
+		  $(LDFLAGS) $(VFLIB_DIR)/libVFlib3.la \
+                  $(X_LIBS) $(X_EXTRALIBS) $(X_PRE_LIBS) -lX11 
+ 
+vflx11s: $(OBJS) $(VFLIB_DIR)/libVFlib3.la
+	$(RM) $@
+	$(LIBTOOL) --mode=link \
+		$(CC) -o $@ -static $(OBJS) \
+		  $(LDFLAGS) $(VFLIB_DIR)/libVFlib3.la \
+                  $(X_LIBS) $(X_EXTRALIBS) $(X_PRE_LIBS) -lX11 
+
+vflx11.o: vflx11.c
+	$(CC) $(VFCFLAGS) $(X_CFLAGS) -c vflx11.c 
+
+install:: $(PROGRAMS)
+	@$(LIBTOOL) --mode=install \
+	   ../../$(INSTALL_PROGRAM) vflx11 $(bindir)/vflx11
+uninstall:: 
+	@$(LIBTOOL) --mode=uninstall $(RM) $(bindir)/vflx11
+
+clean::
+	-$(RM) $(PROGRAMS) vflx11s
+veryclean:: clean
+distclean:: clean
+
+# EOF
+

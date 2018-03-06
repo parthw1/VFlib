@@ -1,0 +1,13 @@
+\ProvidesFile{jy1hsm.fd}[1998/09/07 Keisei Mincho (Horizontal)]
+\DeclareKanjiFamily{JY1}{hsm}{}
+\DeclareRelationFont{JY1}{hsm}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JY1}{hsm}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{hsm}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY1}{hsm}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JY1}{hsm}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JY1}{hsm}{sl}{n}{ <-> dfhsmmaa  }{}
+\DeclareFontShape{JY1}{hsm}{m}{n}{ <->  dfhsmpaa  }{}
+\DeclareFontShape{JY1}{hsm}{sb}{n}{ <-> dfhsmraa  }{}
+\DeclareFontShape{JY1}{hsm}{b}{n}{ <->  dfhsmsaa  }{}
+\DeclareFontShape{JY1}{hsm}{bx}{n}{ <-> dfhsmvaa  }{}
+\endinput

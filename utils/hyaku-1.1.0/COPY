@@ -1,0 +1,15 @@
+#!/bin/sh
+
+# house-keeping job (internal work for the maintainer)
+
+DIR=${HOME}/hack/HyakuninIssyu/	
+
+FILES="hyaku.txt hyakubm.c hyakubm.h mkhdr.c mkgif"
+
+for F in ${FILES}; do
+  cp ${DIR}/$F ./
+done
+
+make hyakubm
+make hyakux11
+

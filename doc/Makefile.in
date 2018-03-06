@@ -1,0 +1,72 @@
+DOC_TEXI=VFlib-37.texi
+DOC_INFO=VFlib-37.info
+DOC_HTML=VFlib-37.html
+DOC_DVI=VFlib-37.dvi
+DOC_PS=VFlib-37.ps
+
+TEXI2HTML=texi2html
+DVI2PS=dvips -f
+
+
+all: VFlib-37.info VFlib-37.ps
+ALL: VFlib-37.info VFlib-37.ps VFlib-37.dvi VFlib-37.html
+
+include ../make-sub
+
+VFlib-37.info: VFlib-37.texi
+	-rm VFlib-37.info*
+	emacs --batch  VFlib-37.texi \
+	      -f texinfo-format-buffer \
+	      -f save-buffer \
+	      -f kill-emacs
+VFlib-37.ps: VFlib-37.texi
+	$(MAKE) VFlib-37.dvi
+	-$(DVI2PS) VFlib-37.dvi > VFlib-37.ps
+VFlib-37.dvi: VFlib-37.texi
+	-rm -f VFlib-37.ps
+	tex VFlib-37.texi
+	texindex VFlib-37.??
+	tex VFlib-37.texi
+VFlib-37.html: VFlib-37.texi
+	$(TEXI2HTML) VFlib-37.texi
+
+install: 
+	@echo "Installing VFlib manuals ...";
+	@if [ ! -d $(infodir) ] ; then \
+	    ../recmkdir $(infodir); fi
+	@for f in `echo $(DOC_INFO)*`; do \
+	   ../$(INSTALL_DATA) $$f  $(infodir); done
+	-@install-info $(DOC_INFO) \
+	     --info-dir=$(infodir) \
+	     --section='Miscellaneous' \
+	     --item="* VFlib 3.7: (VFlib-37.info).		A font library VFlib."; 
+	@if [ ! -d $(runtimedir)/doc ] ; then \
+	    ../recmkdir $(runtimedir)/doc; fi
+	@for f in `echo *.texi *.dvi *.ps *.html`; do \
+	   ../$(INSTALL_DATA) $$f $(runtimedir)/doc; done
+	@if [ ! -d $(runtimedir)/doc/Paper1 ] ; then \
+	    ../recmkdir $(runtimedir)/doc/Paper1; \
+	fi
+	@for f in `echo Paper1/*.ps`; do \
+	   ../$(INSTALL_DATA) $$f $(runtimedir)/doc/Paper1;  done
+	@if [ ! -d $(runtimedir)/doc/Paper2-ja ] ; then \
+	    ../recmkdir $(runtimedir)/doc/Paper2-ja; fi
+	@for f in `echo Paper2-ja/*.ps`; do \
+	   ../$(INSTALL_DATA) $$f $(runtimedir)/doc/Paper2-ja; done
+
+uninstall:
+	-$(RM) $(infodir)/$(DOC_INFO)* 
+	-install-info --delete $(DOC_INFO) --info-dir=$(infodir) --section='Miscellaneous' --item="* VFlib 3: (VFlib-37.info).		A font library VFlib version 3.6."
+	-$(RM)    $(runtimedir)/doc/Paper1/* $(runtimedir)/doc/Paper2-ja/*
+	-$(RMDIR) $(runtimedir)/doc/Paper1   $(runtimedir)/doc/Paper2-ja
+	-$(RM)    $(runtimedir)/doc/*
+	-$(RMDIR) $(runtimedir)/doc
+clean::
+	-$(RM) *.log *.aux *.bbl *.blg missfont.log
+	-$(RM) *.cp *.cps *.fn *.fns *.ky *pg *.pgs *.toc 
+	-$(RM) *.tp *.tps *.vr *.vrs *.bak 
+	-$(RM) */*.aux */*.log */*~  
+veryclean:: clean
+distclean:: clean
+
+

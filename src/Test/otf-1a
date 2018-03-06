@@ -1,0 +1,13 @@
+COMMENT VFlib 3.7
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  ipag.otf  18
+
+bitmap1 0 0x61
+bitmap1 0 0x6a
+bitmap1 0 0x62
+
+quit

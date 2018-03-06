@@ -1,0 +1,13 @@
+\ProvidesFile{jt1kyk.fd}[1998/09/07 Kyokasyo (Vertical)]
+\DeclareKanjiFamily{JT1}{kyk}{}
+\DeclareRelationFont{JT1}{kyk}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JT1}{kyk}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{kyk}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{kyk}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JT1}{kyk}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT1}{kyk}{sl}{n}{ <-> tdfkykmaa  }{}
+\DeclareFontShape{JT1}{kyk}{m}{n}{  <-> tdfkykmaa  }{}
+\DeclareFontShape{JT1}{kyk}{sb}{n}{ <-> tdfkykpaa  }{}
+\DeclareFontShape{JT1}{kyk}{b}{n}{  <-> tdfkykpaa  }{}
+\DeclareFontShape{JT1}{kyk}{bx}{n}{ <-> tdfkykpaa  }{}
+\endinput

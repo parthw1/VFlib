@@ -1,0 +1,252 @@
+/*
+ * vfltest.c - a test program for VFlib
+ * by Hirotsugu Kakugawa
+ *
+ *  22 Mar 1997  Upgraded for VFlib 3.2
+ *   6 Aug 1997  Upgraded for VFlib 3.3
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#if defined(HAVE_STRING_H)
+#  include  <string.h>
+#else
+#  include  <strings.h>
+#endif
+#include "VFlib-3_7.h"
+
+#define PROG_NAME  "vfltest"
+
+void  usage(void);
+int display(long);
+int display_mode1(long);
+int display_mode1_ol(long);
+int display_mode2(long);
+
+
+char        *FontName;
+int         Mode;
+int         Outline;
+double      MagX, MagY;
+int         Pixel;
+double      Point;
+double      Dpi;
+int         FontId;
+
+
+int
+main(int argc, char **argv)
+{
+  int         i, j;
+  long        code, code1, code2;
+  char        *vflibcap;
+
+  Mode = 1;
+  Outline = 0;
+  MagX = MagY = 1.0;
+  Point = -1.0;
+  Pixel = -1;
+  Dpi = -1;
+
+  vflibcap = NULL;
+  argc--; argv++;
+  while ((argc > 0) && (*argv[0] == '-')){
+    if (strcmp(argv[0], "-f") == 0){
+      break;
+    } else if (strcmp(argv[0], "-v") == 0){
+      vflibcap = argv[1];
+      argc--; argv++;
+    } else if (strcmp(argv[0], "-m") == 0){
+      MagX = MagY = atof(argv[1]); 
+      argc--; argv++;
+    } else if (strcmp(argv[0], "-mx") == 0){
+      MagX = atof(argv[1]);
+      argc--; argv++;
+    } else if (strcmp(argv[0], "-my") == 0){
+      MagY = atof(argv[1]);
+      argc--; argv++;
+    } else if (strcmp(argv[0], "-p") == 0){
+      Pixel = atoi(argv[1]); 
+      Point = atof(argv[1]); 
+      argc--; argv++;
+    } else if (strcmp(argv[0], "-d") == 0){
+      Dpi = atof(argv[1]); 
+      argc--; argv++;
+    } else if (strcmp(argv[0], "-mode1") == 0){
+      Mode = 1;
+    } else if (strcmp(argv[0], "-mode2") == 0){
+      Mode = 2;
+    } else if (strcmp(argv[0], "-ol") == 0){
+      Outline = 1;
+    } else if ((strcmp(argv[0], "-h") == 0)|| (strcmp(argv[0], "-h") == 0)){
+      usage();
+    } else if (strcmp(argv[0], "--help") == 0){
+      usage();
+    } else if (strcmp(argv[0], "-help") == 0){
+      usage();
+    }
+
+    argc--; argv++;
+  }
+
+  if (argc <= 1)
+    usage();
+
+  FontName = argv[0];
+  argv++; argc--;
+
+  if (VF_Init(vflibcap, NULL) < 0){
+    fprintf(stderr, "Error %d in VF_Init().\n", VF_GetLastError());
+    exit(0);
+  }
+
+  if (Mode == 1)
+    FontId = VF_OpenFont1(FontName, Dpi, Dpi, Point, MagX, MagY);
+  else
+    FontId = VF_OpenFont2(FontName, Pixel, MagX, MagY);
+
+  if (FontId < 0){
+    fprintf(stderr, "Error %d in VF_OpenFont1()\n", VF_GetLastError());
+    exit(0);
+  }
+      
+  while (argc > 0){
+    if (argv[0][0] == '='){
+      for (i = 1; argv[0][i] != '\0'; i++){
+	if (   (argv[0][i+1] != '\0') && (argv[0][i+1] == '-')
+	    && (argv[0][i+2] != '\0') && (argv[0][i] < argv[0][i+2]) ){
+	  for (j = (int)argv[0][i]; j <= (int)argv[0][i+2]; j++){
+	    display(j);
+	  }
+	  i = i+2;
+	} else {
+	  display((long)argv[0][i]);
+	}
+      }
+      argv++;
+      argc--;
+    } else if ((argv[1] != NULL) && (argv[2] != NULL) 
+	       && (strcmp(argv[1], "-") == 0)){
+      sscanf(argv[0], "%li", &code1);
+      sscanf(argv[2], "%li", &code2);
+      for (code = code1; code <= code2; code++)
+	display(code);
+      argv = &argv[3];
+      argc -= 3;
+    } else {
+      sscanf(argv[0], "%li", &code);
+      display(code);
+      argv++;
+      argc--;
+    }
+  }
+
+  return 0;
+}
+
+
+void
+usage(void)
+{
+  printf("%s --- A test program for VFlib\n", PROG_NAME);
+  printf("Usage:  %s [OPTIONS] FONT %s\n",
+	 PROG_NAME, 
+	 "[CHAR_CODE ...] [=CHAR_LIST ...] [CHAR_FROM - CHAR_TO ...]");
+  printf("  Options: -mode1          select mode 1\n");
+  printf("           -mode2          select mode 2\n");
+  printf("           -mx MAG_X       horizontal magnification\n");
+  printf("           -my MAG_Y       vertical magnification\n");
+  printf("           -v VFLIBCAP     vflibcap file\n");
+  printf("           -ol             (mode 1) rasterize by outline APIs\n");
+  printf("           -d DPI          (mode 1) device resolution\n");
+  printf("           -p POINT        (mode 1) point size\n");
+  printf("           -p PIXEL        (mode 2) pixel size\n");
+  printf("  Example 1:  %s timR24 33 34 35 0x61 0x62\n", PROG_NAME);
+  printf("  Example 2:  %s jiskan16 0x2123 0x2124\n", PROG_NAME);
+  printf("  Example 3:  %s timR24 =abcdefg\n", PROG_NAME);
+  printf("  Example 4:  %s timR24 0x21 - 0x7e\n", PROG_NAME);
+  exit(0);
+}
+
+
+int
+display(long code_point)
+{
+  int  r;
+
+  if (Mode == 1){
+    if (Outline == 0){
+      r = display_mode1(code_point);
+    } else {
+      r = display_mode1_ol(code_point);
+    }
+  } else {
+    r = display_mode2(code_point);
+  }
+
+  return r;
+}
+
+    
+int
+display_mode1(long code_point)
+{
+  VF_BITMAP   bm;
+
+  printf("Char Code: 0x%lx\n", code_point);
+  if ((bm = VF_GetBitmap1(FontId, code_point, 1, 1)) == NULL){
+    fprintf(stderr, "Error %d in VF_GetBitmap1()\n", VF_GetLastError());
+    return -1;
+  }
+  VF_DumpBitmap(bm);
+  printf("\n");
+  VF_FreeBitmap(bm);
+  return 0;
+}
+
+int
+display_mode1_ol(long code_point)
+{
+  VF_OUTLINE  outline;
+  VF_BITMAP   bm;
+
+  printf("Char Code: 0x%lx\n", code_point);
+  if ((outline = VF_GetOutline(FontId, code_point, 1, 1)) == NULL){
+    fprintf(stderr, "Error %d in VF_GetOutline()\n", VF_GetLastError());
+    return -1;
+  }
+  if ((bm = VF_OutlineToBitmap(outline, -1, -1, -1, 1.0, 1.0)) == NULL){
+    fprintf(stderr, "Error %d in VF_GetOutline1()\n", VF_GetLastError());
+    return -1;
+  }
+  VF_FreeOutline(outline);
+  VF_DumpBitmap(bm);
+  printf("\n");
+  VF_FreeBitmap(bm);
+  return 0;
+}
+
+int
+display_mode2(long code_point)
+{
+  VF_BITMAP   bm;
+
+  printf("Char Code: 0x%lx\n", code_point);
+  if ((bm = VF_GetBitmap2(FontId, code_point, 1, 1)) == NULL){
+    fprintf(stderr, "Error %d in VF_GetBitmap2()\n", VF_GetLastError());
+    return -1;
+  }
+  VF_DumpBitmap(bm);
+  printf("\n");
+  VF_FreeBitmap(bm);
+  return 0;
+}
+
+/*EOF*/

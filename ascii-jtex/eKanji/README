@@ -1,0 +1,46 @@
+eKanji support in pLaTeX2e 
+
+
+                                                      Hirotsugu Kakugawa
+
+* Macro package and font definition files for pLaTeX2e:
+    -  "ekanji.sty"
+    -  "jy1ekan.fd"
+    -  "jt1ekan.fd"
+
+* TFM files:
+    -  See tfm/ directory
+
+* Installation
+    1. Copy macro package file and font definition files shown above
+       in  some place under TEXMF directory.
+    2. Copy TFM files shown above in  some place under TEXMF directory.
+    3. Run 'mktexlsr'
+
+* Sample files:
+    - "sample.tex"
+    - Try running "make samples" (after you install macro files and TFMs.)
+
+* Commands: 
+    - \EKU{char_number}
+         for accessing a character in ekan0010.d24 font file.
+    - \EKK{char_number}
+         for accessing a character in ekan0020.d24 font file.
+    - \EKM{char_number}
+         for accessing a character in ekan0030.d24 font file.
+
+    "char_number" is a character number in a font file, starting from 1.
+
+
+* Utility programs for eKanji fonts: 
+    See util/ directory.
+    - ekdump   
+           Show contents of eKanji font file. Characters are displayed
+           by ASCII art.
+    - ekreenc      
+           Create a new eKanji font file whose character encoding is 
+           changed by another eKanji font file.
+
+
+(Note: pLaTeX2e is a localized TeX for Japanese by ASCII Coop.
+       See http://www.ascii.co.jp/ptex/)

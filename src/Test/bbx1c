@@ -1,0 +1,17 @@
+open1 cmr10.pk
+fontbbx1 !!
+fontbbx1 !! 2 2
+
+open1 cmr10.pk 20
+fontbbx1 !!
+fontbbx1 !! 2 2
+
+open2 cmr10.pk 
+fontbbx2 !!
+fontbbx2 !! 2 2
+
+open2 cmr10.pk 72
+fontbbx2 !!
+fontbbx2 !! 2 2
+
+quit

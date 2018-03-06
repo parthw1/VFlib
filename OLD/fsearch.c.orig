@@ -1,0 +1,1142 @@
+/*
+ * fsearch.c - search a file 
+ * by Hirotsugu Kakugawa
+ *
+ *  28 May 1997  Added recursive file searching feature.
+ *  24 Dec 1998  Added searching in "VFlib.fdb" file that contain file list
+ *  21 Sep 1999  Added a feature to generate PK & GF files on the fly.
+ *
+ */
+/*
+ * Copyright (C) 1996-1999   Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * This file is part of the VFlib Library.  This library is free
+ * software; you can redistribute it and/or modify it under the terms of
+ * the GNU Library General Public License as published by the Free
+ * Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.  This library is distributed in the hope
+ * that it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PURPOSE.  See the GNU Library General Public License for more details.
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+ */
+
+#include "config.h"
+#include "with.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#include <sys/types.h>
+#include <sys/param.h>
+
+#ifdef HAVE_DIRENT_H
+
+# include <dirent.h>
+#  define NAMLENGTH(dirent) strlen((dirent)->d_name)
+
+#else /* not DIRENT */
+
+# define dirent direct
+# define NAMLENGTH(dirent)  ((dirent)->d_namlen)
+
+#ifdef HAVE_SYS_NDIR_H
+# include <sys/ndir.h>
+#endif
+
+#ifdef HAVE_SYS_DIR_H
+# include <sys/dir.h>
+#endif
+
+#ifdef HAVE_NDIR_H
+# include <ndir.h>
+#endif
+
+#endif /* not DIRENT */
+
+#ifdef HAVE_SYS_STAT_H
+#  ifdef __linux__
+#    define __USE_BSD
+#  endif
+# include <sys/stat.h>
+#endif
+
+#include "VFlib-3_6.h"
+#include "VFsys.h"
+#include "consts.h"
+#include "fsearch.h"
+#include "texfonts.h"
+#include "sexp.h"
+#include "path.h"
+#include "str.h"
+
+#ifdef WITH_KPATHSEA
+# include  "kpathsea/kpathsea.h"
+#endif
+
+
+#ifdef HAVE_DIRENT_H
+# ifdef HAVE_SYS_STAT_H
+#  ifdef HAVE_OPENDIR
+#   define  RECURSIVE_FILE_SEARCH
+#  endif
+# endif
+#endif
+
+
+
+
+/**
+ ** kpathsea
+ **/
+Private int        kps_switch = DEFAULT_KPS_SWITCH;
+Private char      *kps_mode   = DEFAULT_KPS_MODE;
+Private int        kps_dpi    = DEFAULT_KPS_DPI;
+#ifdef WITH_KPATHSEA
+Private char      *kps_path   = DEFAULT_KPS_PROGRAM_PATH;
+#endif
+Private char      *kps_prog   = DEFAULT_KPS_PROGRAM_NAME;
+
+
+Glocal void
+vf_kpathsea_init(char *prog, char *mode, int dpi, int kps_sw)
+{
+#ifdef WITH_KPATHSEA
+  static int  inited_prog = 0;
+  int   f;
+#endif
+
+  kps_switch  = kps_sw; 
+  kps_dpi     = dpi; 
+  if (mode != NULL)
+    kps_mode  = mode;
+  if (prog != NULL)
+    kps_prog  = prog;
+
+#ifdef WITH_KPATHSEA
+  if (inited_prog == 1)
+    return;
+
+  inited_prog = 1;
+
+  if (vf_dbg_kpathsea == 1){
+    if (kps_switch == TRUE)
+      printf(">>Kpathsea: enabled\n");
+    else
+      printf(">>Kpathsea: disabled\n");
+  }
+
+  if (vf_dbg_kpathsea == 1)
+    printf(">>Kpathsea: mode=%s, dpi=%d program=%s\n",
+	   kps_mode, kps_dpi, kps_prog);
+
+  kpse_set_program_name(kps_path, kps_prog);
+  kpse_init_prog(kps_prog, kps_dpi, kps_mode, NULL);
+  for (f = 0; f < kpse_last_format; f++) {
+    kpse_init_format(f);
+  }
+#else
+  if (vf_dbg_kpathsea == 1)
+    printf(">>Kpathsea: disabled by configure\n");
+#endif
+}
+
+
+
+/**
+ **  VF_AddUncompresser()
+ **/
+
+Private SEXP_ALIST  vf_uncompresser_alist = NULL; 
+
+Public int
+vf_add_uncompresser_alist(SEXP_ALIST alist)
+{
+  SEXP  t;
+
+  if (alist == NULL)
+    return 0;
+
+  if (!vf_sexp_alistp(alist)){
+    fprintf(stderr, "VFlib Error [fsearch.c:VF_AddUncompresser]: %s\n",
+	    "Not an alist.");
+    return -1;
+  }
+
+  t = vf_uncompresser_alist;
+  vf_sexp_nconc(alist, t);
+  vf_uncompresser_alist = alist;
+
+  return 0;
+}
+
+
+Glocal FILE*
+vf_open_uncompress_stream(char *compressed_file, char *uncompress_prog)
+{
+#ifndef HAVE_POPEN
+
+  return NULL;
+
+#else
+
+  FILE  *fp;
+  char  *cmdline;
+
+  cmdline = malloc(strlen(uncompress_prog) + strlen(compressed_file) + 16);
+  if (cmdline == NULL)
+    return NULL;
+  sprintf(cmdline, "%s %s", uncompress_prog, compressed_file);
+  fp = popen(cmdline, "r");
+  vf_free(cmdline);
+
+  return fp;
+
+#endif /* HAVE_POPEN */
+}
+
+Glocal int
+vf_close_uncompress_stream(FILE* fp)
+{
+#ifdef HAVE_POPEN
+
+  if (fp != NULL){
+    pclose(fp);
+  }
+
+#endif
+
+  return 0;
+}
+
+
+
+/**
+ ** Search a File 
+ **/
+
+Private char *search_in_fdb(char *name, char *dir,
+			    SEXP_LIST compressed_ext_list, 
+			    char **p_uncompr_prog, int *ret_val);
+Private int   search_fdb_fp(FILE *fp, char *d, char *f,
+			    char *ret_path, int ret_path_size);
+Private char *search_file_kpathsea(char*,int,char*,int);
+Private char *search_file(char*,char*,SEXP_LIST,char**);
+Private char *search_file_recursive(char*, char*,SEXP_LIST,char**);
+Private int   ext2uncprog(char *ext, SEXP_LIST compressed_ext_list, 
+			  char **p_uncompr_prog);
+
+
+
+Glocal char*
+vf_search_file(char *name, int opt_arg1, char *opt_arg2,
+	       int use_kpathsea, int kpathsea_file_format,
+	       SEXP_LIST dir_list, 
+	       SEXP_LIST compressed_ext_list, char **p_uncompr_prog)
+     /* NOTE: CALLER OF THIS FUNCTION *SHOULD* RELEASE RETURN VALUE.
+	      (STRING RETURNED BY P_UNCOMPR_PROG SHOULD NOT BE RELEASED.) */
+{
+  SEXP   d;
+  char  *path, *dir;
+  int    v;
+
+  if (name == NULL)
+    return NULL;
+
+  if (vf_dbg_font_search == 1){
+    printf(">> File search: %s\n", name);
+  }
+
+  if (p_uncompr_prog != NULL)
+    *p_uncompr_prog = NULL;
+
+  if (vf_path_absolute(name)){
+    if (vf_path_file_read_ok(name)){
+      if (vf_dbg_font_search == 1)
+	printf(">>  File search: Found %s\n", name);
+      return vf_strdup(name);
+    }
+    if (vf_dbg_font_search == 1)
+      printf(">>  File search: Not found (no such absolute path)\n");
+    return NULL;
+  }
+
+  if ((dir_list == NULL) || (!vf_sexp_listp(dir_list))){
+    if (vf_dbg_font_search == 1)
+      printf(">>  File search: Not found (empty dir list)\n");
+    return NULL;
+  }
+
+  path = NULL;
+  for (d = dir_list; vf_sexp_consp(d); d = vf_sexp_cdr(d)){
+    dir = vf_sexp_get_cstring(vf_sexp_car(d));
+    if (dir == NULL)
+      continue;
+    if ((vf_strcmp_ci(dir, "TEXMF") == 0) 
+	|| (vf_strcmp_ci(dir, "KPATHSEA") == 0)){
+      /* Search by 'KPATHSEA' */
+      if (use_kpathsea == FALSE){
+	fprintf(stderr, 
+		"VFlib Warning: Unsupported file format by kpathsea.\n");
+	continue;
+      }
+      if (kps_switch == FALSE)
+	continue;
+      path = search_file_kpathsea(name, opt_arg1, opt_arg2, 
+				  kpathsea_file_format);
+    } else {
+      /* check font file hint db */
+      path = search_in_fdb(name, dir, compressed_ext_list, p_uncompr_prog, &v);
+      if (v == -2){
+	if (vf_path_terminated_by_2delims(dir) == FALSE){
+	  /* Search under dir */
+	  path = search_file(name, dir, compressed_ext_list, p_uncompr_prog);
+	} else {
+	  /* Recursive search under dir */
+	  path = search_file_recursive(name, dir, 
+				       compressed_ext_list, p_uncompr_prog);
+	}
+      }
+    }
+
+    if (path != NULL)
+      break;
+  }
+
+  if (vf_dbg_font_search == 1){
+    if (path != NULL){
+      printf(">>  File search: Found %s\n", path);
+    } else {
+      printf(">>  File search: Not found\n");
+    }
+  }
+
+  if (path == NULL)
+    return NULL;
+
+  return path;
+}
+
+
+Private char*
+search_in_fdb(char *name, char *dir,
+	      SEXP_LIST compressed_ext_list, char **p_uncompr_prog,
+	      int *p_ret_val)
+     /* NOTE: CALLER OF THIS FUNCTION *SHOULD* RELEASE RETURN VALUE. */
+{
+  char   fdb[MAXPATHLEN], name_ext[MAXPATHLEN],  *path;
+  int    pathsize;
+  FILE  *fp;
+  SEXP   s;
+  char  *ext; 
+
+  if (dir == NULL){
+    *p_ret_val = -2;
+    return NULL;
+  }
+
+  if ((vf_path_cons_path(fdb, sizeof(fdb), dir, VF_FONT_FILE_HINT_DB) < 0)
+      || (! vf_path_file_read_ok(fdb))
+      || ((fp = fopen(fdb, FOPEN_RD_MODE_TEXT)) == NULL)){
+    if (vf_dbg_font_search == 1)
+      printf(">> No font hint db file: %s\n", fdb);
+    *p_ret_val = -2;  /* hint db not found */
+    return NULL;  
+  }
+  
+  if (vf_dbg_font_search == 1)
+    printf(">> Reading hint db file: %s\n", fdb);
+
+  pathsize = MAXPATHLEN;
+  ALLOCN_IF_ERR(path, char, pathsize){
+    *p_ret_val = -2;  /* hint db not found */
+    fclose(fp);
+    return NULL;
+  }
+
+  /* look for font without compression */
+  if (search_fdb_fp(fp, dir, name, path, pathsize) >= 0){  /* found */
+    *p_ret_val = 0; /* found */
+    goto end;
+  }
+
+  /* look for font with compression */
+  *p_ret_val = -1; 
+  for (s = compressed_ext_list; vf_sexp_consp(s); s = vf_sexp_cdr(s)){
+    ext = vf_sexp_get_cstring(vf_sexp_car(s));
+    strncpy(name_ext, name, sizeof(name_ext));
+    strncat(name_ext, ext,  sizeof(name_ext) - strlen(name));
+    fseek(fp, 0, SEEK_SET);
+    if ((search_fdb_fp(fp, dir, name_ext, path, pathsize) >= 0) 
+	&& (ext2uncprog(ext, compressed_ext_list, p_uncompr_prog) >= 0)){
+      *p_ret_val = 0;  /* found */
+      break;
+    }
+  }
+  
+end:
+  fclose(fp);
+  if (*p_ret_val != 0){
+    vf_free(path);
+    path = NULL;
+  }
+
+  if (vf_dbg_font_search == 1){
+    if (path != NULL)
+      printf(">> Found in db file: %s\n", path);
+    else
+      printf(">> Not found in db file\n");
+  }
+
+  return path;
+}
+
+Private int
+search_fdb_fp(FILE *fp, char *d, char *f, char *ret_path, int ret_path_size)
+{
+  char   linebuff[MAXPATHLEN], *p;
+  int    flen, dlen, i;
+
+  if ((fp == NULL) || (d == NULL) || (f == NULL) || (ret_path == NULL))
+    return -1;
+
+  dlen = strlen(d);
+  flen = strlen(f);
+  while (fgets(linebuff, sizeof(linebuff), fp) != NULL){
+    if ((strncmp(f, linebuff, flen) == 0) && isspace((int)linebuff[flen])){
+      for (p = &linebuff[flen]; (*p != '\0') && isspace((int)*p); p++)
+	;
+      if (*p == '\0')
+	break;
+      for (i = 0; p[i] != '\0'; i++){
+	if (isspace((int)p[i])){
+	  p[i] = '\0';
+	  break;
+	}
+      }
+      vf_path_cons_path(ret_path, ret_path_size, d, p);
+      return 0;
+    }
+  } 
+
+  return -1;
+}
+
+
+
+Glocal char*
+vf_find_file_in_directory(char *name, char *dir)
+     /* NOTE: CALLER OF THIS FUNCTION *SHOULD* RELEASE RETURN VALUE. */
+{
+  return search_file(name, dir, NULL, NULL);
+}
+
+
+Private char*
+search_file_kpathsea(char *name, int dpi, char *name2, int file_format)
+     /* NOTE: CALLER OF THIS FUNCTION *SHOULD* RELEASE RETURN VALUE. */
+{
+#ifndef WITH_KPATHSEA
+
+  return NULL;
+
+#else 
+
+  char   *s;
+  kpse_glyph_file_type  g_ret;
+
+#if 0
+  printf("search_file_kpathsea(%s, %s, %d, %d)\n", 
+	 name, name2, dpi, file_format);
+#endif
+
+  if (kps_switch == FALSE)
+    return NULL;
+
+  if (vf_dbg_kpathsea == 1)
+    printf(">> Kpathsea: Search %s\n", name);
+
+  s = NULL;
+
+  switch (file_format){
+  case FSEARCH_FORMAT_TYPE_GF:
+    s = kpse_find_gf(name2, dpi, &g_ret);
+    break;
+  case FSEARCH_FORMAT_TYPE_PK:
+    s = kpse_find_pk(name2, dpi, &g_ret);
+    break;
+  case FSEARCH_FORMAT_TYPE_VF:
+    s = kpse_find_vf(name);
+    if (s == NULL)
+      s = kpse_find_ovf(name);
+    break;
+  case FSEARCH_FORMAT_TYPE_TFM:
+    s = kpse_find_tfm(name);
+    if (s == NULL)
+      s = kpse_find_ofm(name);
+    break;
+  case FSEARCH_FORMAT_TYPE_OVF:
+    s = kpse_find_ovf(name);
+    break;
+  case FSEARCH_FORMAT_TYPE_OFM:
+    s = kpse_find_ofm(name);
+    break;
+  case FSEARCH_FORMAT_TYPE_TTF:
+    s = kpse_find_file(name, kpse_truetype_format, 0);
+    break;
+  case FSEARCH_FORMAT_TYPE_TYPE1:
+    s = kpse_find_file(name, kpse_type1_format, 0);
+    break;
+  case FSEARCH_FORMAT_TYPE_TYPE42:
+    s = kpse_find_file(name, kpse_type42_format, 0);
+    break;
+  case FSEARCH_FORMAT_TYPE_AFM:
+    s = kpse_find_file(name, kpse_afm_format, 0);
+    break;
+  case FSEARCH_FORMAT_TYPE_PSHEADER:
+    s = kpse_find_file(name, kpse_tex_ps_header_format, 0);
+    break;
+  default:
+    s = NULL;
+    break;
+  }
+
+  if (vf_dbg_kpathsea == 1){
+    if (s != NULL){
+      printf(">> Kpathsea: Found %s\n", s);
+    } else {
+      printf(">> Kpathsea: Not found\n");
+    }
+  }
+
+  if (s == NULL)
+    return NULL;
+
+#if 0
+  return vf_strdup(s);
+#else
+  return s;
+#endif
+
+#endif
+}
+
+Private char*
+search_file(char *name, char *dir, 
+	    SEXP_LIST compressed_ext_list, char **p_uncompr_prog)
+     /* NOTE: CALLER OF THIS FUNCTION *SHOULD* RELEASE RETURN VALUE. */
+{
+  char   *path;
+  char   *ext = NULL;  
+  int    path_len, found;
+  SEXP   s;
+
+  if ((dir != NULL) && (vf_path_directory_read_ok(dir) == FALSE))
+    return NULL;
+
+  if (dir == NULL)
+    dir = "";
+
+  path_len = strlen(dir) + strlen(name) + 64;
+       /* +64 for compressed extensions. Their lengths must be less 64. */
+  ALLOCN_IF_ERR(path, char, path_len){
+    vf_error = VF_ERR_NO_MEMORY;
+    return NULL;
+  }
+
+  /* search non-compressed file */
+  vf_path_cons_path(path, path_len, dir, name);
+  if (vf_path_file_read_ok(path))
+    return path;
+
+  if (compressed_ext_list == NULL){
+    vf_free(path);
+    return NULL;
+  }
+
+  /* search compressed file */
+  found = 0;
+  for (s = compressed_ext_list; vf_sexp_consp(s); s = vf_sexp_cdr(s)){
+    ext = vf_sexp_get_cstring(vf_sexp_car(s));
+    vf_path_cons_path2(path, path_len, dir, name, ext);
+    if (vf_path_file_read_ok(path) == TRUE){
+      found = 1;
+      break;
+    }
+  }
+  if (found == 0){
+    vf_free(path);
+    return NULL;
+  }
+
+  if (ext2uncprog(ext, compressed_ext_list, p_uncompr_prog) < 0){
+    vf_free(path);
+    path = NULL;
+  }
+
+  return path;
+}
+
+
+/* Obtain uncompression program name from extension */
+Private int
+ext2uncprog(char *ext, SEXP_LIST compressed_ext_list, char **p_uncompr_prog)
+     /* NOTE: CALLER OF THIS FUNCTION *SHOULD NOT* RELEASE 
+	RETURN VALUE IN P_UNCOMPR_PROG. */
+{
+  char  *uncext;
+  SEXP   p, q;
+
+  if (p_uncompr_prog == NULL)
+    return -1;
+
+  *p_uncompr_prog = NULL;
+  for (q = vf_uncompresser_alist; vf_sexp_consp(q); q = vf_sexp_cdr(q)){
+    p = vf_sexp_car(q);
+    uncext = vf_sexp_get_cstring(vf_sexp_car(p));
+    if (strcmp(uncext, ext) == 0){
+      *p_uncompr_prog = vf_sexp_get_cstring(vf_sexp_cadr(p));
+      break;
+    }
+  }
+  if (*p_uncompr_prog == NULL){
+    fprintf(stderr, "VFlib Warning: %s %s\n",
+	    "Undefined uncompression program for file extension", ext);
+    return -1;
+  }
+  if (vf_dbg_font_search == 1)
+    printf(">>   Uncompression program: %s\n", *p_uncompr_prog);
+  return 0;
+}
+
+
+Glocal int
+vf_tex_make_glyph(int type, char *font_name, int dpi, double mag)
+{
+
+#ifndef WITH_KPATHSEA
+
+  return -1;
+
+#else
+
+  char  *name,  *filename;
+  char  *ext;
+  int    kp_fmt;
+  kpse_glyph_file_type file_ret;
+
+  name = NULL;
+
+  switch (type){
+  case FSEARCH_FORMAT_TYPE_PK:
+    ext = "pk";
+    kp_fmt = kpse_pk_format;
+    break;
+  default:
+    return -1;
+  }
+
+  if ((name = vf_path_base_core(font_name)) == NULL)
+    return -1;
+
+  fprintf(stderr, "Generating %s.%d%s (dpi=%d, mag=%.3f)...\n",
+	  name, (unsigned)(dpi*mag+0.5), ext, dpi, mag);
+  fflush(stderr);
+
+  kpse_set_program_enabled(kp_fmt, MAKE_TEX_PK_BY_DEFAULT, kpse_src_compile);
+
+  filename = kpse_find_glyph(name, (unsigned)(dpi*mag+0.5), kp_fmt, &file_ret);
+  if (filename == NULL){
+    fprintf(stderr, "\nFailed.\n");
+    vf_free(name);
+    return -1;
+  }
+
+  fprintf(stderr, "Done.\n");
+
+  vf_free(name);
+  return 0;
+
+#endif /*WITH_KPATHSEA*/
+}
+
+
+
+
+#ifndef RECURSIVE_FILE_SEARCH
+
+Private char*
+search_file_recursive(char *name, char *dir,
+		      SEXP_LIST compressed_ext_list, char **p_uncompr_prog)
+{
+  char  *d, *path;
+  int   len;
+
+  if (dir == NULL)
+    return NULL;
+
+  len = strlen(dir) + 1;
+  ALLOCN_IF_ERR(d, char, len){
+    vf_error = VF_ERR_NO_MEMORY;
+    return NULL;
+  }
+  strcpy(d, dir);
+
+  vf_path_del_terminating_2delims(d);
+  if (vf_path_directory_read_ok(d) == FALSE){
+    vf_free(d);
+    return NULL;
+  }
+  path = search_file(name, d, compressed_ext_list, p_uncompr_prog);
+
+  vf_free(d);
+  return path;
+}
+
+#else /*RECURSIVE_FILE_SEARCH*/
+
+struct s_dtr_list {
+  char              *name;
+  struct stat       st;
+  struct s_dtr_list *prev;
+  struct s_dtr_list *next;
+};
+struct s_dtr_elem {
+  int       path_index;
+  dev_t     dev;
+  ino_t     ino;
+  struct s_dtr_elem   *next;
+  struct s_dtr_elem   *prev;
+  struct s_dtr_list   subdirs;
+};
+struct s_dtr {
+  char      path[MAXPATHLEN];
+  struct s_dtr_elem  *direc_head;
+  struct s_dtr_elem  *direc_tail;
+};
+
+typedef struct s_dtr_list  *DTR_LIST;
+typedef struct s_dtr_elem  *DTR_ELEM;
+typedef struct s_dtr       *DTR;
+
+Private DTR      dtr_alloc(char*);
+Private void     dtr_free(DTR);
+Private char*    dtr_get_path(DTR);
+Private int      dtr_add_name(DTR, char*, int);
+Private void     dtr_del_name(DTR);
+Private int      dtr_add_subdir(DTR, struct dirent*, struct stat*);
+Private DTR_LIST dtr_subdir_list(DTR);
+Private DTR_LIST dtr_next_subdir(DTR, DTR_LIST);
+Private int      dtr_go_subdir(DTR, DTR_LIST);
+Private int      dtr_go_updir(DTR);
+
+Private char *traverse_directory(DTR, char*, SEXP_LIST, char**);
+
+
+Private char*
+search_file_recursive(char *name, char *dir,
+		      SEXP_LIST compressed_ext_list, char **p_uncompr_prog)
+{
+  char   *d, *path;
+  int    len;
+  DTR    dtr;
+
+  if (dir == NULL)
+    return NULL;
+
+  len = strlen(dir) + 1;
+  ALLOCN_IF_ERR(d, char, len){
+    vf_error = VF_ERR_NO_MEMORY;
+    return NULL;
+  }
+  strcpy(d, dir);
+  vf_path_del_terminating_2delims(d);
+
+  if (vf_path_directory_read_ok(d) == FALSE){
+    vf_free(d);
+    return NULL;
+  }
+
+  if (vf_dbg_font_search == 1)
+    printf(">>  Search Recursively in: %s\n", d);
+
+  if ((dtr = dtr_alloc(d)) == NULL){
+    vf_free(d);
+    return NULL;
+  }
+
+  path = traverse_directory(dtr, name, compressed_ext_list, p_uncompr_prog);
+
+  dtr_free(dtr);
+  vf_free(d);
+
+  return path;
+}
+
+Private char*
+traverse_directory(DTR dtr, char *name, 
+		   SEXP_LIST compressed_ext_list, char **p_uncompr_prog)
+{
+  char           *path;
+  int            v;
+  DIR            *dir;
+  DTR_LIST       sd;
+  struct dirent  *ent;
+  struct stat    st; 
+  
+  if (vf_dbg_font_search == 1)
+    printf(">>    Searching in: %s\n", dtr_get_path(dtr));
+
+  /* search a file in a directory */
+  path = search_file(name, dtr_get_path(dtr), 
+		     compressed_ext_list, p_uncompr_prog);
+  if (path != NULL)
+    return path;
+
+  /* obtain a set of subdirectories in a directory */
+  if ((dir = opendir(dtr_get_path(dtr))) == NULL)
+    return NULL;
+  while ((ent = readdir(dir)) != NULL){
+    if ((NAMLENGTH(ent) == 1) && (strcmp(ent->d_name, ".") == 0))
+      continue;
+    if ((NAMLENGTH(ent) == 2) && (strcmp(ent->d_name, "..") == 0))
+      continue;
+
+    dtr_add_name(dtr, ent->d_name, NAMLENGTH(ent));
+    v = stat(dtr_get_path(dtr), &st);
+    dtr_del_name(dtr);
+    if (v < 0)
+      continue;
+    if ((st.st_mode & S_IFMT) == S_IFDIR){
+      dtr_add_subdir(dtr, ent, &st);
+    }
+  }
+  closedir(dir);
+
+  /* search a file under subdirectories */
+  path = NULL;
+  for (sd = dtr_subdir_list(dtr); sd != NULL; sd = dtr_next_subdir(dtr, sd)){
+    if (dtr_go_subdir(dtr, sd) >= 0){
+      path = traverse_directory(dtr, name,
+				compressed_ext_list, p_uncompr_prog);
+      if (path != NULL)
+	break;
+      dtr_go_updir(dtr);
+    }
+  }
+
+  return path;
+}
+
+
+Private DTR_ELEM
+dtr_elem_alloc()
+{
+  DTR_ELEM  dtr_elem;
+
+  if ((dtr_elem = (DTR_ELEM)malloc(sizeof(struct s_dtr_elem))) == NULL)
+    return NULL;
+
+  dtr_elem->path_index = 0;
+  dtr_elem->dev     = 0;
+  dtr_elem->ino     = 0;
+  dtr_elem->next    = NULL;
+  dtr_elem->prev    = NULL;
+  dtr_elem->subdirs.name = NULL;
+  dtr_elem->subdirs.prev = &dtr_elem->subdirs;
+  dtr_elem->subdirs.next = &dtr_elem->subdirs;
+  return dtr_elem;
+}
+
+Private void
+dtr_elem_free(DTR_ELEM dtr_elem)
+{
+  DTR_LIST  dl, dl_next;
+
+  dl = dtr_elem->subdirs.next;
+  while (dl != &dtr_elem->subdirs){
+    dl_next = dl->next;
+    vf_free(dl->name);
+    vf_free(dl);
+    dl = dl_next;
+  }
+  vf_free(dtr_elem);
+}
+
+
+Private DTR
+dtr_alloc(char *topdir)
+{
+  DTR         dtr;
+  DTR_ELEM    dtr_elem;
+  struct stat st; 
+
+  if ((dtr = (DTR)malloc(sizeof(struct s_dtr))) == NULL)
+    return NULL;
+  dtr->direc_head = NULL;
+  dtr->direc_tail = NULL;
+  strcpy(dtr->path, topdir);
+  vf_path_del_terminating_2delims(dtr->path);
+  if (stat(dtr->path, &st) < 0)
+    goto Error;
+
+  if ((dtr_elem = dtr_elem_alloc()) == NULL)
+    goto Error;
+  dtr->direc_head = dtr_elem;
+  dtr->direc_tail = dtr_elem;
+  dtr_elem->path_index = strlen(dtr->path);
+  dtr_elem->dev = st.st_dev;
+  dtr_elem->ino = st.st_ino;
+  return dtr;
+
+Error: 
+  dtr_free(dtr);
+  return NULL;
+}
+
+Private void
+dtr_free(DTR dtr)
+{
+  DTR_ELEM  dtr_elem, dtr_elem_next;
+
+  if (dtr == NULL)
+    return;
+  dtr_elem = dtr->direc_head;
+  while (dtr_elem != NULL){
+    dtr_elem_next = dtr_elem->next;
+    dtr_elem_free(dtr_elem);
+    dtr_elem = dtr_elem_next;
+  }
+  vf_free(dtr);
+}
+
+Private char*
+dtr_get_path(DTR dtr)
+{
+  return dtr->path;
+}
+
+Private int
+dtr_add_subdir(DTR dtr, struct dirent *ent, struct stat* st)
+{
+  DTR_LIST  dl_new, dl_0, dl_1;
+
+  if ((dl_new = (DTR_LIST)malloc(sizeof(struct s_dtr_list))) == NULL)
+    return -1;
+  if ((dl_new->name = (char*)malloc(NAMLENGTH(ent)+1)) == NULL){
+    vf_free(dl_new);
+    return -1;
+  }
+
+  memcpy(dl_new->name, ent->d_name, NAMLENGTH(ent));
+  dl_new->name[NAMLENGTH(ent)] = '\0';
+  memcpy(&dl_new->st, st, sizeof(struct stat));
+
+  dl_0 = &dtr->direc_tail->subdirs;
+  dl_1 = dl_0->next;
+  dl_new->next = dl_1;
+  dl_new->prev = dl_0;
+  dl_0->next   = dl_new;
+  dl_1->prev   = dl_new;
+
+  return 0;
+}
+
+Private int
+dtr_go_subdir(DTR dtr, DTR_LIST sd)
+{
+  DTR_ELEM     dtr_elem, elem;
+  
+  if (dtr_add_name(dtr, sd->name, strlen(sd->name)) < 0)
+    return -1;
+
+  for (elem = dtr->direc_head; elem != NULL; elem = elem->next){
+    if ((elem->dev == sd->st.st_dev) && (elem->ino == sd->st.st_ino)){
+      /* LOOP! */
+      dtr_del_name(dtr);
+      return -1;
+    }
+  }
+
+  if ((dtr_elem = dtr_elem_alloc()) == NULL){
+    dtr_del_name(dtr);
+    return -1;
+  }
+
+  dtr_elem->path_index   = strlen(dtr->path);
+  dtr_elem->dev          = sd->st.st_dev;
+  dtr_elem->ino          = sd->st.st_ino;
+  dtr_elem->prev         = dtr->direc_tail;
+  dtr->direc_tail->next  = dtr_elem; 
+  dtr->direc_tail        = dtr_elem;
+
+  return 0;
+}
+
+Private int
+dtr_go_updir(DTR dtr)
+{
+  DTR_ELEM   tail_elem;
+
+  tail_elem = dtr->direc_tail;
+  if (tail_elem == NULL){
+    fprintf(stderr, "FATAL: CANNOT HAPPEN --- in dtr_go_updir().\n");
+    exit(1);
+  }
+  tail_elem->prev->next = NULL;
+  dtr->direc_tail = tail_elem->prev;
+  dtr_elem_free(tail_elem);
+
+  dtr_del_name(dtr);
+
+  return 0;
+}
+
+
+Private DTR_LIST
+dtr_subdir_list(DTR dtr)
+{
+  DTR_LIST  sd;
+#if 0
+  DTR_LIST  ss;
+
+  ss = dtr->direc_tail->subdirs.prev;
+  printf("  ");
+  while (ss != &dtr->direc_tail->subdirs){
+    printf("%s, ", ss->name);
+    ss = ss->prev;
+  }
+  printf("\n");
+#endif
+
+  if ((sd = dtr->direc_tail->subdirs.prev) == &dtr->direc_tail->subdirs)
+    return NULL;
+
+  return sd;
+}
+
+Private DTR_LIST
+dtr_next_subdir(DTR dtr, DTR_LIST sd)
+{
+  DTR_LIST  next;
+
+  if ((next = sd->prev) == &dtr->direc_tail->subdirs)
+    return NULL;
+  return next;
+}
+
+
+Private int 
+dtr_add_name(DTR dtr, char *name, int len)
+{
+  char  *p;
+  int   index;
+
+  index = dtr->direc_tail->path_index;
+
+  for (p = vf_directory_delimiter; *p != '\0'; p++){
+    dtr->path[index++] = *p;
+  }
+  while (len > 0){
+    dtr->path[index++] = *(name++);
+    --len;
+  }
+  dtr->path[index] = '\0';
+
+  return 0;
+}
+
+Private void
+dtr_del_name(DTR dtr)
+{
+  dtr->path[dtr->direc_tail->path_index] = '\0';
+}
+
+#endif /* RECURSIVE_FILE_SEARCH */
+
+
+
+
+#if 0
+
+Private int
+recursive_searcher(char *path, struct dirent *ent, struct stat *st)
+{
+  SEXP_ALIST   iter, q, s;
+  char         *ext, *uncext, *uncprog;
+  int          ext_len;
+
+  if (rec_target_file_len > NAMLENGTH(ent))
+    return -1;
+  if (strncmp(ent->d_name, rec_target_file, rec_target_file_len) != 0)
+    return -1;
+
+  if ((rec_target_file_len == NAMLENGTH(ent))
+      && (strncmp(rec_target_file, ent->d_name, NAMLENGTH(ent)) == 0)){
+    recursive_searcher_found(path);
+    return 1;
+  }
+
+  if (rec_compressed_ext != NULL){
+    for (iter = rec_compressed_ext;
+	 vf_sexp_consp(iter); 
+	 iter = vf_sexp_cdr(iter)){
+      ext = vf_sexp_get_cstring(vf_sexp_car(iter));
+      if ((ext == NULL) || (strcmp(ext, "") == 0))
+	continue;
+      ext_len = strlen(ext);
+      if ((ext_len == (NAMLENGTH(ent) - rec_target_file_len))
+	   && (strncmp(&ent->d_name[rec_target_file_len], ext, ext_len) == 0)){
+	uncprog = NULL;
+	for (s = vf_uncompresser_alist; vf_sexp_consp(s); s = vf_sexp_cdr(s)){
+	  q = vf_sexp_car(s);
+	  uncext = vf_sexp_get_cstring(vf_sexp_car(q));
+	  if (strcmp(uncext, ext) == 0){
+	    uncprog = vf_sexp_get_cstring(vf_sexp_cadr(q));
+	    break;
+	  }
+	}
+	if (rec_p_uncompression_program != NULL)
+	  *rec_p_uncompression_program = uncprog;
+	if (uncprog == NULL){
+	  fprintf(stderr, "VFlib Warning: %s %s\n",
+		  "Undefined compression program for file extension", ext);
+	  return -1;
+	}
+	if (vf_dbg_font_search == 1)
+	  printf(">>       Uncompression program: %s\n", uncprog);
+	recursive_searcher_found(path);
+	return 1;
+      }
+    }
+  }
+
+  return -1;
+}
+
+Private void
+recursive_searcher_found(char *path)
+{
+  int  len;
+
+  if ((len = strlen(file_path) + 32) > file_path_length){
+    vf_free(file_path);
+    file_path_length = len;
+    ALLOCN_IF_ERR(file_path, char, file_path_length){
+      file_path_length = 0;
+      vf_error = VF_ERR_NO_MEMORY;
+      return;
+    }
+  }
+  strcpy(file_path, path);
+  rec_found_file = file_path;
+}
+
+#endif 
+
+/*EOF*/

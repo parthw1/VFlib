@@ -1,0 +1,5 @@
+\ProvidesFile{jt1hkg.fd}[1998/09/07]
+\DeclareKanjiFamily{JT1}{hkg}{}
+\DeclareRelationFont{JT1}{hkg}{m}{}{OT1}{cmr}{m}{}
+\DeclareFontShape{JT1}{hkg}{m}{n}{ <-> trchkgpaa  }{}
+\endinput

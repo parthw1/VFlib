@@ -1,0 +1,47 @@
+/*
+ * Imakefile.in for vflx11
+ *  by H.Kakugawa
+ */
+
+/* ----------------------------------------------------------------------- */
+makedefault: default
+
+LIBTOOL = ../../libtool
+include ../../make-sub
+
+/* ----------------------------------------------------------------------- */
+
+VFLIB_DIR = ../../src
+
+ PROGRAMS = vflx11
+     SRCS = vflx11.c
+     OBJS = vflx11.o
+
+default all:: $(PROGRAMS)
+
+vflx11: $(OBJS) $(VFLIB_DIR)/libVFlib3.la
+	$(RM) $@
+	$(LIBTOOL) --mode=link \
+		$(CC) -o $@ $(OBJS) \
+		  $(LDOPTIONS) $(XLIB) $(VFLIB_DIR)/libVFlib3.la \
+ 
+vflx11s: $(OBJS) $(VFLIB_DIR)/libVFlib3.la
+	$(RM) $@
+	$(LIBTOOL) --mode=link \
+		$(CC) -o $@ -static $(OBJS) \
+		  $(LDOPTIONS) $(XLIB) $(VFLIB_DIR)/libVFlib3.la 
+
+vflx11.o: vflx11.c
+	$(CC) $(VFCFLAGS) -I$(INCROOT) -c vflx11.c 
+
+install:: $(PROGRAMS)
+	$(LIBTOOL) --mode=install $(INSTALL_PROGRAM) vflx11 $(bindir)/vflx11
+uninstall:: 
+	$(LIBTOOL) --mode=uninstall $(RM) $(bindir)/vflx11
+
+clean::
+	-$(RM) $(PROGRAMS) vflx11s
+veryclean:: clean
+distclean:: clean
+
+/* ----------------------------------------------------------------------- */

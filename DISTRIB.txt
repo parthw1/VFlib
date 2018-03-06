@@ -1,0 +1,12 @@
+DISTRIBUTING
+
+License of VFlib 3.7.2 :
+   - GPLv3 
+   - FreeType Project License (FTL)
+   Choose the one which fits your needs best.
+
+See below for complete statements
+  http://git.savannah.gnu.org/cgit/freetype/freetype2.git/tree/docs/FTL.TXT
+  https://www.gnu.org/licenses/gpl-3.0.txt
+
+-- h.kakugawa

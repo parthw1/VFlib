@@ -1,0 +1,13 @@
+\ProvidesFile{jt1kai.fd}[1998/09/07 Kaisyo (Vertical)]
+\DeclareKanjiFamily{JT1}{kai}{}
+\DeclareRelationFont{JT1}{kai}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JT1}{kai}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{kai}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{kai}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JT1}{kai}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT1}{kai}{sl}{n}{ <-> tdfkaimaa  }{}
+\DeclareFontShape{JT1}{kai}{m}{n}{  <-> tdfkaipaa  }{}
+\DeclareFontShape{JT1}{kai}{sb}{n}{ <-> tdfkaisaa  }{}
+\DeclareFontShape{JT1}{kai}{b}{n}{  <-> tdfkaivaa  }{}
+\DeclareFontShape{JT1}{kai}{bx}{n}{ <-> tdfkaiyaa  }{}
+\endinput

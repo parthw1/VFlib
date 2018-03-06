@@ -1,0 +1,1062 @@
+/* ccv.c  --- charset conversion
+ * by Hirotsugu Kakugawa
+ *
+ *  28 Jul 1997  
+ *  20 Jan 1999  Added to check /usr/local/share/site/
+ *  16 Feb 1999  Added encoding conversion funcs for Row-Cell and WangSung.
+ *  14 Sep 1999  Added alias for charset & encoding names (but not tested yet)
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#include "config.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H	
+#include <sys/param.h>
+#endif
+
+#include "VFlib-3_7.h"
+#include "VFsys.h"
+#include "consts.h"
+#include "str.h"
+#include "path.h"
+#include "vflpaths.h"
+#include "ccv.h"
+
+#define NAMEPP(s)  ((s!=NULL)?s:"*")
+
+#define CS_NAME_XCHARS     ".-_ "
+#define CS_NAME_XCHARS_TO  '_'
+
+#define CCV_TBL_INITIAL_SIZE   32
+static int                 ccv_tbl_index = 0;
+static int                 ccv_tbl_size = 0;
+static struct s_ccv_info  *ccv_tbl = NULL;
+
+Private int  ccv_add_conv_info(struct s_ccv_info*,int,char*);
+Private int  ccv_load(struct s_ccv_info *ccvi);
+Private int  ccv_read_header(struct s_ccv_info *ccvi);
+Private void ccv_read_aliases(FILE *fp, char ***oalias_tbl);
+Private int  ccv_read_file(struct s_ccv_info *ccvi,int);
+Private int  ccv_read_file_alloc_blocks(struct s_ccv_info *);
+Private int  ccv_read_file_block_array(FILE*, struct s_ccv_info*, int);
+Private int  ccv_read_file_block_random_array(FILE*, struct s_ccv_info*, int);
+Private int  ccv_file_read_list(FILE *fp, char *buff, int nbuff);
+Private int  ccv_file_read_elem(FILE *fp, char *buff, int nbuff);
+
+Private char *make_canonical_charset_name(char*);
+Private int   cmp_alias(char **alias_tbl, char *name, int how_compare);
+Private int   cmp_charset_name(char*,char*);
+Private int   cmp_enc_name(char*,char*);
+
+Private long  ccv_conv_array(int,long);
+Private long  ccv_conv_random_array(int,long);
+Private long  ccv_no_conv(int ccvi_index, long code_point);
+Private long  ccv_jis2kuten(int ccvi_index, long code_point);
+Private long  ccv_jis2euc(int ccvi_index, long code_point);
+Private long  ccv_jis2sjis(int ccvi_index, long code_point);
+Private long  ccv_kuten2jis(int ccvi_index, long code_point);
+Private long  ccv_euc2jis(int ccvi_index, long code_point);
+Private long  ccv_euc2sjis(int ccvi_index, long code_point);
+Private long  ccv_sjis2jis(int ccvi_index, long code_point);
+Private long  ccv_wansung2rc(int ccvi_index, long code_point);
+Private long  ccv_rc2wansung(int ccvi_index, long code_point);
+Private long  ccv_jis2seq2_0(int ccvi_index, long code_point);
+Private long  ccv_jis2seq2_1(int ccvi_index, long code_point);
+
+
+Glocal int
+vf_ccv_init(void)
+{
+  int   new_size, i;
+  static struct s_ccv_info   *ccv_tbl_new;
+
+  if (ccv_tbl == NULL){  /* initialization */
+    ccv_tbl_index = 0;
+    ccv_tbl_size = CCV_TBL_INITIAL_SIZE;
+    ALLOCN_IF_ERR(ccv_tbl, struct s_ccv_info, ccv_tbl_size){
+      ccv_tbl_size = 0;
+      vf_error = VF_ERR_NO_MEMORY;
+      return -1;
+    }
+
+    vf_ccv_install_func(NULL, "ISO",       NULL, "ISO",      ccv_no_conv);
+    vf_ccv_install_func(NULL, "ISO2022",   NULL, "ISO2022",  ccv_no_conv);
+    vf_ccv_install_func(NULL, "UNICODE",   NULL, "UNICODE",  ccv_no_conv);
+    vf_ccv_install_func(NULL, "JIS",       NULL, "JIS",      ccv_no_conv);
+    vf_ccv_install_func(NULL, "SJIS",      NULL, "SJIS",     ccv_no_conv);
+    
+    vf_ccv_install_func(NULL, "JIS",       NULL, "SJIS",     ccv_jis2sjis);
+    vf_ccv_install_func(NULL, "ISO2022",   NULL, "SJIS",     ccv_jis2sjis);
+    vf_ccv_install_func(NULL, "SJIS",      NULL, "JIS",      ccv_sjis2jis);
+    vf_ccv_install_func(NULL, "SJIS",      NULL, "ISO2022",  ccv_sjis2jis);
+    vf_ccv_install_func(NULL, "EUC",       NULL, "JIS",      ccv_euc2jis);
+    vf_ccv_install_func(NULL, "EUC",       NULL, "ISO2022",  ccv_euc2jis);
+    vf_ccv_install_func(NULL, "EUC",       NULL, "SJIS",     ccv_euc2sjis);
+    vf_ccv_install_func(NULL, "KU-TEN",    NULL, "JIS",      ccv_kuten2jis);
+    vf_ccv_install_func(NULL, "ROW-CELL",  NULL, "JIS",      ccv_kuten2jis);
+    vf_ccv_install_func(NULL, "KU-TEN",    NULL, "ISO2022",  ccv_kuten2jis);
+    vf_ccv_install_func(NULL, "ROW-CELL",  NULL, "ISO2022",  ccv_kuten2jis);
+    vf_ccv_install_func(NULL, "JIS",       NULL, "ROW-CELL", ccv_jis2kuten);
+    vf_ccv_install_func(NULL, "ISO2022",   NULL, "ROW-CELL", ccv_jis2kuten);
+    vf_ccv_install_func(NULL, "JIS",       NULL, "KU-TEN",   ccv_jis2kuten);
+    vf_ccv_install_func(NULL, "ISO2022",   NULL, "KU-TEN",   ccv_jis2kuten);
+    vf_ccv_install_func(NULL, "JIS",    NULL, "SEQUENTIAL2-0",ccv_jis2seq2_0);
+    vf_ccv_install_func(NULL, "ISO2022",NULL, "SEQUENTIAL2-0",ccv_jis2seq2_0);
+    vf_ccv_install_func(NULL, "JIS",    NULL, "SEQUENTIAL2-1",ccv_jis2seq2_1);
+    vf_ccv_install_func(NULL, "ISO2022",NULL, "SEQUENTIAL2-1",ccv_jis2seq2_1);
+
+    vf_ccv_install_func(NULL, "ISO2022",   NULL, "WANSUNG",  ccv_jis2euc);
+    vf_ccv_install_func(NULL, "JIS",       NULL, "WANSUNG",  ccv_jis2euc);
+    vf_ccv_install_func(NULL, "ROW-CELL",  NULL, "WANSUNG",  ccv_rc2wansung);
+    vf_ccv_install_func(NULL, "KU-TEN",    NULL, "WANSUNG",  ccv_rc2wansung);
+    vf_ccv_install_func(NULL, "WANSUNG",   NULL, "ROW-CELL", ccv_wansung2rc);
+    vf_ccv_install_func(NULL, "WANSUNG",   NULL, "KU-TEN",   ccv_wansung2rc);
+
+    return 0;
+  }
+
+  /* expansion */
+  new_size = ccv_tbl_size + 8;
+  ALLOCN_IF_ERR(ccv_tbl_new, struct s_ccv_info, new_size){
+    return -1;
+  }
+  for (i = 0; i < ccv_tbl_index; i++){
+    memcpy(&ccv_tbl_new[i], &ccv_tbl[i], sizeof(struct s_ccv_info));
+  }
+  vf_free(ccv_tbl);
+  ccv_tbl_size = new_size;
+  ccv_tbl = ccv_tbl_new;
+
+  return 0;
+}
+
+
+Private long
+ccv_no_conv(int ccvi_index, long code_point)
+{
+  return code_point;
+}
+
+Private long
+ccv_jis2kuten(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+
+  if (code_point < 256)
+    return code_point;
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  return (c1 - 0x20)*0x100 + (c2 - 0x20);
+}
+
+Private long
+ccv_jis2euc(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+
+  if (code_point < 256)
+    return code_point;
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  return (c1 + 0x80)*0x100 + (c2 + 0x80);
+}
+
+Private long
+ccv_jis2sjis(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+  int            row_offset, cell_offset;
+
+  if (code_point < 256)
+    return code_point;
+  /* Snarfed from 'jis2sjis()' in UJIP by Ken R Lunde. */
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  if (   (c1 < 0x21) || (0x7e < c1) || (c2 < 0x21) || (0x7e < c2) ){
+    return -1;
+  }
+  row_offset  = (c1 < 95) ? 112 : 176;
+  cell_offset = (c1 % 2) ? ((c2 > 95) ? 32 : 31) : 126;
+  c1 = ((c1 + 1) >> 1) + row_offset;
+  c2 += cell_offset;
+
+  return c1*0x100 + c2;
+}
+
+Private long
+ccv_kuten2jis(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+
+  if (code_point < 256)
+    return code_point;
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  return (c1 + 0x20)*0x100 + (c2 + 0x20);
+}
+
+Private long
+ccv_euc2jis(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+
+  if (code_point < 256)
+    return code_point;
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  return (c1 - 0x80)*0x100 + (c2 - 0x80);
+}
+
+Private long
+ccv_euc2sjis(int ccvi_index, long code_point)
+{
+  long  code_point_jis;
+
+  code_point_jis = ccv_euc2jis(ccvi_index, code_point);
+  return  ccv_jis2sjis(ccvi_index, code_point_jis);
+}
+
+Private long
+ccv_sjis2jis(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+  int            row_offset, cell_offset, adjust;
+
+  if (code_point < 256)
+    return code_point;
+  /* Snarfed from 'sjis2jis()' in UJIP by Ken R Lunde. */
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  if (c2 < 159)
+    adjust = 1;
+  else
+    adjust = 0;
+  row_offset  = (c1 < 160) ? 112 : 176;
+  cell_offset = (adjust == 1) ? ((c2 > 127) ? 32 : 31) : 126;
+  c1 = ((c1 - row_offset) << 1) - adjust;
+  c2 -= cell_offset;
+  return c1*0x100 + c2;
+}
+
+Private long
+ccv_rc2wansung(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+
+  if (code_point < 256)
+    return code_point;
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  return (c1 + 0xa0)*0x100 + (c2 + 0xa0);
+}
+
+Private long
+ccv_wansung2rc(int ccvi_index, long code_point)
+{
+  unsigned int   c1, c2;
+
+  if (code_point < 256)
+    return code_point;
+  c1 = code_point / 0x100;
+  c2 = code_point % 0x100;
+  return (c1 - 0xa0)*0x100 + (c2 - 0xa0);
+}
+
+
+Private long
+ccv_jis2seq2_0(int ccvi_index, long code_point)
+{
+  int   b0, b1;
+
+  b0 = (code_point / 0x1)   % 0x100;
+  b1 = (code_point / 0x100) % 0x100;
+
+  if ((b0 < 0x21) || (b0 > 0x7e))
+    return -1;
+  if ((b1 < 0x21) || (b1 > 0x7e))
+    return -1;
+
+  return  94 * (b1-0x21) + (b0-0x21) + 0;
+}
+
+Private long
+ccv_jis2seq2_1(int ccvi_index, long code_point)
+{
+  int   b0, b1;
+
+  b0 = (code_point / 0x1)   % 0x100;
+  b1 = (code_point / 0x100) % 0x100;
+
+  if ((b0 < 0x21) || (b0 > 0x7e))
+    return -1;
+  if ((b1 < 0x21) || (b1 > 0x7e))
+    return -1;
+
+  return  94 * (b1-0x21) + (b0-0x21) + 1;
+}
+
+
+
+Glocal int
+vf_ccv_require(char *cs1_name, char *cs1_enc,
+	       char *cs2_name, char *cs2_enc)
+{
+  int  i;
+  
+  if (vf_dbg_ccv == 1)
+    printf(">> CCV searching conversion: %s %s => %s %s\n", 
+	   NAMEPP(cs1_name), NAMEPP(cs1_enc),
+	   NAMEPP(cs2_name), NAMEPP(cs2_enc));
+
+  if ((cs1_name == NULL) && (cs1_enc == NULL))
+    return -1;
+
+  for (i = 0; i < ccv_tbl_index; i++){
+    if (   ((ccv_tbl[i].cs1_name == NULL)
+	    || (cmp_charset_name(ccv_tbl[i].cs1_name, cs1_name) == 0)
+	    || (cmp_alias(ccv_tbl[i].cs1_name_aliases, cs1_name, 0) == 0))
+	&& ((ccv_tbl[i].cs2_name == NULL)
+	    || (cmp_charset_name(ccv_tbl[i].cs2_name, cs2_name) == 0)
+	    || (cmp_alias(ccv_tbl[i].cs2_name_aliases, cs2_name, 0) == 0))
+	&& ((ccv_tbl[i].cs1_enc == NULL) || (cs1_enc == NULL)
+	    || (cmp_enc_name(ccv_tbl[i].cs1_enc, cs1_enc) == 0)
+	    || (cmp_alias(ccv_tbl[i].cs1_enc_aliases, cs1_enc, 1) == 0))
+	&& ((ccv_tbl[i].cs2_enc == NULL) || (cs2_enc == NULL)
+	    || (cmp_enc_name(ccv_tbl[i].cs2_enc, cs2_enc) == 0)
+	    || (cmp_alias(ccv_tbl[i].cs2_enc_aliases, cs2_enc, 1) == 0)) ){
+      if (vf_dbg_ccv == 1){
+	printf(">> CCV use conversion  #%d [%s %s => %s %s]\n", i, 
+	       NAMEPP(ccv_tbl[i].cs1_name), NAMEPP(ccv_tbl[i].cs1_enc),
+	       NAMEPP(ccv_tbl[i].cs2_name), NAMEPP(ccv_tbl[i].cs2_enc));
+      }
+      if (ccv_tbl[i].load_stat == CCV_STAT_AUTOLOAD){
+	if (ccv_load(&ccv_tbl[i]) < 0)
+	  return -1;
+	ccv_tbl[i].load_stat = CCV_STAT_LOADED;
+      }
+      return i;
+    }
+  }
+  return -1;
+}
+
+Private int 
+cmp_alias(char **alias_tbl, char *name, int how_compare)
+{
+  char  **pp;
+
+  if (alias_tbl == NULL)
+    return -1;
+
+  if (how_compare == 0){
+    for (pp = alias_tbl; *pp != NULL; pp++){
+      if (cmp_charset_name(*pp, name) == 0)
+	return 0;
+    }
+  } else {
+    for (pp = alias_tbl; *pp != NULL; pp++){
+      if (cmp_enc_name(*pp, name) == 0)
+	return 0;
+    }
+  }
+  return -1;
+}
+   
+
+
+Private int
+ccv_add_conv_info(struct s_ccv_info *ccvi, 
+		  int load_stat, char *file_name)
+{
+  char **pp, *q;
+
+  if (ccv_tbl_index >= ccv_tbl_size){
+    if (vf_dbg_ccv == 1)
+      printf(">> CCV expand table\n");
+    if (vf_ccv_init() < 0){
+      fprintf(stderr, "VFlib: too many code coversion table.\n");
+      return 0;
+    }
+  }
+
+  ccv_tbl[ccv_tbl_index].cs1_name          = ccvi->cs1_name;
+  ccv_tbl[ccv_tbl_index].cs1_name_aliases  = ccvi->cs1_name_aliases;
+  ccv_tbl[ccv_tbl_index].cs1_enc           = ccvi->cs1_enc;
+  ccv_tbl[ccv_tbl_index].cs1_enc_aliases   = ccvi->cs1_enc_aliases;
+  ccv_tbl[ccv_tbl_index].cs2_name          = ccvi->cs2_name;
+  ccv_tbl[ccv_tbl_index].cs2_name_aliases  = ccvi->cs2_name_aliases;
+  ccv_tbl[ccv_tbl_index].cs2_enc           = ccvi->cs2_enc;
+  ccv_tbl[ccv_tbl_index].cs2_enc_aliases   = ccvi->cs2_enc_aliases;
+  ccv_tbl[ccv_tbl_index].block_size = ccvi->block_size;
+  ccv_tbl[ccv_tbl_index].load_stat  = load_stat;
+  ccv_tbl[ccv_tbl_index].conv       = ccvi->conv;
+  ccv_tbl[ccv_tbl_index].arg        = ccvi->arg;
+  ccv_tbl[ccv_tbl_index].arg_type   = ccvi->arg_type;
+  ccv_tbl[ccv_tbl_index].c1min      = ccvi->c1min;
+  ccv_tbl[ccv_tbl_index].c1max      = ccvi->c1max;
+  ccv_tbl[ccv_tbl_index].c2min      = ccvi->c2min;
+  ccv_tbl[ccv_tbl_index].c2max      = ccvi->c2max;
+  ccv_tbl[ccv_tbl_index].nblocks    = ccvi->nblocks;
+  if (file_name != NULL){
+    ccv_tbl[ccv_tbl_index].file_name  = vf_strdup(file_name);
+    if (ccv_tbl[ccv_tbl_index].file_name == NULL){
+      vf_error = VF_ERR_NO_MEMORY;
+      return -1;
+    }
+  } else {
+    ccv_tbl[ccv_tbl_index].file_name  = NULL;
+  }
+
+  if (vf_dbg_ccv == 1){
+    printf(">> CCV installed #%d [%s %s => %s %s]\n", 
+	   ccv_tbl_index, 
+	   NAMEPP(ccv_tbl[ccv_tbl_index].cs1_name), 
+	   NAMEPP(ccv_tbl[ccv_tbl_index].cs1_enc),
+	   NAMEPP(ccv_tbl[ccv_tbl_index].cs2_name), 
+	   NAMEPP(ccv_tbl[ccv_tbl_index].cs2_enc));
+    if ((pp = ccv_tbl[ccv_tbl_index].cs1_name_aliases) != NULL){
+      q = NAMEPP(ccv_tbl[ccv_tbl_index].cs1_name);
+      for ( ; *pp != NULL; pp++)
+	printf(">>   alias %s: %s\n", *pp, q);
+    }
+    if ((pp = ccv_tbl[ccv_tbl_index].cs1_enc_aliases) != NULL){
+      q = NAMEPP(ccv_tbl[ccv_tbl_index].cs1_enc);
+      for ( ; *pp != NULL; pp++)
+	printf(">>   alias %s: %s\n", *pp, q);
+    }
+    if ((pp = ccv_tbl[ccv_tbl_index].cs2_name_aliases) != NULL){
+      q = NAMEPP(ccv_tbl[ccv_tbl_index].cs2_name);
+      for ( ; *pp != NULL; pp++)
+	printf(">>   alias %s: %s\n", *pp, q);
+    }
+    if ((pp = ccv_tbl[ccv_tbl_index].cs2_enc_aliases) != NULL){
+      q = NAMEPP(ccv_tbl[ccv_tbl_index].cs2_enc);
+      for ( ; *pp != NULL; pp++)
+	printf(">>   alias %s: %s\n", *pp, q);
+    }
+  }
+
+  ccv_tbl_index++;
+  return 0;
+}
+
+Private char*
+make_canonical_charset_name(char *cs_name)
+{
+  char *canon, *p;
+
+  if (cs_name == NULL)
+    return NULL;
+
+  if ((canon = vf_strdup(cs_name)) == NULL)
+    return NULL;
+  for (p = canon; *p != '\0'; p++){
+    if (vf_index(CS_NAME_XCHARS, *p) != NULL)
+      *p = CS_NAME_XCHARS_TO;
+    else
+      *p = toupper(*p);
+  }
+  return canon;
+}
+
+Private int
+cmp_charset_name(char *canon, char *name)
+{
+  char  *p, *q, cp, cq;
+
+  if (canon == NULL)
+    return 0;
+
+  p = canon;
+  q = name;
+  do {
+    cp = toupper(*p);
+    if (vf_index(CS_NAME_XCHARS, *p) != NULL)
+      cp = CS_NAME_XCHARS_TO;
+    cq = toupper(*q);
+    if (vf_index(CS_NAME_XCHARS, *q) != NULL)
+      cq = CS_NAME_XCHARS_TO;
+    if (cp != cq)
+      return -1;
+    p++;
+    q++;
+  } while ((*p != '\0') && (*q != '\0'));
+  return 0;
+}
+
+Private int
+cmp_enc_name(char *enc1, char *enc2)
+{
+  char  *p, *q, cp, cq;
+
+  p = enc1;
+  q = enc2;
+  do {
+    cp = toupper(*p);
+    if (vf_index(CS_NAME_XCHARS, *p) != NULL)
+      cp = CS_NAME_XCHARS_TO;
+    cq = toupper(*q);
+    if (vf_index(CS_NAME_XCHARS, *q) != NULL)
+      cq = CS_NAME_XCHARS_TO;
+    if (cp != cq)
+      return -1;
+    p++;
+    q++;
+  } while ((*p != '\0') && (*q != '\0'));
+  return 0;
+}
+
+
+
+Glocal int
+vf_ccv_autoload(char *file_name)
+{
+  struct s_ccv_info ccv_info;
+
+  if (vf_dbg_ccv == 1)
+    printf(">> CCV autoload: %s\n", file_name);
+
+  ccv_info.file_name = vf_strdup(file_name);
+
+  if (ccv_read_header(&ccv_info) < 0){
+    if (vf_dbg_ccv == 1)
+      printf(">> CCV failed autoload\n");
+    return -1;
+  }
+
+#if 0
+  printf("  %s %s => %s %s  0x%02x 0x%02x 0x%02x 0x%02x\n", 
+	 ccv_info.cs1_name, ccv_info.cs1_enc, 
+	 ccv_info.cs2_name, ccv_info.cs2_enc, 
+	 ccv_info.c1min, ccv_info.c1max, ccv_info.c2min, ccv_info.c2max);
+#endif
+
+  ccv_add_conv_info(&ccv_info, CCV_STAT_AUTOLOAD, file_name);
+
+  if (vf_dbg_ccv == 1)
+    printf(">> CCV autoload done.\n");
+
+  return 0;
+}
+
+
+Glocal int
+vf_ccv_install_func(char *cs1_name, char *cs1_enc, 
+		    char *cs2_name, char *cs2_enc,
+		    long (*conv)(int,long))
+{
+  struct s_ccv_info ccv_info;
+
+  ccv_info.cs1_name          = cs1_name;
+  ccv_info.cs1_name_aliases  = NULL;
+  ccv_info.cs1_enc           = cs1_enc;
+  ccv_info.cs1_enc_aliases   = NULL;
+  ccv_info.cs2_name          = cs2_name;
+  ccv_info.cs2_name_aliases  = NULL;
+  ccv_info.cs2_enc           = cs2_enc; 
+  ccv_info.cs2_enc_aliases   = NULL; 
+  ccv_info.arg_type  = CCV_ARG_TYPE_FUNC;
+  ccv_info.conv      = conv;
+  ccv_info.arg       = 0;
+
+  ccv_info.block_size = 0;
+  ccv_info.c1min      = 0;
+  ccv_info.c1max      = 0;
+  ccv_info.c2min      = 0;
+  ccv_info.c2max      = 0;
+  ccv_info.nblocks    = 0;
+  ccv_info.file_name  = NULL;
+
+  ccv_add_conv_info(&ccv_info, CCV_STAT_LOADED, NULL);
+  return 0;
+}
+
+
+
+Private int
+ccv_load(struct s_ccv_info *ccvi)
+{
+  if (vf_dbg_ccv == 1)
+    printf(">> CCV loading %s\n", ccvi->file_name);
+
+  return ccv_read_file(ccvi, 0);
+}
+
+Private int
+ccv_read_header(struct s_ccv_info *ccvi)
+{
+  return ccv_read_file(ccvi, 1);
+}
+
+Private int
+ccv_read_file(struct s_ccv_info *ccvi, int header_only)
+{
+  FILE  *fp;
+  char   key[256], val[256];
+  int    block, v;
+
+  ccvi->file_path = vf_path_find_runtime_file("ccv", ccvi->file_name,
+					      VF_ENV_CCV_DIR);
+  
+  if (vf_dbg_ccv == 1){
+    if (ccvi->file_path != NULL)
+      printf(">> CCV autoload file %s: %s\n",
+	     ccvi->file_name, ccvi->file_path);
+    else
+      printf(">> CCV autoload file %s: not found\n", ccvi->file_name);
+  }
+
+  if (ccvi->file_path == NULL)
+    return -1;
+
+  if ((fp = vf_fm_OpenTextFileStream(ccvi->file_path)) == NULL)
+    return -1;
+
+  if (header_only == 1){
+    ccvi->cs1_name_aliases = NULL;
+    ccvi->cs1_enc_aliases  = NULL;
+    ccvi->cs2_name_aliases = NULL;
+    ccvi->cs2_enc_aliases  = NULL;
+  }
+
+  while (ccv_file_read_list(fp, key, sizeof(key)) >= 0){
+    v = ccv_file_read_elem(fp, val, sizeof(val));
+    if (v == -1)
+      break;
+    else if (v == 0)
+      continue;
+    if ((   (vf_strcmp_ci(key, "charset-from-name") == 0) 
+         || (vf_strcmp_ci(key, "charset-external-name") == 0)) 
+	&& (header_only == 1)){
+      ccvi->cs1_name = make_canonical_charset_name(val);
+      ccv_read_aliases(fp, &ccvi->cs1_name_aliases);
+    } else if ((   (vf_strcmp_ci(key, "charset-from-encoding") == 0)
+		|| (vf_strcmp_ci(key, "charset-external-encoding") == 0))
+	       && (header_only == 1)){
+      ccvi->cs1_enc = vf_strdup(val);
+      ccv_read_aliases(fp, &ccvi->cs1_enc_aliases);
+    } else if ((   (vf_strcmp_ci(key, "charset-to-name") == 0)
+	        || (vf_strcmp_ci(key, "charset-internal-name") == 0))
+	       && (header_only == 1)){
+      ccvi->cs2_name = make_canonical_charset_name(val);
+      ccv_read_aliases(fp, &ccvi->cs2_name_aliases);
+    } else if ((   (vf_strcmp_ci(key, "charset-to-encoding") == 0)
+	        || (vf_strcmp_ci(key, "charset-internal-encoding") == 0))
+	       && (header_only == 1)){
+      ccvi->cs2_enc = vf_strdup(val);
+      ccv_read_aliases(fp, &ccvi->cs2_enc_aliases);
+    } else if ((vf_strcmp_ci(key, "table-type") == 0)
+	       && (header_only == 1)){
+      ccvi->conv = NULL;
+      if (vf_strcmp_ci(val, "array") == 0){
+	ccvi->arg_type = CCV_ARG_TYPE_ARRAY;
+	ccvi->conv = ccv_conv_array;
+      } else if (vf_strcmp_ci(val, "random-arrays") == 0){
+	ccvi->arg_type = CCV_ARG_TYPE_RANDOM_ARRAY;
+	ccvi->conv = ccv_conv_random_array;
+      } else {
+	fprintf(stderr, "VFlib: broken code conversion file: %s\n", 
+		ccvi->file_name);
+	return -1;
+      }
+    } else if ((vf_strcmp_ci(key, "nblocks") == 0) && (header_only == 1)){
+      sscanf(val, "%i", &ccvi->nblocks);
+    } else if ((vf_strcmp_ci(key, "c1-min") == 0) && (header_only == 1)){
+      sscanf(val, "%i", &ccvi->c1min);
+    } else if ((vf_strcmp_ci(key, "c1-max") == 0) && (header_only == 1)){
+      sscanf(val, "%i", &ccvi->c1max);
+    } else if ((vf_strcmp_ci(key, "c2-min") == 0) && (header_only == 1)){
+      sscanf(val, "%i", &ccvi->c2min);
+    } else if ((vf_strcmp_ci(key, "c2-max") == 0) && (header_only == 1)){
+      sscanf(val, "%i", &ccvi->c2max);
+    } else if ((vf_strcmp_ci(key, "block-size") == 0) && (header_only == 1)){
+      sscanf(val, "%i", &ccvi->block_size);
+    } else if (vf_strcmp_ci(key, "block") == 0){
+      if (header_only == 1){
+	break;
+      } else {
+	ccv_read_file_alloc_blocks(ccvi);
+	sscanf(val, "%i", &block);
+	if (ccvi->arg_type == CCV_ARG_TYPE_ARRAY){
+	  ccv_read_file_block_array(fp, ccvi, block);
+	} else {
+	  ccv_read_file_block_random_array(fp, ccvi, block);
+	}
+      }
+    }
+  }
+
+  return 0;
+}
+
+Private void
+ccv_read_aliases(FILE  *fp, char ***alias_tbl)
+{
+  char   val[128];
+  char  *names[64];
+  int    nnames, i;
+
+  nnames = 0;
+  while (ccv_file_read_elem(fp, val, sizeof(val)) > 0){
+    names[nnames++] = vf_strdup(val);
+  }
+
+  if (nnames == 0){
+    *alias_tbl = NULL;
+    return;
+  }
+  if ((*alias_tbl = (char**)malloc(sizeof(char*) * (nnames + 1))) != NULL){
+    for (i = 0; i < nnames; i++){
+      (*alias_tbl)[i] = names[i];
+    }
+    (*alias_tbl)[nnames] = NULL;
+  }
+}
+
+Private int
+ccv_read_file_alloc_blocks(struct s_ccv_info *ccvi)
+{
+  long              *array;
+  CCV_RANDOM_ARRAY  rarray;
+
+  switch (ccvi->arg_type){
+  case CCV_ARG_TYPE_ARRAY:
+    array = (long*)calloc(ccvi->nblocks * (ccvi->c2max - ccvi->c2min + 1),
+			  sizeof(long));
+    if (array == NULL)
+      return -1;
+    ccvi->arg = (long)array;
+    break;
+  case CCV_ARG_TYPE_RANDOM_ARRAY:
+  default:
+    rarray = (CCV_RANDOM_ARRAY)calloc(1, sizeof(struct s_ccv_random_array));
+    if (rarray == NULL)
+      return -1;
+    rarray->block_index
+      = (int*)calloc(ccvi->nblocks, sizeof(int));
+    rarray->tbl 
+      = (long*)calloc(ccvi->nblocks * (ccvi->c2max - ccvi->c2min + 1),
+		      sizeof(long));
+    if ((rarray == NULL)
+	|| (rarray->block_index == NULL) || (rarray->tbl == NULL))
+      return -1;
+    ccvi->arg = (long)rarray;
+    break;
+  }
+  return 0;
+}
+
+
+Private int
+ccv_read_file_block_array(FILE *fp, struct s_ccv_info *ccvi, int block)
+{
+  int   code, base, b, c, v;
+  char  key[256], val[256];
+  long  *tbl;
+
+  if (vf_dbg_ccv == 1)
+    printf(">> CCV Reding table (array) nblocks=%d\n", ccvi->nblocks);
+
+  tbl = (long*)ccvi->arg;
+  for (b = ccvi->c1min; ; ){
+    if (vf_dbg_ccv == 1)
+      printf("  Block %d", block);
+    base = block * (ccvi->c2max - ccvi->c2min + 1);
+    for (c = ccvi->c2min; c <= ccvi->c2max; c++){
+      if ((v = ccv_file_read_elem(fp, val, sizeof(val))) <= 0){
+	fprintf(stderr, "VFlib warning: broken code conversion table: %s\n",
+		ccvi->file_name);
+	return -1;
+      }
+      sscanf(val, "%i", &code);
+      tbl[base + (c - ccvi->c2min)] = code;
+#if defined(DEBUG) && 0
+      printf("\n   0x%04x ==> 0x%04x", b*ccvi->block_size+c, code);
+#endif
+    }
+
+    if ((++b) > ccvi->c1max)
+      break;
+
+    for (;;){
+      if (ccv_file_read_list(fp, key, sizeof(key)) < 0){
+	fprintf(stderr, "VFlib warning: broken code conversion table: %s\n",
+		ccvi->file_name);
+	return -1;
+      }
+      if (vf_strcmp_ci(key, "block") == 0)
+	break;
+    }
+    ccv_file_read_elem(fp, val, sizeof(val));
+    sscanf(val, "%i", &block);
+  }
+  if (vf_dbg_ccv == 1)
+    printf("\n");
+
+  return 0;
+}
+
+Private int
+ccv_read_file_block_random_array(FILE *fp, struct s_ccv_info *ccvi, int block)
+{
+  int   code, base, b, c, v;
+  char  key[256], val[256];
+  int   index;
+  long  *tbl;
+  CCV_RANDOM_ARRAY rarray;
+
+  if (vf_dbg_ccv == 1)
+    printf(">> CCV reding table (random-arrays) nblocks=%d", ccvi->nblocks);
+
+  rarray = (CCV_RANDOM_ARRAY)ccvi->arg;
+  tbl = rarray->tbl;
+  for (b = 0; ; ){
+    if (vf_dbg_ccv == 1)
+      printf("  Block %d", block);
+    rarray->block_index[b] = block;
+    base = b * (ccvi->c2max - ccvi->c2min + 1);
+    for (c = ccvi->c2min; c <= ccvi->c2max; c++){
+      if ((v = ccv_file_read_elem(fp, val, sizeof(val))) <= 0){
+	fprintf(stderr, "VFlib warning: broken code conversion table: %s\n",
+		ccvi->file_name);
+	return -1;
+      }
+      sscanf(val, "%i", &code);
+      index = base + (c - ccvi->c2min);
+      tbl[index] = code;
+#if defined(DEBUG) && 0
+      printf("\n   0x%04x ==> 0x%04x  (%d)", 
+	     (block + ccvi->c1min)*ccvi->block_size+c, code, index);
+#endif
+    }
+
+    if ((++b) >= ccvi->nblocks)
+      break;
+
+    for (;;){
+      if ((v = ccv_file_read_list(fp, key, sizeof(key))) == 0)
+	break;
+      if (v < 0){
+	fprintf(stderr, "VFlib warning: broken code conversion table: %s\n",
+		ccvi->file_name);
+	return -1;
+      }
+      if (vf_strcmp_ci(key, "block") == 0)
+	break;
+    }
+    ccv_file_read_elem(fp, val, sizeof(val));
+    sscanf(val, "%i", &block);
+  }
+
+  return 0;
+}
+
+
+Private int 
+ccv_file_read_list(FILE *fp, char *buff, int nbuff)
+{
+  int  ch, i;
+
+  buff[0] = '\0';
+
+  /* skip until '(' */
+  while ((ch = getc(fp)) != EOF){
+    if (ch == '(')
+      break;
+    if (ch == ';'){    /* coment begins. skip until the eol */
+      while ((ch = getc(fp)) != '\n'){  
+	if (ch == EOF)
+	  return -1;
+      }
+    }
+  }
+  if (ch == EOF)
+    return -1;
+
+  /* read the car part of an s-exp */
+  i = 0;
+  while ((ch = getc(fp)) != EOF){
+    if (i >= nbuff-1)
+      break;
+    if (isspace((int)ch))
+      break;
+    if (ch == ')')
+      break;
+    buff[i++] = ch;    
+    if (ch == ' ')
+      break;
+  }
+  buff[i] = '\0';
+#if 0
+  printf("\n* %s:  ", buff);
+#endif
+  return 1;
+}
+
+Private int 
+ccv_file_read_elem(FILE *fp, char *buff, int nbuff)
+{
+  int  ch, i;
+
+  buff[0] = '\0';
+  while ((ch = getc(fp)) != EOF){
+    if (!isspace(ch))
+      break;
+  }
+  if (ch == ')')
+    return 0;
+  if (ch == EOF)
+    return -1;
+  i = 0;
+  buff[i++] = ch;
+  while ((ch = getc(fp)) != EOF){
+    if (i >= nbuff-1)
+      break;
+    if (isspace((int)ch))
+      break;
+    if (ch == ')'){
+      ungetc(ch, fp);
+      break;
+    }
+    buff[i++] = ch;
+  }
+  buff[i] = '\0';
+#if 0
+  printf("%s  ", buff);
+#endif
+  return 1;
+}
+
+
+
+Glocal long
+vf_ccv_conv(int ccvi_index, long code_point)
+{
+  long cv_code_point;
+
+  if (ccvi_index < 0)
+    return code_point;
+
+  cv_code_point = (*ccv_tbl[ccvi_index].conv)(ccvi_index, code_point);
+
+  if (vf_dbg_ccv_map == 1)
+    printf(">> CCV code conversion: 0x%04lx => 0x%04lx\n", 
+	   code_point, cv_code_point);
+
+  return cv_code_point;
+}
+
+
+Private long
+ccv_conv_array(int ccvi_index, long code_point)
+{
+  int       c1, c2, index; 
+  CCV_INFO  ccvi;
+  long      *tbl;
+
+  ccvi = &ccv_tbl[ccvi_index];
+  c1 = code_point / ccvi->block_size;
+  c2 = code_point % ccvi->block_size;
+
+  if (   (c1 < ccvi->c1min) || (ccvi->c1max < c1)
+      || (c2 < ccvi->c2min) || (ccvi->c2max < c2) ){
+    return -1;
+  }
+  index = (c1 - ccvi->c1min) * (ccvi->c2max - ccvi->c2min + 1) 
+          + (c2 - ccvi->c2min);
+  tbl = (long*) ccvi->arg;
+  return tbl[index];
+}
+
+Private long
+ccv_conv_random_array(int ccvi_index, long code_point)
+{
+  int       c1, c2, index, i; 
+  CCV_INFO  ccvi;
+  CCV_RANDOM_ARRAY cra;
+
+  ccvi = &ccv_tbl[ccvi_index];
+  c1 = code_point / ccvi->block_size;
+  c2 = code_point % ccvi->block_size;
+
+  if (   (c1 < ccvi->c1min) || (ccvi->c1max < c1)
+      || (c2 < ccvi->c2min) || (ccvi->c2max < c2) ){
+    return -1;
+  }
+  cra = (CCV_RANDOM_ARRAY)ccvi->arg;
+  for (i = 0; i < ccvi->nblocks; i++){  /** TOO SLOW! **/
+    /*printf("\n index %d %d", cra->block_index[i], c1);*/
+    if (cra->block_index[i]+ccvi->c1min == c1)
+      break;
+  }
+  if (i == ccvi->nblocks)
+    return -1;
+  index = i * (ccvi->c2max - ccvi->c2min + 1) + (c2 - ccvi->c2min);
+  return cra->tbl[index];
+}
+
+
+
+#ifdef DEBUG
+
+/*
+ * Usage: dbg-ccv filename - cs1_name cs1_enc cs2_name cs2_enc code_point ...
+ */
+int
+main(int argc, char **argv)
+{
+  int   i;
+  int   cc, cvcc;
+
+  argc--; argv++;
+
+  vf_ccv_init();
+  if (argc <= 4)
+    exit(1);
+
+  while (argc > 0){
+    if (strcmp(argv[0], "-") == 0){
+      argc--;
+      argv++;
+      break;
+    }
+    vf_ccv_autoload(argv[0]);
+    argc--;
+    argv++;
+  }
+  if (argc == 0)
+    exit(0);
+
+  if (argc > 4){
+    i = vf_ccv_require(argv[0], argv[1], argv[2], argv[3]);
+    argc -= 4;
+    argv = &argv[4];
+  }
+  if (argc == 0)
+    exit(0);
+
+  while (argc > 0){
+    sscanf(argv[0], "%i", &cc);
+    cvcc = vf_ccv_conv(i, (long)cc);
+    printf("\n  Conv 0x%x ==> 0x%x", cc, (int)cvcc);
+    argc--;
+    argv++;
+  }
+}
+#endif
+
+/*EOF*/

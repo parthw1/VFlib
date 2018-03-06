@@ -1,0 +1,21 @@
+; tempty.adj
+;   Shift the vecter to reference point for Japanese TeX by ASCII co.
+;   (Support for vertical writing)
+
+; See tminXX.pl (or generete it by tftopl command) to see 
+; the relation between code point and char-type.
+;   Shift bitmap to right:  give positive value for delta-X
+;   Shift bitmap to up:  give positive value for delta-Y
+
+;--------------------------------------------------------
+; Writing direction and Rotation semantics
+;--------------------------------------------------------
+(direction vertical)        ;; "vertical" or "horizontal"
+
+;--------------------------------------------------------
+;  global shift
+;--------------------------------------------------------
+(char-all  0.00  0.00)
+
+;--------------------------------------------------------
+;EOF

@@ -1,0 +1,13 @@
+\ProvidesFile{jy1mik.fd}[2006/05/11 Mikachan Font (Horizontal)]
+\DeclareKanjiFamily{JY1}{mik}{}
+\DeclareRelationFont{JY1}{mik}{sl}{}{OT1}{rpagk}{}{}
+\DeclareRelationFont{JY1}{mik}{m}{}{OT1}{rpagk}{m}{}
+\DeclareRelationFont{JY1}{mik}{sb}{}{OT1}{rpagk}{m}{}
+\DeclareRelationFont{JY1}{mik}{b}{}{OT1}{rpagk}{bx}{}
+\DeclareRelationFont{JY1}{mik}{bx}{}{OT1}{rpagk}{bx}{}
+\DeclareFontShape{JY1}{mik}{sl}{n}{ <-> mikpnmaa  }{}
+\DeclareFontShape{JY1}{mik}{m}{n}{ <->  mikpnmaa  }{}
+\DeclareFontShape{JY1}{mik}{sb}{n}{ <-> mikpnmaa  }{}
+\DeclareFontShape{JY1}{mik}{b}{n}{ <->  mikpnmaa  }{}
+\DeclareFontShape{JY1}{mik}{bx}{n}{ <-> mikpnmaa  }{}
+\endinput

@@ -1,0 +1,43 @@
+#  Makefile.in for VFlib CCV
+#  by Hirotsugu Kakugawa (h.kakugwa@computer.org)
+
+makedefault: default
+include ../make-sub
+
+#-------------------------------------------------
+LIBTOOL=../libtool
+
+default all:
+	@echo ""
+
+ALL:
+	$(MAKE) mkcscv
+	-rm *.ccv
+	./mkall
+
+mkcscv: mkcscv.c
+	$(CC) $(VFCFLAGS) -o mkcscv mkcscv.c 
+
+install: 
+	@if [ ! -d $(runtimedir)/ccv ] ; then \
+	    ../recmkdir $(runtimedir)/${subdir_ccv}; fi
+	@echo "Installing CCV files..."
+	@for f in *.ccv ; do \
+	   ../$(INSTALL_DATA) $$f $(runtimedir)/${subdir_ccv}; done
+
+uninstall:
+	-$(RM)    $(runtimedir)/${subdir_ccv}/*
+	-$(RMDIR) $(runtimedir)/${subdir_ccv}
+
+
+veryclean distclean:: clean
+
+clean::
+	-$(RM) mkcscv 
+
+wc:
+	wc *.c *.h
+WC:
+	wc *.c *.h *.in
+
+#EOF

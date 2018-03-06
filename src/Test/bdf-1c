@@ -1,0 +1,26 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  bdf-font1
+open1  bdf-font2
+open1  bdf-fontx
+
+property !0 FONT_CLASS
+property !0 PROP1
+property !0 PROP2
+property !0 PROPX
+
+property !1 FONT_CLASS
+property !1 PROP1
+property !1 PROP2
+property !1 PROPX
+
+property !2 FONT_CLASS
+property !2 PROP1
+property !2 PROP2
+property !2 PROPX
+
+quit

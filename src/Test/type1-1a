@@ -1,0 +1,17 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  dcr10-1
+
+bitmap1 !0 0x67  1.0 1.0
+bitmap1 !0 0x67  1.2 1.2
+bitmap1 !0 0x67  1.4 1.4 
+
+property !0 RESOLUTION_X
+property !0 RESOLUTION_Y
+property !0 POINT_SIZE
+
+quit

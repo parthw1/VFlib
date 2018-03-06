@@ -1,0 +1,20 @@
+all: 
+ALL: 
+
+include ../make-sub
+
+install: 
+	@if [ ! -d $(runtimedir)/t1lib ] ; then \
+	    ../recmkdir $(runtimedir)/t1lib; fi
+	@for f in `echo mkt1enc.sh *.enc`; do \
+	   ../$(INSTALL_DATA) $$f $(runtimedir)/t1lib; done
+
+uninstall:
+	-$(RM)    $(runtimedir)/t1lib/*.enc 
+	-$(RM)    $(runtimedir)/t1lib/mkt1enc.sh
+	-$(RMDIR) $(runtimedir)/t1lib
+
+veryclean:: clean
+distclean:: clean
+
+

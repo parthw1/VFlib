@@ -1,0 +1,72 @@
+default: all
+
+all:	fonts.lst fontsh.lst fontsc.lst
+
+include ../make-sub
+
+
+fonts.lst: def.dat
+	-@rm -f fonts.*
+	@./mkfonts.sh   def.dat   fonts
+fontsh.lst: defh.dat
+	-@rm -f fontsh.*
+	@./mkfonts.sh   defh.dat  fontsh
+fontsc.lst: defc.dat
+	-@rm -f fontsc.*
+	@./mkfontsc.sh  defc.dat fontsc
+
+install: 
+	@echo "Installing ADJ files for Japanese TeX..."
+	@if [ ! -d $(runtimedir)/$(subdir_ascii_jtex) ] ; then \
+	    ../recmkdir $(runtimedir)/$(subdir_ascii_jtex); fi
+	@for f in `echo Adj/*.adj`; do \
+	   ../$(INSTALL_DATA) $$f $(runtimedir)/$(subdir_ascii_jtex); done
+
+install-jfm install-tfm: fonts.lst fontsh.lst fontsc.lst def.dat defh.dat
+	@if [ ! -d $(runtimedir)/$(subdir_ascii_jtex)/Fonts ] ; then \
+	    ../recmkdir $(runtimedir)/$(subdir_ascii_jtex)/Fonts; fi
+	@for f in `echo Fonts/*.fd`; do \
+	   ../$(INSTALL_DATA) $$f $(runtimedir)/$(subdir_ascii_jtex)/Fonts; \
+	 done
+	@if [ ! -d $(texmf_fonts_vflib) ] ; then \
+	    ../recmkdir $(texmf_fonts_vflib); fi
+	@if [ ! -d $(texmf_platex_vflib)/jisx0208 ] ; then \
+	    ../recmkdir $(texmf_platex_vflib)/jisx0208; fi
+	@if [ ! -d $(texmf_platex_vflib)/jisx0212 ] ; then \
+	    ../recmkdir $(texmf_platex_vflib)/jisx0212; fi
+	@echo "Installing JIS X 0208/0212 tfm, style files...";
+	@./inst.sh  $(texmf_fonts_vflib) def.dat  fonts.lst \
+		    min10.tfm tmin10.tfm 
+	@./instc.sh $(texmf_fonts_vflib) defc.dat fontsc.lst \
+		    min10.tfm tmin10.tfm 
+	@for f in `echo HojoKanji/*.tfm`; do \
+	   ../$(INSTALL_DATA) $$f $(texmf_fonts_vflib); \
+	 done
+	@for f in `echo Fonts/*.fd Fonts/*.sty`; do \
+	   ../$(INSTALL_DATA) $$f $(texmf_platex_vflib)/jisx0208; \
+	 done
+	@for f in `(cd HojoKanji; echo *.sty *.tex *.fd 00README)`; do \
+	   ../$(INSTALL_DATA) HojoKanji/$$f $(texmf_platex_vflib)/jisx0212; \
+	 done
+	mktexlsr
+
+
+
+uninstall:
+	-$(RM)    $(runtimedir)/$(subdir_ascii_jtex)/Fonts/*
+	-$(RMDIR) $(runtimedir)/$(subdir_ascii_jtex)/Fonts
+	-$(RM)    $(runtimedir)/$(subdir_ascii_jtex)/*
+	-$(RMDIR) $(runtimedir)/$(subdir_ascii_jtex)
+uninstall-jfm uninstall-tfm:
+	-$(RM)    $(texmf_fonts_vflib)/fd/* $(texmf_fonts_vflib)/*
+	-$(RMDIR) $(texmf_fonts_vflib)/fd $(texmf_fonts_vflib)
+	-$(RMDIR) $(texmf_fonts_vflib)
+	-$(RM)    $(texmf_platex_vflib)/*
+	-$(RMDIR) $(texmf_platex_vflib)
+
+clean veryclean distclean:: 
+	-$(RM) */*~ *~
+	-$(RM) fonts.tex  fonts.lst
+	-$(RM) fontsh.tex fontsh.lst
+
+#EOF

@@ -1,0 +1,31 @@
+Using Hojo Kanji (JISX0212, Supplementary Kanji) for pLaTeX2e     
+                                                         by H. Kakugawa
+
+
+hojo.pl, hojot.pl
+- Template PL files for horizontal and vertical writing directionarities.
+
+minh?.tfm, gothh?.tfm
+- TFM files for Mincho and Gothic fonts, generated from 'hojo.pl'.
+
+tminh?.tfm, tgothh?.tfm
+- TFM files for Mincho and Gothic fonts, generated from 'hojot.pl'.
+
+mkhojo.sh
+- A shell script to generate TFM files from 'hojo.pl' and 'hojot.pl'.
+
+jisx0212.sty
+- A style file for using Hojo Kanji. Following commands are defined:
+    * \begin{jisx0212} ...text... \end{jisx0212}
+    * \HojoKanji{...text...}
+  See 'sample.tex' for an example.
+
+jy2mc.fd, jy2gt.fd, jt2mc.fd, jt2gt.fd
+- Font definition files. (These files are used in 'jisx0208.sty'.)
+
+sample.tex
+- A sample document file to use Hojo Kanji.
+
+
+See http://www.ascii.co.jp/pb/ptex/ for pLaTeX, a localized LaTeX2e system
+for Japanese text.

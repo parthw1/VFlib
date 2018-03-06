@@ -1,0 +1,431 @@
+/*
+ * fileman.c - a module for file descripter management
+ * by Hirotsugu Kakugawa
+ *
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+#include  "config.h"
+#include  <stdio.h>
+#include  <stdlib.h>
+#include  "VFlib-3_7.h"
+#include  "VFsys.h"
+#include  "cache.h"
+#include  "consts.h"
+
+
+#define VF_MAX_FD_HASH  101
+Private VF_CACHE  fp_cache     = NULL;
+Private int       fp_case_size = VF_MAX_FILE_DESCRIPTERS;
+
+
+
+#if 1 
+
+/* NEW CODE */ 
+
+
+struct s_ck {
+  char             path[MAXPATHLEN+16];
+  long             iarg1, iarg2;
+  void            *arg1, *arg2;
+  FM_OPEN_METHOD   open;
+  FM_CLOSE_METHOD  close;
+  /* debug msg */
+  char dbgmsg[160];
+};
+typedef   struct s_ck   CK;
+
+struct s_val {
+  void            *val;
+  long             iarg1, iarg2;
+  void            *arg1, *arg2;
+  FM_OPEN_METHOD   open;
+  FM_CLOSE_METHOD  close;
+};
+typedef   struct s_val   VAL;
+
+Private FILE  *get_file_stream(char *file_path, int bin_file);
+Private void   close_file_stream(char *file_path, int bin_file);
+Private VAL   *open_file(VF_CACHE,CK*,int);
+Private void   close_file(VAL*);
+Private void  *simple_open(char*,long,long,void*,void*);
+Private void   simple_close(void*,long,long,void*,void*);
+
+static int     debug_fileman = 0;
+
+
+Glocal int
+vf_fm_init(void)
+{
+  char  *s;
+
+  if (fp_cache != NULL){
+    /* XXX   TO DO: dispose fp_cache here */
+  }
+
+  debug_fileman = 0;
+  if (getenv(VF_ENV_DEBUG_FILEMAN) != NULL)
+    debug_fileman = 1;
+
+  fp_case_size = VF_MAX_FILE_DESCRIPTERS;
+  if ((s = getenv(VF_ENV_MAX_FILE_DESCRIPTERS)) != NULL)
+    fp_case_size = atoi(s);
+  if (fp_case_size < 1)
+    fp_case_size = VF_MAX_FILE_DESCRIPTERS;
+  if (debug_fileman != 0)
+    printf("VFlib fileman: #fd = %d\n", fp_case_size);
+
+  fp_cache = vf_cache_create(fp_case_size, VF_MAX_FD_HASH,
+			     (void*(*)(VF_CACHE,void*,int))open_file,
+			     (void(*)(void*))close_file);
+  if (fp_cache == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    return -1;
+  }
+
+  return 0;
+}
+
+Glocal FILE*
+vf_fm_OpenTextFileStream(char *file_path)
+{
+  FILE  *fp;
+
+  if ((fp = get_file_stream(file_path, 0)) != NULL)
+    fseek(fp, 0L, SEEK_SET);
+  return fp;
+}
+
+Glocal FILE*
+vf_fm_OpenBinaryFileStream(char *file_path)
+{
+  FILE  *fp;
+
+  if ((fp = get_file_stream(file_path, 1)) != NULL)
+    fseek(fp, 0L, SEEK_SET);
+  return fp;
+}
+
+Private FILE*
+get_file_stream(char *file_path, int bin_file)
+{
+  struct s_ck    ck;
+  struct s_val  *val;
+
+  if (debug_fileman != 0)
+    printf("VFlib fileman: Get file stream for %s\n", file_path);
+
+  if (file_path == NULL)
+    return NULL;
+
+  memset(&ck, 0, sizeof(ck));
+  strncpy(ck.path, file_path, sizeof(ck.path));
+  ck.iarg1 = 0;
+  ck.iarg2 = 0;
+  ck.arg1  = (void*)bin_file;
+  ck.arg2  = NULL;
+  ck.open  = simple_open;
+  ck.close = simple_close;
+  strncpy(ck.dbgmsg, file_path, sizeof(ck.dbgmsg));
+
+  if ((val = (fp_cache->get)(fp_cache, &ck, sizeof(struct s_ck))) == NULL){
+    vf_error = VF_ERR_CANT_OPEN;
+    return NULL;
+  }
+
+  return val->val;
+}
+
+
+Glocal void*
+vf_fm_OpenFileStreamApp(char *arg, 
+			long iarg1, long iarg2, void *arg1, void *arg2, 
+			FM_OPEN_METHOD open_method,
+			FM_CLOSE_METHOD  close_method,
+			char *dbgmsg)
+{
+  struct s_ck    ck;
+  struct s_val  *val;
+
+  if ((debug_fileman != 0) && (dbgmsg != NULL))
+    printf("VFlib fileman: Get file stream %s (%s)\n", arg, dbgmsg);
+
+  memset(&ck, 0, sizeof(ck));
+  if (arg != NULL)
+    strncpy(ck.path, arg, sizeof(ck.path));
+  ck.iarg1 = iarg1;
+  ck.iarg2 = iarg2;
+  ck.arg1  = arg1;
+  ck.arg2  = arg2;
+  ck.open  = open_method;
+  ck.close = close_method;
+  if (dbgmsg != NULL) 
+    strncpy(ck.dbgmsg, dbgmsg, sizeof(ck.dbgmsg));
+  
+  if ((val = (fp_cache->get)(fp_cache, &ck, sizeof(ck))) == NULL){
+    vf_error = VF_ERR_CANT_OPEN;
+    return NULL;
+  }
+
+  return val->val;
+}
+
+
+Glocal void
+vf_fm_CloseTextFileStream(char *file_path)
+{
+  close_file_stream(file_path, 0);
+}
+
+Glocal void
+vf_fm_CloseBinaryFileStream(char *file_path)
+{
+  close_file_stream(file_path, 1);
+}
+
+Glocal void
+close_file_stream(char *file_path, int bin_file)
+{
+  struct s_ck    ck;
+
+  if (debug_fileman != 0)
+    printf("VFlib fileman: Close file stream for %s\n", file_path);
+
+  if (file_path == NULL)
+    return;
+
+  memset(&ck, 0, sizeof(ck));
+  strncpy(ck.path, file_path, sizeof(ck.path));
+  ck.iarg1 = 0;
+  ck.iarg2 = 0;
+  ck.arg1  = (void*)bin_file;
+  ck.arg2  = NULL;
+  ck.open  = simple_open;
+  ck.close = simple_close;
+  strncpy(ck.dbgmsg, file_path, sizeof(ck.dbgmsg));
+
+  (fp_cache->del)(fp_cache, &ck, sizeof(struct s_ck));
+}
+
+Glocal void
+vf_fm_CloseFileStreamApp(char *arg, 
+			 long iarg1, long iarg2, void *arg1, void *arg2, 
+			 FM_OPEN_METHOD open_method,
+			 FM_CLOSE_METHOD  close_method,
+			 char *dbgmsg)
+{
+  struct s_ck    ck;
+
+  if ((debug_fileman != 0) && (dbgmsg != NULL))
+    printf("VFlib fileman: Close App file stream %s (%s)\n", arg, dbgmsg);
+
+  memset(&ck, 0, sizeof(ck));
+  if (arg != NULL) 
+    strncpy(ck.path, arg, sizeof(ck.path));
+  ck.iarg1 = iarg1;
+  ck.iarg2 = iarg2;
+  ck.arg1  = arg1;
+  ck.arg2  = arg2;
+  ck.open  = open_method;
+  ck.close = close_method;
+  if (dbgmsg != NULL) 
+    strncpy(ck.dbgmsg, dbgmsg, sizeof(ck.dbgmsg));
+
+  (fp_cache->del)(fp_cache, &ck, sizeof(struct s_ck));
+}
+
+
+
+
+/* Cache Loader and Disposer */
+
+Private VAL*
+open_file(VF_CACHE c, CK *ck, int key_len)
+{
+  VAL  *val;
+
+  ALLOC_IF_ERR(val, VAL){
+    return NULL;
+  }
+  val->iarg1 = ck->iarg1;
+  val->iarg2 = ck->iarg2;
+  val->arg1  = ck->arg1;
+  val->arg2  = ck->arg2;
+  val->open  = ck->open;
+  val->close = ck->close;
+
+  if (debug_fileman != 0)
+    printf("VFlib fileman: call open function for %s\n", ck->dbgmsg);
+  val->val = ck->open(ck->path, ck->iarg1, ck->iarg2, ck->arg1, ck->arg2);
+
+  return val;
+}
+
+Private void
+close_file(VAL *val)
+{
+  if (debug_fileman != 0)
+    printf("VFlib fileman: call close function\n");
+  val->close(val->val, val->iarg1, val->iarg2, val->arg1, val->arg2);
+  vf_free(val);
+}
+
+
+
+/* Simple File Opener/Closer */
+
+Private void*
+simple_open(char *path, long iarg1, long iarg2, void *arg1, void *arg2)
+{
+  FILE  *fp;
+  char  *mode;
+
+  if ((int)arg1 == 1)
+    mode = "rb";
+  else 
+    mode = "rt";
+
+  fp = fopen(path, mode);
+
+  if (debug_fileman != 0){
+    printf("VFlib fileman: fopen(\"%s\", \"%s\")\n", path, mode);
+    printf(" ==> %p\n", (void*)fp);
+  }
+
+  return fp;
+}
+
+Private void
+simple_close(void *v, long iarg1, long iarg2, void *arg1, void *arg2)
+{
+  FILE *fp = (FILE*)v;
+
+  if (debug_fileman != 0)
+    printf("VFlib fileman: fclose %p\n", (void*)fp);
+
+  if (fp != NULL)
+    fclose(fp);
+}
+
+
+
+#else /* old code */
+
+
+static int     last_file_valid = 0;
+static char   *last_file_path = NULL;  /* a kind of a cache */
+static int     last_file_path_size = 0;
+static FILE   *last_fp = NULL;  
+
+Private FILE* open_file(VF_CACHE c, char *key, int key_len);
+Private void  close_file(FILE* fp);
+
+
+Glocal int
+vf_fm_Init(void)
+{
+  if (fp_cache != NULL){
+    /* XXX   TO DO: dispose fp_cache here */
+  }
+
+  fp_cache = vf_cache_create(VF_MAX_FILE_DESCRIPTERS, VF_MAX_FD_HASH,
+			     (void*(*)(VF_CACHE,void*,int))open_file,
+			     (void(*)(void*))close_file);
+  if (fp_cache == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    return -1;
+  }
+
+  return 0;
+}
+
+Glocal FILE*
+vf_fm_OpenFileStream(char *file_path)
+{
+  FILE  *fp;
+
+  if ((fp = vf_fm_GetFileStream(file_path)) != NULL)
+    fseek(fp, 0L, SEEK_SET);
+
+  return fp;
+}
+
+Glocal FILE*
+vf_fm_GetFileStream(char *file_path)
+{
+  FILE  *fp;
+  int   n;
+
+#if 0
+  printf("FileMan: Path %s\n", file_path);
+#endif
+
+  if (file_path == NULL)
+    return NULL;
+
+  if ((last_file_path != NULL) && (last_fp != NULL) && (last_file_valid == 1) 
+      && (strcmp(last_file_path, file_path) == 0)){
+    return last_fp;
+  }
+
+  if ((fp = (fp_cache->get)(fp_cache, file_path,
+			    strlen(file_path)+1)) == NULL){
+    vf_error = VF_ERR_CANT_OPEN;
+    return NULL;
+  }
+
+  if (last_file_path_size < strlen(file_path)+1){
+    n = strlen(file_path) + 64;
+    vf_free(last_file_path);
+    ALLOCN_IF_ERR(last_file_path, char, n){
+      last_file_valid = 0;
+      last_file_path_size = 0;
+      last_file_path = NULL;
+      return fp;
+    }
+    last_file_path_size = n;
+    last_file_valid = 1;
+    strcpy(last_file_path, file_path);
+  }
+
+  return fp;
+}
+
+
+
+/* cache loader */
+Private FILE*
+open_file(VF_CACHE c, char *key, int key_len)
+{
+#if 0
+  printf("FileMan: Open %s\n", key);
+#endif
+
+  return fopen(key, FOPEN_RD_MODE_BIN);
+}
+
+/* cache disposer */
+Private void
+close_file(FILE* fp)
+{
+  /*printf("FileMan: Close \n");*/
+  if (last_fp == fp)
+    last_fp = NULL;
+  if (fp != NULL)
+    fclose(fp);
+}
+
+
+#endif
+
+
+
+
+/*EOF*/

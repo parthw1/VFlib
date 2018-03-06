@@ -1,0 +1,166 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  goth10.pk -1 1.0 1.0 300 300
+
+comment char_type 1
+  bitmap1 !0 0x214b
+  bitmap1 !0 0x214d
+  bitmap1 !0 0x214f
+  bitmap1 !0 0x2151
+  bitmap1 !0 0x2153
+  bitmap1 !0 0x2155
+  bitmap1 !0 0x2157
+  bitmap1 !0 0x2159
+  bitmap1 !0 0x215b
+
+comment char_type 2
+  bitmap1 !0 0x212b
+  bitmap1 !0 0x212c
+
+comment char_type 3
+  bitmap1 !0 0x2136
+  bitmap1 !0 0x2137
+  bitmap1 !0 0x2139
+  bitmap1 !0 0x2169
+  bitmap1 !0 0x216a
+  bitmap1 !0 0x2170
+  bitmap1 !0 0x2171
+  bitmap1 !0 0x2172
+  bitmap1 !0 0x2421
+  bitmap1 !0 0x2423
+  bitmap1 !0 0x2425
+  bitmap1 !0 0x2427
+  bitmap1 !0 0x2429
+  bitmap1 !0 0x2443
+  bitmap1 !0 0x2463
+  bitmap1 !0 0x2465
+  bitmap1 !0 0x2467
+  bitmap1 !0 0x246e
+  bitmap1 !0 0x2521
+  bitmap1 !0 0x2523
+  bitmap1 !0 0x2525
+  bitmap1 !0 0x2527
+  bitmap1 !0 0x2529
+  bitmap1 !0 0x2543
+  bitmap1 !0 0x2567
+  bitmap1 !0 0x2563
+  bitmap1 !0 0x2565
+  bitmap1 !0 0x2567
+  bitmap1 !0 0x256e
+  bitmap1 !0 0x2575
+  bitmap1 !0 0x2576
+
+comment char_type 4
+  bitmap1 !0 0x2126
+  bitmap1 !0 0x2127
+  bitmap1 !0 0x2128
+  bitmap1 !0 0x212d
+  bitmap1 !0 0x212e
+  bitmap1 !0 0x213e
+  bitmap1 !0 0x2142
+  bitmap1 !0 0x2143
+  bitmap1 !0 0x2146
+  bitmap1 !0 0x2147
+
+comment char_type 5
+  bitmap1 !0 0x2129
+  bitmap1 !0 0x212f
+  bitmap1 !0 0x2130
+  bitmap1 !0 0x2133
+  bitmap1 !0 0x2135
+  bitmap1 !0 0x2148
+  bitmap1 !0 0x2149
+  bitmap1 !0 0x216b
+  bitmap1 !0 0x216c
+  bitmap1 !0 0x216d
+  bitmap1 !0 0x2178
+
+comment char_type 6
+  bitmap1 !0 0x214a
+  bitmap1 !0 0x214c
+  bitmap1 !0 0x214e
+  bitmap1 !0 0x2150
+  bitmap1 !0 0x2152
+  bitmap1 !0 0x2154
+  bitmap1 !0 0x2156
+  bitmap1 !0 0x2158
+  bitmap1 !0 0x215a
+
+comment char_type 7
+  bitmap1 !0 0x2426
+  bitmap1 !0 0x242f
+  bitmap1 !0 0x2430
+  bitmap1 !0 0x2431
+  bitmap1 !0 0x2432
+  bitmap1 !0 0x243a
+  bitmap1 !0 0x246a
+  bitmap1 !0 0x2546
+  bitmap1 !0 0x2547
+  bitmap1 !0 0x2564
+
+comment char_type 8
+  bitmap1 !0 0x2124
+  bitmap1 !0 0x2125
+
+comment char_type 9
+  bitmap1 !0 0x2122
+  bitmap1 !0 0x2123
+
+comment char_type 10
+  bitmap1 !0 0x2522
+  bitmap1 !0 0x2524
+  bitmap1 !0 0x2526
+  bitmap1 !0 0x252a
+  bitmap1 !0 0x2531
+  bitmap1 !0 0x2532
+  bitmap1 !0 0x2535
+  bitmap1 !0 0x2536
+  bitmap1 !0 0x253d
+  bitmap1 !0 0x253e
+  bitmap1 !0 0x2541
+  bitmap1 !0 0x2542
+  bitmap1 !0 0x2544
+  bitmap1 !0 0x2545
+  bitmap1 !0 0x2548
+  bitmap1 !0 0x2549
+  bitmap1 !0 0x254a
+  bitmap1 !0 0x2555
+  bitmap1 !0 0x2556
+  bitmap1 !0 0x2557
+  bitmap1 !0 0x255f
+  bitmap1 !0 0x2561
+  bitmap1 !0 0x2569
+  bitmap1 !0 0x256a
+  bitmap1 !0 0x256f
+  bitmap1 !0 0x2572
+
+comment char_type 11
+  bitmap1 !0 0x252f
+  bitmap1 !0 0x2530
+  bitmap1 !0 0x253f
+  bitmap1 !0 0x2540
+
+comment char_type 12
+  bitmap1 !0 0x254e
+
+comment char_type 0
+  bitmap1 !0 0x2221
+  bitmap1 !0 0x2223
+  bitmap1 !0 0x2224
+  bitmap1 !0 0x2229
+  bitmap1 !0 0x213b
+  bitmap1 !0 0x2341
+  bitmap1 !0 0x2342
+  bitmap1 !0 0x2343
+  bitmap1 !0 0x2361
+  bitmap1 !0 0x2362
+  bitmap1 !0 0x2363
+  bitmap1 !0 0x3026
+  bitmap1 !0 0x302a
+  bitmap1 !0 0x3170
+
+quit

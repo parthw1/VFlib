@@ -1,0 +1,48 @@
+#
+# a Makefile for "ctext2pgm"
+#   by Hirotsugu Kakugawa
+#
+
+# -----------------------------------------------------------------------
+makedefault: default
+
+LIBTOOL=../../libtool
+include ../../make-sub
+
+     PROGRAM = ctext2pgm
+        SRCS = ctext2pgm.c
+        OBJS = ctext2pgm.lo
+   VFLIB_DIR = ../../src
+
+default all: $(PROGRAM)
+
+
+ctext2pgm: ctext2pgm.o $(VFLIB_DIR)/libVFlib3.la
+	$(LIBTOOL) --mode=link \
+		$(CC) $(VFCFLAGS) -o ctext2pgm ctext2pgm.o  \
+		    $(VFLIB_DIR)/libVFlib3.la
+ctext2pgm.o: ctext2pgm.c ctext2pgm.h fontdef.h
+	$(CC) $(VFCFLAGS) -I$(VFLIB_DIR) -c ctext2pgm.c
+
+ctext2pgms: ctext2pgm.o $(VFLIB_DIR)/libVFlib3.la
+	$(LIBTOOL) --mode=link  \
+		$(CC) $(VFCFLAGS) -static -o ctext2pgms ctext2pgm.o \
+		    $(VFLIB_DIR)/libVFlib3.la
+
+wc:
+	wc *.c *.h
+
+install: $(PROGRAM)
+	@$(LIBTOOL) --mode=install \
+	  ../../$(INSTALL_PROGRAM) ctext2pgm $(bindir)
+	@../../$(INSTALL_DATA) vflibcap-ctext2pgm $(runtimedir)
+uninstall: 
+	$(LIBTOOL) --mode=uninstall $(RM) $(bindir)/ctext2pgm
+	$(RM) $(runtimedir)/vflibcap-ctext2pgm
+
+clean::
+	-$(RM) $(PROGRAM) ctext2pgms
+veryclean:: clean
+distclean:: clean
+
+#EOF

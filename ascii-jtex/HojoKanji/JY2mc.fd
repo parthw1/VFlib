@@ -1,0 +1,12 @@
+%% JY2mc.fd
+\ProvidesFile{JY2mc.fd}[1999/08/30 by H. Kakugawa]
+\DeclareKanjiFamily{JY2}{mc}{}
+\DeclareRelationFont{JY2}{mc}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JY2}{mc}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JY2}{mc}{m}{n}{<5> <6> <7> <8> <9> <10> sgen*minh
+    <10.95><12><14.4><17.28><20.74><24.88> minh10
+    <-> minh10
+    }{}
+\DeclareFontShape{JY2}{mc}{bx}{n}{<->ssub*gt/m/n}{}
+\endinput
+%% EOF

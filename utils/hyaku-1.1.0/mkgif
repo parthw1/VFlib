@@ -1,0 +1,62 @@
+#!/bin/sh
+
+FGCOLOR=rgb:00/00/00
+BGCOLOR=rgb:ff/ff/ff
+
+FONT=tdfkaisaa
+VFLIBCAP=vflibcap-jtex
+DPI=600
+MODE=ljfour
+SHRINK=4
+POEM_FROM=1
+POEM_TO=100
+
+if [ $# -ge 1 ]; then
+  FONT=$1 
+fi
+if [ $# -ge 2 ]; then
+  VFLIBCAP=$2
+fi
+if [ $# -ge 3 ]; then
+  DPI=$3
+fi
+if [ $# -ge 4 ]; then
+  MODE=$4
+fi
+if [ $# -ge 5 ]; then
+  SHRINK=$5
+fi
+if [ $# -ge 6 ]; then
+  POEM_FROM=$6
+fi
+if [ $# -ge 7 ]; then
+  POEM_TO=$7
+fi
+
+
+ARGS="-f ${FONT}.pk -v ${VFLIBCAP} -dpi ${DPI} -mode ${MODE} -s ${SHRINK}" 
+GIFDIR=GIF-${FONT}
+
+
+if [ ! -d ${GIFDIR} ] ; then
+  mkdir ${GIFDIR}
+fi
+
+TMP=tmp-$$.pgm
+
+POEM=${POEM_FROM}
+while true
+do
+  if [ $POEM -gt ${POEM_TO} ]; then
+    break;
+  fi 
+  rm -f ${TMP}
+  echo "Making Hyakunin Issyu Poem No. #${POEM}..."
+  ./hyakubm ${POEM} ${ARGS} | pgmtoppm ${FGCOLOR}-${BGCOLOR} > ${TMP}
+  ppmtogif -interlace ${TMP} > ${GIFDIR}/P${POEM}.gif
+  ppmtogif -interlace -transparent ${BGCOLOR} ${TMP} > ${GIFDIR}/P${POEM}t.gif
+  rm -f ${TMP}
+  POEM=`expr ${POEM} + 1`
+done
+
+#EOF

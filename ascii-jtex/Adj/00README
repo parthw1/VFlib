@@ -1,0 +1,24 @@
+**** Metric Adjustment Files for Japanese TeX
+
+All files whose name start with 't' is for vertical writing directinarily.
+
+* For Zeit format fonts:
+   asiya24.adj         Asiya font
+   mincho.adj          Watanabe vectory font
+   
+* For JG format fonts:
+   jg.adj              For all JG fons
+
+* For TrueType format fonts:
+   dfhs*.adj           DylaLab, DynaFont, Heisei Series
+   df{mim,got}p*.adj   DynaLab, DynaFont, Kakou Series
+   f5ajch*.adj         Fujitsu, FontCity, Heisei Series
+   hgrh*.adj           Ricoh, TrueType World, Heisei Series
+
+* X Window System PCF/BDF format fonts:
+   k14.adj             k14.{pcf,bdf}
+   jiskan*.adj         jiskan{16,24}.{pcf,bdf}
+
+* Dummy (or, template file):
+   empty.adj
+   none.adj

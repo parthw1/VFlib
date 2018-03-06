@@ -1,0 +1,62 @@
+/* Define if you compile VFlib with kpathsea.  */
+#undef WITH_KPATHSEA
+
+/* Define if you compile VFlib with BDF font driver */
+#undef WITH_BDF
+
+/* Define if you compile VFlib with PCF font driver */
+#undef WITH_PCF
+
+/* Define if you compile VFlib with HBF font driver */
+#undef WITH_HBF
+
+/* Define if you compile VFlib with ZEIT font driver */
+#undef WITH_ZEIT
+
+/* Define if you compile VFlib with JG font driver */
+#undef WITH_JG
+
+/* Define if you compile VFlib with EKANJI font driver */
+#undef WITH_EKANJI
+
+/* Define if you compile VFlib with TrueType font driver by FreeType 1 */
+#undef WITH_TRUETYPE
+
+/* Define if you compile VFlib with OpenType font driver by FreeType 2 */
+#undef WITH_OPENTYPE
+
+/* Define if you compile VFlib with TrueType font driver by FreeType 1 */
+#undef WITH_TRUETYPE1
+
+/* Define if you compile VFlib with OpenType font driver by FreeType 2 */
+#undef WITH_TRUETYPE2
+
+/* Define if you compile VFlib with Type1 font driver */
+#undef WITH_TYPE1
+
+/* Define if you compile VFlib with GF font driver */
+#undef WITH_GF
+
+/* Define if you compile VFlib with PK font driver */
+#undef WITH_PK
+
+/* Define if you compile VFlib with TFM font driver */
+#undef WITH_TFM
+
+/* Define if you compile VFlib with VF font driver */
+#undef WITH_VF
+
+/* Define if you compile VFlib with JTEX font driver */
+#undef WITH_JTEX
+
+/* Define if you compile VFlib with TeX font driver family */
+#undef WITH_TEXFONTS
+
+/* Define if you compile VFlib with Japanese COMIC font driver */
+#undef WITH_COMIC
+
+/* Define if you compile VFlib with TRY font driver */
+#undef WITH_TRY
+
+/* Define if you compile VFlib with Mojikyo Mapping font driver */
+#undef WITH_MOJIKMAP

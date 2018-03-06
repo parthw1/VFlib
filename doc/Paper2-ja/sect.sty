@@ -1,0 +1,19 @@
+\renewcommand{\section}{\@startsection{section}{1}{\z@}%
+   {.4\Cvs \@plus.1\Cdp \@minus.1\Cdp}%
+   {.2\Cvs \@plus.1\Cdp}%
+   {\reset@font\Large\bfseries}}
+
+\newenvironment{myitemize}
+  {\advance\@itemdepth\@ne
+   \edef\@itemitem{labelitem\romannumeral\the\@itemdepth}%
+   \expandafter
+   \list{\csname \@itemitem\endcsname}{%
+         \setlength{\topsep}{0.4em}
+         \setlength{\parsep}{0.0em}
+         \setlength{\itemsep}{0.2em}
+         \labelwidth1zw \labelsep.3zw
+         \ifnum \@itemdepth =\@ne \leftmargin1zw\relax
+           \else\leftmargin\leftskip\fi
+         \advance\leftmargin 1zw
+         \def\makelabel##1{\hss\llap{##1}}}%
+   }{\endlist}

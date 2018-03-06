@@ -1,0 +1,14 @@
+Hello world  \IHello world  \BHello world\D
+Grüß Gott  \IGrüß Gott  \BGrüß Gott\D
+\f\NGuten Tag  \IGuten Tag  \BGuten Tag\.
+\t\NGuten Tag  \IGuten Tag  \BGuten Tag\.
+\h\NGuten Tag  \IGuten Tag  \BGuten Tag\.
+\c\NGuten Tag  \IGuten Tag  \BGuten Tag\.
+\f\N\( GUTEN TAG! \)\.
+$(BEl5~(B $(B$3$s$K$A$O(B 
+\f\NWonder $(B5~ET(B  \BWonder $(B5~ET(B\.
+\t\NWonder $(B5~ET(B  \BWonder $(B5~ET(B\.
+\h\NWonder $(B5~ET(B  \BWonder $(B5~ET(B\.
+\c\NWonder $(B5~ET(B  \BWonder $(B5~ET(B\.
+$(C>H3gGO<<?d(B
+$(A11>)(B

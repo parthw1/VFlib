@@ -1,0 +1,23 @@
+#! /bin/sh
+
+MAKE=$1
+shift
+SRCS=$*
+
+case $# in
+0)
+  exit 0
+  ;;
+esac
+
+GIFS=""
+HEXS=""
+for S in ${SRCS}
+do
+  G=`echo $S | sed 's/txt/gif/`
+  H=`echo $S | sed 's/txt/hex/`
+  GIFS="${GIFS} $G"
+  HEXS="${HEXS} $H"
+done
+
+${MAKE} ${GIFS} ${HEXS}

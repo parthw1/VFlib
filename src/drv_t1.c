@@ -1,0 +1,1268 @@
+/*
+ * drv_t1.c - A font driver for Type 1 fonts with t1ib library.  
+ * by Hirotsugu Kakugawa
+ *
+ * 15 Jan 1998  First implementation by T1Lib 0.7.1-beta
+ * 21 Jan 1998  Added type1_get_outline1() using vf_bitmap_to_outline(). 
+ *              The obtained outline is very ugly but it works, anyway.
+ * 17 Oct 1998  A bug in Get font metric 1 is fixed.
+ * 29 Nov 1998  Changed to use T1Lib 0.8 beta.
+ * 24 Dec 1998  Code for obtaining metrics in mode 1 fonts is fixed.
+ * 28 Dec 1998  Improved not to open the same font file more than once.
+ *  3 May 2001  Improved.
+ * 18 May 2001  Font file names can be given more than one.
+ * 28 Oct 2001  Upgrade to T1Lib 1.3.
+ */
+/*
+ * Copyright (C) 1996-2017 Hirotsugu Kakugawa. 
+ * All rights reserved.
+ *
+ * License: GPLv3 and FreeType Project License (FTL)
+ *
+ */
+
+/* debug flag in vflibcap (debug capability):
+ *    f - font path and font open information
+ *    c - code mapping table information (ccv info)
+ *    p - code mapping table information (non-ccv info)
+ *    m - font metric information
+ *    * - everything
+ */
+
+#include  "config.h"
+#include  <stdio.h>
+#include  <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#  include <unistd.h>
+#endif
+#ifdef HAVE_SYS_PARAM_H
+#  include  <sys/param.h>
+#endif
+#include  <ctype.h>
+#include  <math.h>
+#include  <t1lib.h>
+
+#include  "VFlib-3_7.h"
+#include  "VFsys.h"
+#include  "vflibcap.h"
+#include  "bitmap.h"
+#include  "cache.h"
+#include  "fsearch.h"
+#include  "path.h"
+#include  "str.h"
+#include  "sexp.h"
+#include  "ccv.h"
+#include  "t1.h"
+#include  "texfonts.h"
+#include  "tfm.h"
+
+
+Private VF_TABLE     t1_free_table  = NULL;
+
+
+
+Private SEXP_LIST    default_font_dirs;
+Private SEXP_LIST    default_afm_dirs;
+Private SEXP_LIST    default_enc_dirs;
+Private SEXP_STRING  default_point_size;
+Private double       v_default_point_size;
+Private SEXP_STRING  default_pixel_size;
+Private double       v_default_pixel_size;
+Private SEXP_STRING  default_dpi, default_dpi_x, default_dpi_y;
+Private double       v_default_dpi_x, v_default_dpi_y;
+Private SEXP_STRING  default_aspect;
+Private double       v_default_aspect;
+Private SEXP_ALIST   default_properties;
+Private SEXP_ALIST   default_variables;
+Private SEXP_ALIST   default_log_level;
+Private SEXP_STRING  default_debug_mode;
+Private char        *env_debug_mode = NULL;
+#define DEBUG_ENV_NAME   "VFLIB_DEBUG_TYPE1"
+
+
+struct s_font_type1 {
+  char     *font_name;
+  char     *font_path;
+  int       t1fid;
+  char     *t1encfile;
+  char    **t1encvect;
+  double    point_size;
+  double    pixel_size;
+  double    dpi_x, dpi_y; 
+  double    aspect;
+  double    mag;
+  double    slant;
+  int       font_number;
+  char     *charset_name;
+  char     *encoding_name;
+  SEXP      props;
+  int       ccv_id;
+  double    last_extend;
+  char     *tfm_name;
+  TFM       tfm;
+};
+typedef struct s_font_type1  *FONT_TYPE1;
+
+
+Private int         type1_create(VF_FONT,char*,char*,int,SEXP);
+Private int         type1_close(VF_FONT);
+Private int         type1_get_metric1(VF_FONT,long,VF_METRIC1,double,double);
+Private int         type1_get_metric2(VF_FONT,long,VF_METRIC2,double,double);
+Private int         type1_get_fontbbx1(VF_FONT font,double,double,
+				       double*,double*,double*,double*);
+Private int         type1_get_fontbbx2(VF_FONT font, double,double,
+				       int*,int*,int*,int*);
+Private VF_BITMAP   type1_get_bitmap1(VF_FONT,long,double,double);
+Private VF_BITMAP   type1_get_bitmap2(VF_FONT,long,double,double);
+Private VF_OUTLINE  type1_get_outline1(VF_FONT,long,double,double);
+Private char       *type1_get_font_prop(VF_FONT,char*);
+Private int         type1_debug(char);
+
+Private int  log_level(SEXP s);
+Private int  add_file_search_path(int type,  SEXP dirs);
+
+
+#define LASTVAL_NONE  -10000
+
+
+#define MODE_METRIC1  1  
+#define MODE_BITMAP1  2  
+#define MODE_FONTBBX1 3  
+#define MODE_OUTLINE  4
+#define MODE_METRIC2  5
+#define MODE_FONTBBX2 6  
+#define MODE_BITMAP2  7
+
+struct s_fontbbx1 {
+  double  w, h;
+  double  xoff, yoff;
+};
+typedef struct s_fontbbx1  *FONTBBX1; 
+struct s_fontbbx2 {
+  int     w, h;
+  int     xoff, yoff;
+};
+typedef struct s_fontbbx2  *FONTBBX2;
+
+Private void* type1_get_xxx(int mode, 
+			    VF_FONT font, long code_point, 
+			    double mag_x, double mag_y, 
+			    VF_METRIC1 metric1, VF_METRIC2 metric2,
+			    FONTBBX1 bbx1, FONTBBX2 bbx2);
+
+
+
+static int   Initialized_t1lib = 0;
+
+
+
+
+
+Glocal int
+VF_Init_Driver_Type1(void)
+{
+  int       ini_arg, level;
+  struct s_capability_table  ct[20];
+  int  z;
+
+  z = 0;
+  /* VF_CAPE_FONT_DIRECTORIES */
+  ct[z].cap = VF_CAPE_FONT_DIRECTORIES;      ct[z].type = CAPABILITY_LIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_font_dirs;
+  /* VF_CAPE_TYPE1_AFM_DIRECTORIES */
+  ct[z].cap = VF_CAPE_TYPE1_AFM_DIRECTORIES; ct[z].type = CAPABILITY_LIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_afm_dirs;
+  /* VF_CAPE_TYPE1_ENC_DIRECTORIES */
+  ct[z].cap = VF_CAPE_TYPE1_ENC_DIRECTORIES; ct[z].type = CAPABILITY_LIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_enc_dirs;
+  /* VF_CAPE_POINT_SIZE */
+  ct[z].cap = VF_CAPE_POINT_SIZE;            ct[z].type = CAPABILITY_STRING; 
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_point_size;
+  /* VF_CAPE_PIXEL_SIZE */
+  ct[z].cap = VF_CAPE_PIXEL_SIZE;            ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_pixel_size;
+  /* VF_CAPE_DPI */
+  ct[z].cap = VF_CAPE_DPI;                   ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_dpi;
+  /* VF_CAPE_DPI_X */
+  ct[z].cap = VF_CAPE_DPI_X;                 ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_dpi_x;
+  /* VF_CAPE_DPI_Y */
+  ct[z].cap = VF_CAPE_DPI_Y;                 ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_dpi_y;
+  /* VF_CAPE_ASPECT_RATIO */
+  ct[z].cap = VF_CAPE_ASPECT_RATIO;          ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_aspect;
+  /* VF_CAPE_PROPERTIES */
+  ct[z].cap = VF_CAPE_PROPERTIES;            ct[z].type = CAPABILITY_ALIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_properties;
+  /* VF_CAPE_VARIABLE_VALUES */
+  ct[z].cap = VF_CAPE_VARIABLE_VALUES;       ct[z].type = CAPABILITY_ALIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_variables;
+  /* VF_CAPE_TYPE1_LOG_LEVEL */
+  ct[z].cap = VF_CAPE_TYPE1_LOG_LEVEL;       ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_log_level;
+  /* VF_CAPE_DEBUG */
+  ct[z].cap = VF_CAPE_DEBUG;                 ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;           ct[z++].val = &default_debug_mode;
+  /* end */
+  ct[z].cap = NULL; ct[z].type = 0; ct[z].ess = 0; ct[z++].val = NULL;
+
+  if ((t1_free_table = vf_table_create()) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    return -1;
+  }
+
+  if (vf_cap_GetParsedClassDefault(FONTCLASS_NAME, ct, NULL, NULL) 
+      == VFLIBCAP_PARSED_ERROR)
+    return -1;
+
+  env_debug_mode = getenv(DEBUG_ENV_NAME);
+
+  if (Initialized_t1lib == 0){
+    T1_SetBitmapPad(8);
+    level = log_level(default_log_level);
+    T1_SetLogLevel(level);
+    ini_arg = ((level > 0) ? LOGFILE : NO_LOGFILE)
+              | IGNORE_CONFIGFILE | IGNORE_FONTDATABASE;
+
+    if (T1_InitLib(ini_arg) == NULL){
+      vf_error = VF_ERR_T1LIB_INIT;
+      return -1;
+    }
+
+    T1_SetFileSearchPath(T1_PFAB_PATH, DIR_T1);
+    T1_SetFileSearchPath(T1_AFM_PATH,  DIR_T1);
+    add_file_search_path(T1_AFM_PATH,  default_afm_dirs);
+    T1_SetFileSearchPath(T1_ENC_PATH,  DIR_T1);
+    add_file_search_path(T1_ENC_PATH,  default_enc_dirs);
+
+    if (type1_debug('f')) {
+      printf("VFlib Type1: Search Path (%d) = %s\n",
+	     T1_PFAB_PATH, T1_GetFileSearchPath(T1_PFAB_PATH));
+      printf("VFlib Type1: Search Path (%d) = %s\n",
+	     T1_AFM_PATH,  T1_GetFileSearchPath(T1_AFM_PATH));
+      printf("VFlib Type1: Search Path (%d) = %s\n",
+	     T1_ENC_PATH,  T1_GetFileSearchPath(T1_ENC_PATH));
+    }  
+
+    Initialized_t1lib = 1;
+  }
+
+  v_default_point_size = DEFAULT_POINT_SIZE;
+  if (default_point_size != NULL)
+    v_default_point_size = atof(vf_sexp_get_cstring(default_point_size));
+  if (v_default_point_size < 0)
+    v_default_point_size = DEFAULT_POINT_SIZE;
+
+  v_default_pixel_size = DEFAULT_PIXEL_SIZE;
+  if (default_pixel_size != NULL)
+    v_default_pixel_size = atof(vf_sexp_get_cstring(default_pixel_size));
+  if (v_default_pixel_size < 0)
+    v_default_pixel_size  = DEFAULT_PIXEL_SIZE;
+
+  v_default_dpi_x  = TYPE1_DEFAULT_DPI;
+  v_default_dpi_y  = TYPE1_DEFAULT_DPI;
+  if (default_dpi != NULL)
+    v_default_dpi_x = v_default_dpi_y = atof(vf_sexp_get_cstring(default_dpi));
+  if (default_dpi_x != NULL)
+    v_default_dpi_x = atof(vf_sexp_get_cstring(default_dpi_x));
+  if (default_dpi_y != NULL)
+    v_default_dpi_y = atof(vf_sexp_get_cstring(default_dpi_y));
+  if (v_default_dpi_x < 0)
+    v_default_dpi_x = TYPE1_DEFAULT_DPI;
+  if (v_default_dpi_y < 0)
+    v_default_dpi_y = TYPE1_DEFAULT_DPI;
+
+  v_default_aspect = 1.0;
+  if (default_aspect != NULL)
+    v_default_aspect = atof(vf_sexp_get_cstring(default_aspect));
+  if (v_default_aspect < 0)
+    v_default_aspect = 1.0;
+
+  VF_InstallFontDriver(FONTCLASS_NAME, (DRIVER_FUNC_TYPE)type1_create);
+
+  return 0;
+}
+
+Private int
+log_level(SEXP s) 
+{
+  char  *p;
+
+  if (   (s == NULL) 
+      || (!vf_sexp_stringp(s)) 
+      || ((p = vf_sexp_get_cstring(s)) == NULL)){
+    return -1;
+  }
+
+  if (vf_strcmp_ci(p, "") == 0)
+    return -1;
+  if (vf_strncmp_ci(p, "NO", 2) == 0)
+    return -1;
+
+  if (vf_strncmp_ci(p, "ERR", 3) == 0)
+    return T1LOG_ERROR;
+  if (vf_strncmp_ci(p, "WARN", 4) == 0)
+    return T1LOG_WARNING;
+  if (vf_strncmp_ci(p, "STAT", 4) == 0)
+    return T1LOG_STATISTIC;
+  if (vf_strncmp_ci(p, "DEBUG", 5) == 0)
+    return T1LOG_DEBUG;
+
+  return -1;
+}
+
+Private int
+add_file_search_path(int type,  SEXP dirs)
+{
+  char  *p;
+  SEXP  d;
+
+  if (type == T1_ENC_PATH){  
+    if ((dirs == NULL) || (vf_sexp_null(dirs))){
+      /* add default directory */
+      T1_AddToFileSearchPath(T1_ENC_PATH, 
+			     T1_APPEND_PATH, DIR_T1);
+      T1_AddToFileSearchPath(T1_ENC_PATH, 
+			     T1_APPEND_PATH, DIR_RUNTIME_SITE_LIB);
+      T1_AddToFileSearchPath(T1_ENC_PATH, 
+			     T1_APPEND_PATH, DIR_RUNTIME_SITE_LIB "/t1lib");
+      return 0;
+    }
+  }
+
+  while (vf_sexp_consp(dirs)){
+    d = vf_sexp_car(dirs);
+    if (vf_sexp_stringp(d)){ 
+      p = vf_sexp_get_cstring(d);
+      if ((p != NULL) 
+	  && (strcmp(p, "") != 0)
+	  && (strcmp(p, "TEXMF") != 0)
+	  && (strcmp(p, "KPATHSEA") != 0)
+	  && vf_path_directory_read_ok(p)){
+#if 0
+	printf("Path (%d): %s\n", type, p);
+#endif
+	T1_AddToFileSearchPath(type, T1_APPEND_PATH, p);
+      }
+    }
+    dirs = vf_sexp_cdr(dirs);
+  }
+  
+  return 0;
+}
+  
+
+
+Private int
+type1_create(VF_FONT font, char *font_class, char *font_name, 
+	     int implicit, SEXP entry)
+{
+  FONT_TYPE1    font_type1;
+  char      *font_file = NULL, *font_path = NULL;
+  SEXP       cap_font, cap_encfile, cap_point, cap_pixel;
+  SEXP       cap_dpi, cap_dpi_x, cap_dpi_y, cap_mag, cap_aspect, cap_slant;
+  SEXP       cap_charset, cap_encoding, cap_tfm, cap_props;
+  struct s_capability_table  ct[20];
+  int        z, val, *ip, i, lk;
+  SEXP      s;
+  char     *tfm_path;
+  
+  z = 0;
+  /* VF_CAPE_FONT_CLASS */
+  ct[z].cap = VF_CAPE_FONT_CLASS;     ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_ESSENTIAL;   ct[z++].val = NULL;
+  /* VF_CAPE_FONT_FILE */
+  ct[z].cap = VF_CAPE_FONT_FILE;      ct[z].type = CAPABILITY_STRING_LIST1;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_font;
+  /* VF_CAPE_TYPE1_ENC_VECT */
+  ct[z].cap = VF_CAPE_TYPE1_ENC_VECT; ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_encfile;
+  /* VF_CAPE_POINT_SIZE */
+  ct[z].cap = VF_CAPE_POINT_SIZE;     ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_point;
+  /* VF_CAPE_PIXEL_SIZE */
+  ct[z].cap = VF_CAPE_PIXEL_SIZE;     ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_pixel;
+  /* VF_CAPE_DPI */
+  ct[z].cap = VF_CAPE_DPI;            ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_dpi;
+  /* VF_CAPE_DPI_X */
+  ct[z].cap = VF_CAPE_DPI_X;          ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_dpi_x;
+  /* VF_CAPE_DPI_Y */
+  ct[z].cap = VF_CAPE_DPI_Y;          ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_dpi_y;
+  /* VF_CAPE_MAG */
+  ct[z].cap = VF_CAPE_MAG;            ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_mag;
+  /* VF_CAPE_ASPECT_RATIO */
+  ct[z].cap = VF_CAPE_ASPECT_RATIO;   ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_aspect;
+  /* VF_CAPE_SLANT_FACTOR */
+  ct[z].cap = VF_CAPE_SLANT_FACTOR;   ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_slant;
+  /* VF_CAPE_CHARSET */
+  ct[z].cap = VF_CAPE_CHARSET;        ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_charset;
+  /* VF_CAPE_ENCODING */
+  ct[z].cap = VF_CAPE_ENCODING;       ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_encoding;
+  /* VF_CAPE_TYPE1_TFM */
+  ct[z].cap = VF_CAPE_TYPE1_TFM;      ct[z].type = CAPABILITY_STRING;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_tfm;
+  /* VF_CAPE_PROPERTIES */
+  ct[z].cap = VF_CAPE_PROPERTIES;     ct[z].type = CAPABILITY_ALIST;
+  ct[z].ess = CAPABILITY_OPTIONAL;    ct[z++].val = &cap_props;
+  /* end */
+  ct[z].cap = NULL; ct[z].type = 0; ct[z].ess = 0; ct[z++].val = NULL;
+
+  val = -1;
+  font_type1 = NULL;
+  font_file = NULL;
+  font_path = NULL;
+
+
+  if (implicit == 1){   /* implicit font */
+    font_file = font_name;
+  } else {              /* explicit font */
+    if (vf_cap_GetParsedFontEntry(entry, font_name, ct,
+				  default_variables, NULL) < 0)
+      return -1;
+    if (cap_font == NULL){
+      /* Use font name as font file name if font file name is not given. */
+      font_file = font_name;
+    } else {
+      font_file = NULL;   /* list in 'cap_font' */
+    }
+  }
+
+  font->font_type       = VF_FONT_TYPE_OUTLINE;
+  font->get_metric1     = type1_get_metric1;
+  font->get_metric2     = type1_get_metric2;
+  font->get_fontbbx1    = type1_get_fontbbx1;
+  font->get_fontbbx2    = type1_get_fontbbx2;
+  font->get_bitmap1     = type1_get_bitmap1;
+  font->get_bitmap2     = type1_get_bitmap2;
+  font->get_outline     = type1_get_outline1;
+  font->get_font_prop   = type1_get_font_prop;
+  font->query_font_type = NULL;  /* Use font->font_type value. */
+  font->close           = type1_close;
+
+  if (font_file != NULL){
+    font_path = vf_search_file(font_file, -1, NULL, 
+			       TRUE, FSEARCH_FORMAT_TYPE_TYPE1, 
+			       default_font_dirs, NULL, NULL);
+  } else {
+    font_path = NULL;
+    for (s = cap_font; vf_sexp_consp(s); s = vf_sexp_cdr(s)){
+      font_file = vf_sexp_get_cstring(vf_sexp_car(s));
+      font_path = vf_search_file(font_file, -1, NULL, 
+				 TRUE, FSEARCH_FORMAT_TYPE_TYPE1, 
+				 default_font_dirs, NULL, NULL);
+      if (font_path != NULL)
+	break;
+    }
+  }
+
+  if (font_path == NULL){
+    if (type1_debug('f')) 
+      printf("VFlib Type1: font file %s not found\n", font_file);
+    vf_error = VF_ERR_NO_FONT_FILE;
+    goto End;
+  }
+  if (type1_debug('f')) 
+    printf("VFlib Type1: font file %s\n   ==> %s\n", font_file, font_path);
+
+  ALLOC_IF_ERR(font_type1, struct s_font_type1){
+    vf_error = VF_ERR_NO_MEMORY;
+    vf_free(font_path);
+    goto End;
+    return -1;
+  }
+
+  if ((font_type1->font_name = vf_strdup(font_name)) == NULL){
+    vf_error = VF_ERR_NO_MEMORY;
+    vf_free(font_path);
+    goto End;
+  }
+  font_type1->font_path      = font_path;
+  font_type1->t1fid          = -1;
+  font_type1->t1encfile      = NULL;
+  font_type1->t1encvect      = NULL;
+  font_type1->point_size     = -1;
+  font_type1->pixel_size     = -1;
+  font_type1->mag            = 1;
+  font_type1->dpi_x          = v_default_dpi_x;
+  font_type1->dpi_y          = v_default_dpi_y;
+  font_type1->aspect         = v_default_aspect;
+  font_type1->slant          = 0;
+  font_type1->charset_name   = NULL;
+  font_type1->encoding_name  = NULL;
+  font_type1->last_extend    = LASTVAL_NONE;
+  font_type1->tfm_name       = NULL;
+  font_type1->tfm            = NULL;
+
+  if (implicit == 0){
+    if (cap_encfile != NULL)
+      font_type1->t1encfile = vf_strdup(vf_sexp_get_cstring(cap_encfile));
+    if (cap_point != NULL)
+      font_type1->point_size = atof(vf_sexp_get_cstring(cap_point));
+    if (cap_pixel != NULL)
+      font_type1->pixel_size = atof(vf_sexp_get_cstring(cap_pixel));
+    if (cap_dpi != NULL)
+      font_type1->dpi_x = font_type1->dpi_y 
+	= atof(vf_sexp_get_cstring(cap_dpi));
+    if (cap_dpi_x != NULL)
+      font_type1->dpi_x = atof(vf_sexp_get_cstring(cap_dpi_x));
+    if (cap_dpi_y != NULL)
+      font_type1->dpi_y = atof(vf_sexp_get_cstring(cap_dpi_y));
+    if (cap_mag != NULL)
+      font_type1->mag = atof(vf_sexp_get_cstring(cap_mag));
+    if (cap_aspect != NULL)
+      font_type1->aspect = atof(vf_sexp_get_cstring(cap_aspect));
+    if (cap_slant != NULL)
+      font_type1->slant = atof(vf_sexp_get_cstring(cap_slant));
+    if (cap_charset != NULL)
+      font_type1->charset_name = vf_strdup(vf_sexp_get_cstring(cap_charset));
+    if (cap_encoding != NULL)
+      font_type1->encoding_name = vf_strdup(vf_sexp_get_cstring(cap_encoding));
+    if (cap_props != NULL)
+      font_type1->props = cap_props;
+    if (cap_tfm != NULL){
+      font_type1->tfm_name = vf_strdup(vf_sexp_get_cstring(cap_tfm));
+    }
+  }
+
+  if (type1_debug('f')) 
+    printf("VFlib Type1: opening font: %s\n", font_name);
+
+  i = (t1_free_table->get_id_by_key)(t1_free_table, 
+				     font_type1->font_path, 
+				     strlen(font_type1->font_path)+1);
+  if (i >= 0){
+    ip = (t1_free_table->get_obj_by_id)(t1_free_table, i);
+    font_type1->t1fid = *ip;
+    lk = (t1_free_table->unlink_by_id)(t1_free_table, i);
+    if (lk == 0)
+      vf_free(ip);
+  } else {
+    if (type1_debug('f')) 
+      printf("VFlib Type1: T1_AddFont(%s)\n", font_type1->font_path);
+    if ((font_type1->t1fid = T1_AddFont(font_type1->font_path)) < 0){
+      fprintf(stderr, "VFlib Type1: cannot add file: %s\n", 
+	      font_type1->font_path);
+      vf_error = VF_ERR_NO_FONT_FILE;
+      goto End;
+    }
+  }
+
+  if (type1_debug('f'))
+    printf("VFlib Type1: T1_LoadFont(%d)\n", font_type1->t1fid);
+  if (T1_LoadFont(font_type1->t1fid) < 0){
+    fprintf(stderr, "VFlib Type1: cannot load file: %s\n", 
+	    font_type1->font_path);
+    vf_error = VF_ERR_NO_FONT_FILE;
+    goto End;
+  }
+
+  if (font_type1->t1encfile != NULL){
+    font_type1->t1encvect = T1_LoadEncoding(font_type1->t1encfile);
+    if (font_type1->t1encvect  == NULL){
+      fprintf(stderr, "VFlib Type1: cannot load encoding vector: %s\n",
+	      font_type1->t1encfile);
+      vf_error = VF_ERR_NO_FONT_FILE;
+      goto End;
+    }
+    if (type1_debug('f')) 
+      printf("VFlib Type1: use encoding vector: %s\n", font_type1->t1encfile);
+    if (T1_ReencodeFont(font_type1->t1fid, font_type1->t1encvect) < 0){
+      fprintf(stderr, "VFlib Type1: failed to reencode font: %s, %s\n", 
+	      font_type1->font_path, font_type1->t1encfile);
+      goto End;
+    }
+  } else {
+    font_type1->t1encvect = NULL;
+    if (T1_ReencodeFont(font_type1->t1fid, NULL) < 0){
+      goto End;
+    }
+  }
+
+  if (T1_SlantFont(font_type1->t1fid, font_type1->slant) < 0){
+    fprintf(stderr, "VFlib Type1: failed slanting: %s, %.3f\n", 
+	    font_type1->font_path, font_type1->slant);
+    goto End;
+  }
+
+  if (T1_ExtendFont(font_type1->t1fid, font_type1->aspect) < 0){
+    fprintf(stderr, "VFlib Type1: failed extending: %s, %.3f\n", 
+	    font_type1->font_path, font_type1->aspect);
+    goto End;
+  }
+  
+  if (type1_debug('f')){
+    printf("VFlib Type1: t1lib font id %d, name=%s\n", 
+	   font_type1->t1fid, T1_GetFontName(font_type1->t1fid));
+  }
+
+  if (font_type1->tfm_name != NULL){
+    if (type1_debug('t'))
+      printf("VFlib Type1: TFM file=%s\n", font_type1->tfm_name);
+    tfm_path = vf_tex_search_file_tfm(font_type1->tfm_name, NULL, NULL);
+    if (tfm_path == NULL){
+      vf_error = VF_ERR_NO_FONT_FILE;
+      goto End;
+    }
+    if (type1_debug('t'))
+      printf("VFlib Type1: TFM path=%s\n", tfm_path);
+    font_type1->tfm = vf_tfm_open(tfm_path);
+    vf_free(tfm_path);
+    if (font_type1->tfm == NULL){
+      fprintf(stderr, "VFlib: Cannot open TFM %s for font %s\n", 
+	      font_type1->tfm_name, font_file);
+      vf_error = VF_ERR_NO_FONT_FILE;
+      goto End;
+    }
+  }
+
+#if 1   /*** NO SUPPORT FOR CCV **/
+  font_type1->ccv_id = -1;
+#else
+  font_type1->ccv_id 
+    = vf_ccv_require(charset, encoding, font_charset, font_encoding);
+  if (type1_debug('c'))
+    printf("VFlib Type1: CCV ID = %d\n", ccv_id);
+#endif
+
+  /* OK */
+  font->private = font_type1;
+  val = 0;
+
+End:
+  if (implicit == 0){   /* explicit font */
+    vf_sexp_free4(&cap_font, &cap_encfile, &cap_point, &cap_pixel);
+    vf_sexp_free3(&cap_dpi, &cap_dpi_x, &cap_dpi_y);
+    vf_sexp_free3(&cap_mag, &cap_aspect, &cap_slant);
+    vf_sexp_free3(&cap_charset, &cap_encoding, &cap_tfm);
+    vf_sexp_free1(&cap_props);
+  }
+  if (val < 0){
+    type1_close(font);
+  }
+
+  return val;
+}
+
+
+Private int
+type1_close(VF_FONT font)
+{
+  FONT_TYPE1  font_type1;
+  int  *ip;
+
+  font_type1 = (FONT_TYPE1)font->private;
+
+  if (font_type1 != NULL){ 
+    if (font_type1->t1fid >= 0){
+      ALLOC_IF_ERR(ip, int){
+	goto err;
+      }
+      *ip = font_type1->t1fid;
+      (t1_free_table->put2)(t1_free_table, ip, font_type1->font_path, 
+			    strlen(font_type1->font_path)+1);
+    }
+  err:
+    vf_sexp_free(&font_type1->props);
+    vf_free(font_type1->font_name); 
+    vf_free(font_type1->font_path); 
+    vf_free(font_type1->charset_name);
+    vf_free(font_type1->encoding_name);
+    vf_free(font_type1->tfm_name);
+    vf_tfm_free(font_type1->tfm);
+    vf_free(font_type1->t1encfile); 
+    if (font_type1->t1encvect != NULL)
+      T1_DeleteEncoding(font_type1->t1encvect);
+    if (font_type1->t1fid >= 0)
+      T1_DeleteFont(font_type1->t1fid);
+    vf_free(font_type1);
+  }
+
+  return 0; 
+}
+
+
+Private int
+type1_get_metric1(VF_FONT font, long code_point, VF_METRIC1 metric, 
+		  double mag_x, double mag_y)
+{
+  if (type1_get_xxx(MODE_METRIC1, font, code_point, mag_x, mag_y, 
+		    metric, NULL, NULL, NULL) == NULL)
+    return -1;
+  return 0;
+}
+
+
+Private int
+type1_get_fontbbx1(VF_FONT font, double mag_x, double mag_y,
+		   double *w_p, double *h_p, double *xoff_p, double *yoff_p)
+{
+  struct s_fontbbx1  bbx1;
+
+  if (type1_get_xxx(MODE_FONTBBX1, font, -1, mag_x, mag_y, 
+		    NULL, NULL, &bbx1, NULL) == NULL)
+    return -1;
+
+  *w_p    = bbx1.w;
+  *h_p    = bbx1.h; 
+  *xoff_p = bbx1.xoff;
+  *yoff_p = bbx1.yoff;
+  return 0;
+}
+
+
+Private VF_BITMAP
+type1_get_bitmap1(VF_FONT font, long code_point,
+		  double mag_x, double mag_y)
+{
+  VF_BITMAP  bm;  
+#if 0
+  FONT_TYPE1 font_type1;
+  struct vf_s_metric1 met;
+  long       w, h;
+  double     dpix, dpiy;
+#endif
+ 
+  bm = (VF_BITMAP)type1_get_xxx(MODE_BITMAP1, font, code_point, mag_x, mag_y, 
+				NULL, NULL, NULL, NULL);
+#if 0
+  if (bm == NULL){
+    if (type1_get_xxx(MODE_METRIC1, font, code_point, mag_x, mag_y, 
+		      &met, NULL, NULL, NULL) == NULL)
+      return NULL;
+    font_type1 = (FONT_TYPE1)font->private;
+    if (((dpix = font->dpi_x) < 0) || ((dpiy = font->dpi_y) < 0)){
+      dpix = font_type1->dpi_x;
+      dpiy = font_type1->dpi_y;
+    }
+    w = met.bbx_width  * dpix;
+    h = met.bbx_height * dpiy;
+    bm = vf_alloc_bitmap(w, h);
+    bm->off_x      = met.bbx_width  * dpix;
+    bm->off_y      = met.bbx_height * dpiy;
+    bm->mv_x       = met.mv_x       * dpix;
+    bm->mv_y       = met.mv_y       * dpiy;
+  }
+#endif
+
+  return bm;
+}
+
+
+Private VF_OUTLINE
+type1_get_outline1(VF_FONT font, long code_point,
+		 double mag_x, double mag_y)
+{
+  VF_OUTLINE  ol;
+
+  ol = type1_get_xxx(MODE_OUTLINE, font, code_point, mag_x, mag_y, 
+		     NULL, NULL, NULL, NULL);
+  return  ol;
+}
+
+
+Private int
+type1_get_metric2(VF_FONT font, long code_point, VF_METRIC2 metric,
+		double mag_x, double mag_y)
+{
+  if (type1_get_xxx(MODE_METRIC2, font, code_point, mag_x, mag_y, 
+		    NULL, metric, NULL, NULL) == NULL)
+    return -1;
+  return 0;
+}
+
+
+Private int
+type1_get_fontbbx2(VF_FONT font, double mag_x, double mag_y,
+		   int *w_p, int *h_p, int *xoff_p, int *yoff_p)
+{
+  struct s_fontbbx2  bbx2;
+
+  if (type1_get_xxx(MODE_FONTBBX2, font, -1, mag_x, mag_y, 
+		    NULL, NULL, NULL, &bbx2) == NULL)
+    return -1;
+
+  *w_p    = bbx2.w;
+  *h_p    = bbx2.h; 
+  *xoff_p = bbx2.xoff;
+  *yoff_p = bbx2.yoff;
+  return 0;
+}
+
+
+Private VF_BITMAP
+type1_get_bitmap2(VF_FONT font, long code_point, 
+		double mag_x, double mag_y)
+{
+  VF_BITMAP  bm;
+#if 0
+  struct vf_s_metric2 met;
+#endif
+
+  bm = (VF_BITMAP)type1_get_xxx(MODE_BITMAP2, font, code_point, mag_x, mag_y,
+				NULL, NULL, NULL, NULL);
+#if 0
+  if (bm == NULL){
+    if (type1_get_xxx(MODE_METRIC2, font, code_point, mag_x, mag_y, 
+		      NULL, &met, NULL, NULL) == NULL){
+      return NULL;
+    }
+    bm = vf_alloc_bitmap(met.bbx_width, met.bbx_height);
+    bm->off_x = met.bbx_width;
+    bm->off_y = met.bbx_height;
+    bm->mv_x  = met.mv_x;
+    bm->mv_y  = met.mv_y;
+  }
+#endif
+
+  return bm;
+}
+
+
+Private void
+mag_factor(VF_FONT font, FONT_TYPE1 font_type1, 
+	   double mag_x, double mag_y, double ps0,
+	   double *mx, double *my, double *asp, double *ps)
+{
+  *mx = mag_x * font_type1->mag * font->mag_x;
+  *my = mag_y * font_type1->mag * font->mag_y;
+  *asp = v_default_aspect * font_type1->aspect * (*mx / *my);
+  if (*asp < 0)
+    *asp = 0.0 - *asp;
+  *ps = ps0 * *my;
+
+  if (type1_debug('x'))
+    printf("VFlib Type1: asp=%.3f mx=%.3f my=%.3f\n", *asp, *mx, *my);
+  if (type1_debug('p'))
+    printf("VFlib Type1: ps=%.3f ps0=%.3f\n", *ps, ps0);
+}
+
+
+Private void*
+type1_get_xxx(int mode, 
+	      VF_FONT font, long code_point, 
+	      double mag_x, double mag_y,
+	      VF_METRIC1 metric1, VF_METRIC2 metric2,
+	      FONTBBX1 bbx1, FONTBBX2 bbx2)
+{
+  void         *val;
+  FONT_TYPE1    font_type1;
+  VF_BITMAP     bm;
+  GLYPH        *t1_glyph;
+  BBox          bbox;
+  long          cp;
+  int           x, y, w, f_bbx_w, f_bbx_h, i; 
+  BBox          font_bbox;
+  T1_TMATRIX    unity_matrix = {1.0, 0.0, 0.0, 1.0};
+  T1_TMATRIX    matrix;
+  double        ps = 0.0, ps0 = 0.0, mx, my, asp, dpix = 0.0, dpiy = 0.0; 
+  unsigned char *p;
+  static double last_dpix = LASTVAL_NONE;
+  static double last_dpiy = LASTVAL_NONE;
+  /* a table for LSB-MSB exchange for 4 bits */
+  static unsigned char  EXCHG_MLSB4[] = {  
+       0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
+       0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf };
+  /*
+   *   0000 1000 0100 1100 0010 1010 0110 1110   exchanged
+   *   0001 1001 0101 1101 0011 1011 0111 1111 
+   * <===
+   *   0000 0001 0010 0011 0100 0101 0110 0111   original
+   *   1000 1001 1010 1011 1100 1101 1110 1111 
+   */
+  
+  if ((font_type1 = (FONT_TYPE1)font->private) == NULL){
+    fprintf(stderr, "VFlib: internal error in type1_get_xxx() 1\n");
+    abort();
+  }
+
+  if (   (mode == MODE_METRIC1)
+      || (mode == MODE_FONTBBX1)
+      || (mode == MODE_BITMAP1)
+      || (mode == MODE_OUTLINE)){
+    if (((dpix = font->dpi_x) < 0) || ((dpiy = font->dpi_y) < 0)){
+      dpix = font_type1->dpi_x;
+      dpiy = font_type1->dpi_y;
+    }
+    if ((ps0 = font->point_size) < 0)
+      if ((ps0 = font_type1->point_size) < 0)
+	ps0 = v_default_point_size;
+  } else if (   (mode == MODE_METRIC2)
+	     || (mode == MODE_FONTBBX2)
+	     || (mode == MODE_BITMAP2)){
+    dpix = TYPE1_POINTS_PER_INCH;
+    dpiy = TYPE1_POINTS_PER_INCH;
+    if ((ps0 = font->pixel_size) < 0)
+      if ((ps0 = font_type1->pixel_size) < 0)
+	ps0 = v_default_pixel_size;
+  } else {
+    fprintf(stderr, "VFlib: internal error in type1_get_xxx() 2\n");
+    abort();
+  }
+
+  mag_factor(font, font_type1, mag_x, mag_y, ps0, &mx, &my, &asp, &ps);
+#if 0
+  mx = mag_x * font_type1->mag * font->mag_x;
+  my = mag_y * font_type1->mag * font->mag_y;
+  asp = v_default_aspect * font_type1->aspect * (mx / my);
+  if (asp < 0)
+    asp = 0.0 - asp;
+  ps = ps0 * my;
+#endif
+
+
+  if (ps0 < 0)
+    ps0 = 0.0 - ps0;
+  if (ps < 0)
+    ps = 0.0 - ps;
+
+  if ((last_dpix != dpix) || (last_dpiy != dpiy)){
+    for (i = 0; i < T1_GetNoFonts(); i++)
+      T1_DeleteAllSizes(i);
+    if (T1_SetDeviceResolutions((float)dpix, (float)dpiy) < 0){
+      last_dpix = LASTVAL_NONE; 
+      last_dpiy = LASTVAL_NONE; 
+      vf_error = VF_ERR_NO_GLYPH;
+      return NULL;
+    }
+    if (type1_debug('r'))
+      printf("T1_SetDeviceResolutions %.3f %.3f\n", dpix, dpiy);
+    last_dpix = dpix;
+    last_dpiy = dpiy;
+  }
+
+  if ((mode == MODE_FONTBBX1) || (mode == MODE_FONTBBX2)){
+    cp = -1;
+  } else {
+    if (font_type1->ccv_id < 0){
+      cp = code_point;
+    } else {
+      cp = vf_ccv_conv(font_type1->ccv_id, code_point);
+      if (type1_debug('c')) 
+	printf("VFlib Type1: CCV  0x%lx => 0x%lx\n", code_point, cp);
+    }
+    if (cp < 0)
+      return NULL;
+    if (type1_debug('m')){
+      if (cp >= 0){
+	bbox = T1_GetCharBBox(font_type1->t1fid, (char)(cp%256));
+	printf("T1_CharBBox %ld (0x%lx)  => ", (cp%256), cp);
+	printf("  llx=%d, lly=%d, urx=%d ury=%d\n",
+	       bbox.llx, bbox.lly, bbox.urx, bbox.ury);
+      }
+    }
+  }
+  cp = cp % 256;
+
+  val = NULL;
+  if (   (mode == MODE_BITMAP1) 
+      || (mode == MODE_BITMAP2) 
+      || (mode == MODE_OUTLINE) ){
+    matrix.cxx = asp;
+    matrix.cxy = 0.0;
+    matrix.cyx = 0.0;
+    matrix.cyy = 1.0;
+    t1_glyph = T1_SetChar(font_type1->t1fid, (char)cp, (float)ps, &matrix);
+    if (type1_debug('s'))
+      printf("T1_SetChar fid=%d, 0x%02x, ps=%.3f, asp=%.2f mx=%.2f my=%.2f\n",
+	     font_type1->t1fid, (unsigned int)cp, ps, asp, mx, my);
+    if (t1_glyph == NULL){
+      vf_error = VF_ERR_NO_GLYPH;
+      return NULL;
+    }
+
+    {
+      int bbxw
+	= t1_glyph->metrics.rightSideBearing-t1_glyph->metrics.leftSideBearing;
+      int bbxh
+	= t1_glyph->metrics.ascent - t1_glyph->metrics.descent;
+
+      if (t1_glyph->bits == NULL){
+	bm = vf_alloc_bitmap(bbxw, bbxh);
+      } else {
+	ALLOC_IF_ERR(bm, struct vf_s_bitmap){
+	  vf_error = VF_ERR_NO_MEMORY;
+	  return NULL;
+	}
+	bm->bbx_width  = bbxw;
+	bm->bbx_height = bbxh;
+	bm->raster     = (bm->bbx_width + 7) / 8;
+	bm->bitmap = (unsigned char*)t1_glyph->bits;
+	t1_glyph->bits = NULL;
+	for (y = 0; y < bm->bbx_height; y++){
+	  p = &bm->bitmap[y*bm->raster];
+	  for (x = 0; x < bm->raster; x++, p++)
+	    *p = ((EXCHG_MLSB4[(*p)&0x0f]) << 4) | EXCHG_MLSB4[(*p) >> 4];
+	}
+      }
+      bm->off_x      = t1_glyph->metrics.leftSideBearing;
+      bm->off_y      = t1_glyph->metrics.ascent;
+      bm->mv_x       = t1_glyph->metrics.advanceX;
+      bm->mv_y       = t1_glyph->metrics.advanceY;
+    }
+
+    if ((mode == MODE_BITMAP1) || (mode == MODE_BITMAP2)){
+      val = (void*) bm;
+    } else if (mode == MODE_OUTLINE){
+      font_bbox = T1_GetFontBBox(font_type1->t1fid);
+      if (   (font_bbox.urx == 0) && (font_bbox.llx == 0) 
+	  && (font_bbox.ury == 0) && (font_bbox.lly == 0) ){
+	bbox = T1_GetCharBBox(font_type1->t1fid, (char)cp);
+	f_bbx_w = bbox.urx - bbox.llx;
+	f_bbx_h = bbox.ury - bbox.lly;
+      } else {
+	f_bbx_w = font_bbox.urx - font_bbox.llx;
+	f_bbx_h = font_bbox.ury - font_bbox.lly;
+      }
+      f_bbx_w = (f_bbx_w * ps / 1000.0) * dpix / TYPE1_POINTS_PER_INCH;
+      f_bbx_h = (f_bbx_h * ps / 1000.0) * dpiy / TYPE1_POINTS_PER_INCH;
+      val = (void*) vf_bitmap_to_outline(bm, f_bbx_w, f_bbx_h, 
+					 dpix, dpiy, ps0, mx, my);
+      VF_FreeBitmap(bm);
+    } else {
+      fprintf(stderr, "VFlib: internal error in type1_get_xxx() 3\n");
+      abort();
+    }
+    
+  } else if (mode == MODE_METRIC1){
+    if (font_type1->tfm == NULL) {
+      w = T1_GetCharWidth(font_type1->t1fid, (char)cp);
+      if (w == 0){
+	vf_error = VF_ERR_NO_GLYPH;
+      	return NULL;
+      }
+      bbox = T1_GetCharBBox(font_type1->t1fid, (char)cp);
+      if (metric1 != NULL){
+	mx *= ps / 1000.0;
+	my *= ps / 1000.0;
+	metric1->bbx_width  = (double)(bbox.urx - bbox.llx) * mx;
+	metric1->bbx_height = (double)(bbox.ury - bbox.lly) * my;
+	metric1->off_x      = (double)(bbox.llx) * mx;
+	metric1->off_y      = (double)(bbox.ury) * my;
+	metric1->mv_x       = (double)(w) * mx;
+	metric1->mv_y       = (double)(0) * my;
+      }
+    } else {
+      struct vf_s_metric1  m1;
+      if (type1_debug('t')){
+	printf("VFlib Type1 ps=%.2f ps0=%.2f ds=%.2f\n", 
+	       ps, ps0, font_type1->tfm->design_size);
+      }
+      m1.mv_x = 0;
+      vf_tfm_metric(font_type1->tfm, cp, &m1);
+      if (metric1 != NULL){
+	metric1->bbx_width  = (double)(m1.bbx_width)  * mx;
+	metric1->bbx_height = (double)(m1.bbx_height) * my;
+	metric1->off_x      = (double)(m1.off_x) * mx;
+	metric1->off_y      = (double)(m1.off_y) * my;
+	metric1->mv_x       = (double)(m1.mv_x) * mx;
+	metric1->mv_y       = (double)(m1.mv_y) * my;
+      }
+    }
+    if (metric1 != NULL)
+      val = (void*) metric1;
+
+  } else if (mode == MODE_METRIC2){
+    t1_glyph = T1_SetChar(font_type1->t1fid, (char)cp,
+			  (float)ps, &unity_matrix);
+    if (t1_glyph == NULL){
+      vf_error = VF_ERR_NO_GLYPH;
+      return NULL;
+    }
+    if (metric2 != NULL){
+      metric2->bbx_width  = t1_glyph->metrics.rightSideBearing 
+	                    - t1_glyph->metrics.leftSideBearing;
+      metric2->bbx_height = t1_glyph->metrics.ascent
+	                    - t1_glyph->metrics.descent;
+      metric2->off_x      = t1_glyph->metrics.leftSideBearing;
+      metric2->off_y      = t1_glyph->metrics.ascent;
+      metric2->mv_x       = t1_glyph->metrics.advanceX;
+      metric2->mv_y       = t1_glyph->metrics.advanceY;
+    }
+    val = (void*) metric2;
+
+  } else if (mode == MODE_FONTBBX1){
+    font_bbox = T1_GetFontBBox(font_type1->t1fid);
+    if (type1_debug('m'))
+      printf("T1_GetFontBBox: urx=%d, ury=%d, llx=%d, lly=%d, x=%.3f\n",
+	     font_bbox.urx, font_bbox.ury, font_bbox.llx, font_bbox.lly,ps);
+    f_bbx_w = font_bbox.urx - font_bbox.llx;
+    f_bbx_h = font_bbox.ury - font_bbox.lly;
+    if (bbx1 != NULL){
+      bbx1->w = f_bbx_w * ps / 1000.0;
+      bbx1->h = f_bbx_h * ps / 1000.0;
+      bbx1->xoff = font_bbox.llx * ps / 1000.0;
+      bbx1->yoff = font_bbox.lly * ps / 1000.0;
+    }
+    val = (void*) bbx1;
+
+  } else if (mode == MODE_FONTBBX2){
+    font_bbox = T1_GetFontBBox(font_type1->t1fid);
+    if (type1_debug('m'))
+      printf("T1_GetFontBBox: urx=%d, ury=%d, llx=%d, lly=%d, x=%.3f\n",
+	     font_bbox.urx, font_bbox.ury, font_bbox.llx, font_bbox.lly, ps);
+    f_bbx_w = font_bbox.urx - font_bbox.llx;
+    f_bbx_h = font_bbox.ury - font_bbox.lly;
+    if (bbx2 != NULL){
+      bbx2->w = f_bbx_w * ps / 1000.0;
+      bbx2->h = f_bbx_h * ps / 1000.0;
+      bbx2->xoff = font_bbox.llx * ps / 1000.0;
+      bbx2->yoff = font_bbox.lly * ps / 1000.0;
+    }
+    val = (void*) bbx2;
+
+  } else {
+    fprintf(stderr, "VFlib: internal error in type1_get_xxx() 4\n");
+    fprintf(stderr, "Unknown mode: %d\n", mode);
+    abort();
+  }
+
+  return val;
+}
+
+
+
+Private char*
+type1_get_font_prop(VF_FONT font, char *prop_name)
+{ /* CALLER MUST RELEASE RETURNED STRING LATER */
+  SEXP       v;
+  FONT_TYPE1   font_type1;
+  char       str[512], *s;
+  double     dpix, dpiy, p;
+  
+  if ((font_type1 = (FONT_TYPE1)font->private) == NULL){
+    fprintf(stderr, "VFlib: internal error in type1_get_font_prop()\n");
+    abort();
+  }
+
+  if ((v = vf_sexp_assoc(prop_name, font_type1->props)) != NULL){
+    return vf_strdup(vf_sexp_get_cstring(vf_sexp_cadr(v)));
+  } else if ((v = vf_sexp_assoc(prop_name, default_properties)) != NULL){
+    return vf_strdup(vf_sexp_get_cstring(vf_sexp_cadr(v)));
+  }
+
+  if (font->mode == 1){
+    if ((dpix = font->dpi_x) < 0)
+      if ((dpix = font_type1->dpi_x) < 0)
+	dpix = v_default_dpi_x; 
+    if ((dpiy = font->dpi_y) < 0)
+      if ((dpiy = font_type1->dpi_y) < 0)
+	dpiy = v_default_dpi_y; 
+    if ((p = font->point_size) < 0)
+      if ((p = font_type1->point_size) < 0)
+	p = v_default_point_size;
+    p = p * font->mag_y * font_type1->mag;
+    if (strcmp(prop_name, "POINT_SIZE") == 0){  
+      sprintf(str, "%d", toint(p * 10.0)); 
+      return vf_strdup(str);
+    } else if (strcmp(prop_name, "PIXEL_SIZE") == 0){
+      sprintf(str, "%d", toint(p * dpiy / TYPE1_POINTS_PER_INCH));
+      return vf_strdup(str);
+    } else if (strcmp(prop_name, "RESOLUTION_X") == 0){
+      sprintf(str, "%d", toint(dpix)); 
+      return vf_strdup(str);
+    } else if (strcmp(prop_name, "RESOLUTION_Y") == 0){
+      sprintf(str, "%d", toint(dpiy)); 
+      return vf_strdup(str);
+    }
+
+  } else if (font->mode == 2){
+    if ((p = font->pixel_size) < 0)
+      if ((p = font_type1->pixel_size) < 0)
+	p = v_default_pixel_size;
+    p = p * font->mag_y * font_type1->mag;
+    if (strcmp(prop_name, "POINT_SIZE") == 0){  
+      sprintf(str, "%d", 
+	      toint(p * 10.0 * TYPE1_POINTS_PER_INCH / TYPE1_DEFAULT_DPI)); 
+    } else if (strcmp(prop_name, "PIXEL_SIZE") == 0){
+      sprintf(str, "%d", toint(p));
+      return vf_strdup(str);
+    } else if (strcmp(prop_name, "RESOLUTION_X") == 0){
+      sprintf(str, "%d", toint(TYPE1_DEFAULT_DPI)); 
+      return vf_strdup(str);
+    } else if (strcmp(prop_name, "RESOLUTION_Y") == 0){
+      sprintf(str, "%d", toint(TYPE1_DEFAULT_DPI)); 
+      return vf_strdup(str);
+    }
+  }
+    
+  if ((strcmp(prop_name, "FONT_NAME") == 0)
+      || (strcmp(prop_name, "FontName") == 0)){
+    if ((s = T1_GetFontName(font_type1->t1fid))!= NULL)
+      return vf_strdup(s);
+  } else if ((strcmp(prop_name, "FULL_NAME") == 0)
+	     || (strcmp(prop_name, "FullName") == 0)){
+    if ((s = T1_GetFullName(font_type1->t1fid))!= NULL)
+      return vf_strdup(s);
+  } else if ((strcmp(prop_name, "FAMILY_NAME") == 0)
+	     || (strcmp(prop_name, "FamilyName") == 0)){
+    if ((s = T1_GetFamilyName(font_type1->t1fid))!= NULL)
+      return vf_strdup(s);
+  } else if ((strcmp(prop_name, "WEIGHT_NAME") == 0)
+	     || (strcmp(prop_name, "WEIGHT") == 0)
+	     || (strcmp(prop_name, "Weight") == 0)){
+    if ((s = T1_GetWeight(font_type1->t1fid))!= NULL)
+      return vf_strdup(s);
+  }
+
+#if 0
+  if (strcmp(prop_name, "FONT_ASCENT") == 0){
+    ;
+  } else if (strcmp(prop_name, "FONT_DESCENT") == 0){
+    ;
+  }
+#endif
+
+  return NULL;
+}
+
+
+
+Private int  type1_debug2(char type, char *str);
+
+Private int
+type1_debug(char type)
+{
+  int    v;
+  char  *p0;
+
+  v = FALSE;
+  if (env_debug_mode != NULL){
+    if ((v = type1_debug2(type, env_debug_mode)) == TRUE)
+      return TRUE;
+  }
+
+  if (default_debug_mode == NULL)
+    return FALSE;
+  if ((p0 = vf_sexp_get_cstring(default_debug_mode)) == NULL)
+    return FALSE;
+  return type1_debug2(type, p0);
+}
+
+Private int
+type1_debug2(char type, char *p0)
+{
+  char  *p;
+
+  for (p = p0; *p != '\0'; p++){
+    if (*p == type)
+      return TRUE;
+  }
+  for (p = p0; *p != '\0'; p++){
+    if (*p == '*')
+      return TRUE;
+  }
+  return FALSE;
+}
+
+/*EOF*/

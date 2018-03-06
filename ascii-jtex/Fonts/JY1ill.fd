@@ -1,0 +1,5 @@
+\ProvidesFile{jy1gyo.fd}[1999/02/15 Illustlations (Horizontal)]
+\DeclareKanjiFamily{JY1}{ill}{}
+\DeclareRelationFont{JY1}{ill}{m}{}{OT1}{cmr}{m}{}
+\DeclareFontShape{JY1}{ill}{m}{n}{ <-> fjillmaa}{}
+\endinput

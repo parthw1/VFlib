@@ -1,0 +1,26 @@
+# Makefile for VFlib utils
+
+SUBDIRS = ctext2pgm vfl2bdf vflx11 hyaku
+
+makedefault: default
+include ../make-sub
+
+default all: 
+	@for d in $(SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done 
+
+install uninstall::
+	@echo "Installing utility programs..."
+	@for d in $(SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done 
+
+clean veryclean::
+	for d in $(SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done 
+
+distclean::
+	for d in $(SUBDIRS) ; do \
+	  (cd $$d ; $(MAKE) $@); done 
+	-$(RM) *~
+
+#EOF

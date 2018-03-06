@@ -1,0 +1,5 @@
+\ProvidesFile{jy1gyo.fd}[1998/09/07 Gyosyo (Horizontal)]
+\DeclareKanjiFamily{JY1}{gyo}{}
+\DeclareRelationFont{JY1}{gyo}{m}{}{OT1}{cmr}{m}{}
+\DeclareFontShape{JY1}{gyo}{m}{n}{ <-> dfgyopaa  }{}
+\endinput

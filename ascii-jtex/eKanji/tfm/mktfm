@@ -1,0 +1,33 @@
+#!/bin/sh
+
+
+# TFM
+HTFM="ekan1000.tfm  ekan1001.tfm  ekan1002.tfm  ekan1003.tfm  ekan1004.tfm \
+      ekan2000.tfm  ekan2001.tfm  ekan2002.tfm  ekan2003.tfm  ekan2004.tfm \
+      ekan2005.tfm  ekan2006.tfm  ekan2007.tfm  ekan2008.tfm \
+      ekan3000.tfm  ekan3001.tfm  ekan3002.tfm  ekan3003.tfm  ekan3004.tfm \
+      ekan3005.tfm  ekan3006.tfm  ekan3007.tfm  ekan3008.tfm  "
+
+VTFM="tekan1000.tfm tekan1001.tfm tekan1002.tfm tekan1003.tfm tekan1004.tfm \
+      tekan2000.tfm tekan2001.tfm tekan2002.tfm tekan2003.tfm tekan2004.tfm \
+      tekan2005.tfm tekan2006.tfm tekan2007.tfm tekan2008.tfm \
+      tekan3000.tfm tekan3001.tfm tekan3002.tfm tekan3003.tfm tekan3004.tfm \
+      tekan3005.tfm tekan3006.tfm tekan3007.tfm tekan3008.tfm  "
+
+
+# PL to TFM (for JFM)
+PLTOTF=pltotf-j
+
+
+
+for tfm in ${HTFM}
+do
+	echo Making ${tfm}...
+	${PLTOTF} ekan.pl ${tfm}
+done
+for tfm in ${VTFM}
+do
+	echo Making ${tfm}...
+	${PLTOTF} tekan.pl ${tfm}
+done
+echo done.

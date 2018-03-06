@@ -1,0 +1,562 @@
+dnl  Top-level configure for VFlib verison 3 package
+dnl  by H.Kakugawa (h.kakugawa@computer.org)
+
+AC_INIT(src/VFsys.h)
+AC_STARTUP
+dnl AC_REQUIRE([AC_STARTUP])
+
+dnl configure libtool
+dnl AM_DISABLE_STATIC
+dnl AM_PROG_LIBTOOL
+
+dnl VFlib version
+vflib_version='3.7.2'
+AC_SUBST(vflib_version)
+
+dnl Libtool versioning scheme
+CUR=10
+REV=1
+AGE=5
+dnl CUR=9
+dnl REV=8
+dnl AGE=4
+AC_SUBST(version_info)
+version_info=$CUR:$REV:$AGE
+
+dnl From GNU Libtoool 1.2 manual:
+dnl  1. Start with version information of `0:0:0' for each libtool library.
+dnl
+dnl  2. Update the version information only immediately before a public
+dnl     release of your software.  More frequent updates are unnecessary,
+dnl     and only guarantee that the current interface number gets larger
+dnl     faster.
+dnl
+dnl  3. If the library source code has changed at all since the last
+dnl     update, then increment REVISION (`C:R:A' becomes `C:R+1:A').
+dnl
+dnl  4. If any interfaces have been added, removed, or changed since the
+dnl     last update, increment CURRENT, and set REVISION to 0.
+dnl
+dnl  5. If any interfaces have been added since the last public release,
+dnl     then increment AGE.
+dnl
+dnl  6. If any interfaces have been removed since the last public release,
+dnl     then set AGE to 0.
+
+
+dnl AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+AC_PROG_LN_S
+
+AC_PATH_XTRA
+
+AC_SUBST(XX_CFLAGS)
+if test "x$CC" = xgcc; then
+	XX_CFLAGS="-Wall"
+else
+       	XX_CFLAGS=
+fi
+
+AC_HEADER_STDC
+AC_CHECK_HEADERS(unistd.h)
+AC_CHECK_HEADERS(malloc.h)
+AC_CHECK_HEADERS(fcntl.h)
+AC_CHECK_HEADERS(strings.h)
+AC_CHECK_HEADERS(string.h)
+AC_CHECK_HEADERS(dirent.h)
+AC_CHECK_HEADERS(stdarg.h)
+AC_CHECK_HEADERS(sys/stat.h)
+AC_FUNC_MEMCMP
+AC_CHECK_FUNCS(popen)
+AC_CHECK_FUNCS(opendir)
+AC_CHECK_FUNCS(access)
+AC_CHECK_FUNCS(nint)
+AC_CHECK_LIB(m, main, LIBS="$LIBS -lm")
+AC_CHECK_LIB(nsl, main, LIBS="$LIBS -lnsl")
+AC_CHECK_LIB(socket, main, LIBS="$LIBS -lsocket")
+
+AC_SUBST(default_vflibcap)
+AC_SUBST(runtimesitedir)
+AC_SUBST(runtimedir)
+AC_SUBST(subdir_ccv)
+AC_SUBST(subdir_t1enc)
+AC_SUBST(subdir_ascii_jtex)
+AC_SUBST(texmf_root)
+
+default_vflibcap=${datadir}/VFlib/${vflib_version}/vflibcap
+runtimesitedir=${datadir}/VFlib/site
+runtimedir=${datadir}/VFlib/${vflib_version}
+subdir_ccv=ccv
+subdir_t1enc=t1lib
+subdir_ascii_jtex=ascii-jtex
+
+
+AC_SUBST(bdf_objs)
+bdf_objs="drv_bdf.lo"
+AC_ARG_WITH([bdf],
+  [AS_HELP_STRING([--disable-bdf], [Build VFlib without BDF font driver])],
+  [bdf_objs=""], [])
+AS_IF([test "x$with_bdf" != xno],
+      [AC_DEFINE([WITH_BDF], [1], [Define if BDF font driver is required])
+       echo "Enabled the BDF font driver"],
+      [echo "Disabled the BDF font driver"])
+
+AC_SUBST(pcf_objs)
+pcf_objs="drv_pcf.lo"
+AC_ARG_WITH([pcf],
+  [AS_HELP_STRING([--disable-pcf], [Build VFlib without PCF font driver])],
+  [pcf_objs=""], [])
+AS_IF([test "x$with_pcf" != xno],
+      [AC_DEFINE([WITH_PCF], [1], [Define if PCF font driver is required])
+       echo "Enabled the PCF font driver"],
+      [echo "Disabled the PCF font driver"])
+
+AC_SUBST(hbf_objs)
+hbf_objs="drv_hbf.lo"
+AC_ARG_WITH([hbf],
+  [AS_HELP_STRING([--disable-hbf], [Build VFlib without HBF font driver])],
+  [hbf_objs=""], [])
+AS_IF([test "x$with_hbf" != xno],
+      [AC_DEFINE([WITH_HBF], [1], [Define if HBF font driver is required])
+       echo "Enabled the HBF font driver"],
+      [echo "Disabled the HBF font driver"])
+
+
+dnl freetype_vers=0
+
+AC_SUBST(freetype1_includedir)
+AC_SUBST(freetype1_libdir)
+AC_SUBST(freetype1_lib)
+AC_SUBST(ttf1_objs)
+AC_ARG_WITH(
+ freetype1,
+ [  --with-freetype1[=LIB]           Link FreeType1 library LIB [LIB=ttf]],
+ if test "${withval}" = yes; then withval="ttf"; fi;
+ if test "${withval}" = no;  then withval="";    fi;
+ if test "${withval}" = "";
+ then freetype1_lib="";         ttf1_objs=""; 
+ else freetype1_lib=-l$withval; ttf1_objs="drv_ttf.lo"; 
+dnl   if test "${freetype_vers}" = 0; then freetype_vers=1;
+dnl   else AC_MSG_ERROR(Both FreeType1 and FreeType2 are enabled); fi
+   AC_DEFINE(WITH_TRUETYPE)
+   AC_DEFINE(WITH_TRUETYPE1)
+ fi)
+AC_ARG_WITH(
+ freetype1-includedir,
+ [  --with-freetype1-includedir=DIR  FreeType1 include files are in DIR],
+ if test "${withval}" = yes; then withval=""; fi;
+ if test "${withval}" = ""; 
+ then freetype1_includedir=""
+ else freetype1_includedir=-I${withval}; fi)
+AC_ARG_WITH(
+ freetype1-libdir,
+ [  --with-freetype1=LIB    Build VFlib with TrueType font driver (FreeType1)],
+
+ if test "${withval}" = yes; then withval=""; fi;
+ if test "${withval}" = ""; 
+ then freetype1_libdir=""
+ else freetype1_libdir=-L${withval}; fi)
+if test -n "$freetype1_lib" ; then
+  echo "Enabled the TrueType1 font driver"; 
+  OLD_CPPFLAGS=${CPPFLAGS}; OLD_LIBS=${LIBS}
+  CPPFLAGS="${freetype1_includedir} ${CPPFLAGS}"
+  LIBS="${freetype1_libdir} ${freetype1_lib} ${LIBS}"; 
+  AC_TRY_CPP([#include <freetype.h>], , 
+    AC_MSG_ERROR(Header file is not found: ${freetype1_includedir}))
+  AC_TRY_LINK([#include <freetype.h>], 
+              [TT_Engine fte;  TT_Init_FreeType(&fte)], ,
+              AC_MSG_ERROR(Library file is not found: ${freetype1_lib}))
+  CPPFLAGS=${OLD_CPPFLAGS}; LIBS=${OLD_LIBS}
+else  echo "Disabled the TrueType1 font driver"; 
+      freetype1_includedir=""; freetype1_libdir=""; 
+fi
+
+AC_SUBST(freetype_includedir)
+AC_SUBST(freetype_libdir)
+AC_SUBST(freetype_lib)
+AC_SUBST(ttf_objs)
+freetype_includedir="${freetype1_includedir}"
+freetype_libdir="${freetype1_libdir}" 
+freetype_lib="${freetype1_lib}"
+ttf_objs="${ttf1_objs}"
+
+
+AC_SUBST(opentype_includedir)
+AC_SUBST(opentype_lib)
+AC_SUBST(otf_objs)
+AC_ARG_WITH(
+ opentype,
+ [  --with-opentype         Build VFlib with OpenType font driver (FreeType2)],
+ if test "${withval}" = yes; then withval="opentype"; fi;
+ if test "${withval}" = no;  then withval="";         fi;
+ opentype_lib=`freetype-config --libs`; 
+ opentype_includedir=`freetype-config --cflags`; 
+ otf_objs="drv_otf.lo"; 
+ AC_DEFINE(WITH_OPENTYPE)
+)
+if test -n "$opentype_lib" ; then
+  echo "Enabled the OpenType font driver"; 
+  OLD_CPPFLAGS=${CPPFLAGS}; OLD_LIBS=${LIBS}
+  CPPFLAGS="${opentype_includedir} ${CPPFLAGS}"
+  LIBS="${opentype_lib} ${LIBS}"; 
+  AC_TRY_CPP([#include <ft2build.h>], , 
+    AC_MSG_ERROR(Header file is not found: ${opentype_includedir}))
+    AC_TRY_LINK([
+#include <ft2build.h>
+#include FT_FREETYPE_H], 
+                [FT_Library fte;  FT_Init_FreeType(&fte)], ,
+                AC_MSG_ERROR(Library file is not found: ${freetype2_lib}))
+  CPPFLAGS=${OLD_CPPFLAGS}; LIBS=${OLD_LIBS}
+else  echo "Disabled the OpenType font driver"; 
+      opentype_includedir=""; opentype_libdir=""; 
+fi
+
+AC_SUBST(t1lib_includedir)
+AC_SUBST(t1lib_libdir)
+AC_SUBST(t1lib_lib)
+AC_SUBST(type1_objs)
+AC_ARG_WITH(
+ t1lib,
+ [  --with-t1lib[=LIB]               Link T1Lib library LIB [LIB=t1]],
+ if test "${withval}" = yes; then withval="t1"; fi;
+ if test "${withval}" = no;  then withval="";   fi;
+ if test "${withval}" = "";  then withval="t1"; fi;
+ if test "${withval}" != ""; then
+   t1lib_lib=-l$withval; type1_objs="drv_t1.lo"; AC_DEFINE(WITH_TYPE1)
+ fi)
+AC_ARG_WITH(
+ t1lib-includedir,
+ [  --with-t1lib-includedir=DIR      T1Lib include files are in DIR],
+ if test "${withval}" = yes; then withval=""; fi;
+ if test "${withval}" = ""; 
+ then t1lib_includedir=""
+ else t1lib_includedir=-I${withval}; fi)
+AC_ARG_WITH(
+ t1lib-libdir,
+ [  --with-t1lib-libdir=DIR          T1Lib library files are in DIR],
+ if test "${withval}" = yes; then withval=""; fi;
+ if test "${withval}" = ""; 
+ then t1lib_libdir=""
+ else t1lib_libdir=-L${withval}; fi)
+if test -n "$t1lib_lib" ; then
+  echo "Enabled the Type1 font driver"; 
+  OLD_CPPFLAGS=${CPPFLAGS}; OLD_LIBS=${LIBS}
+  CPPFLAGS="${t1lib_includedir} ${CPPFLAGS}"
+  LIBS="${t1lib_libdir} ${t1lib_lib} ${LIBS}"; 
+  AC_TRY_CPP([#include  <t1lib.h>], , 
+    AC_MSG_ERROR(Header file is not found: ${t1lib_includedir}))
+  AC_TRY_LINK([#include  <t1lib.h>],
+    [T1_SetBitmapPad(8); T1_SetLogLevel(0)], ,
+  AC_MSG_ERROR(Library file is not found: ${t1lib_lib}))
+  CPPFLAGS=${OLD_CPPFLAGS}; LIBS=${OLD_LIBS}
+else  echo "Disabled the Type1 font driver"; 
+      t1lib_includedir=""; t1lib_libdir=""; 
+fi
+
+AC_SUBST(zeit_objs)
+zeit_objs="drv_zeit.lo"
+AC_ARG_WITH([zeit],
+  [AS_HELP_STRING([--disable-zeit], [Build VFlib without ZEIT font driver])],
+  [zeit_objs=""], [])
+AS_IF([test "x$with_zeit" != xno],
+      [AC_DEFINE([WITH_ZEIT], [1], [Define if ZEIT font driver is required])
+       echo "Enabled ZEIT (Syotai Kurabu) font driver"],
+      [echo "Disabled ZEIT (Syotai Kurabu) font driver"])
+
+AC_SUBST(jg_objs)
+jg_objs="drv_jg.lo"
+AC_ARG_WITH([jg],
+  [AS_HELP_STRING([--disable-jg], [Build VFlib without JG font driver])],
+  [jg_objs=""], [])
+AS_IF([test "x$with_jg" != xno],
+      [AC_DEFINE([WITH_JG], [1], [Define if JG font driver is required])
+       echo "Enabled JG font driver"],
+      [echo "Disabled JG font driver"])
+
+AC_SUBST(ekan_objs)
+ekan_objs="drv_ekan.lo"
+AC_ARG_WITH([ekan],
+  [AS_HELP_STRING([--disable-ekanji], [Build VFlib without EKAN font driver])],
+  [ekan_objs=""], [])
+AS_IF([test "x$with_ekan" != xno],
+      [AC_DEFINE([WITH_EKAN], [1], [Define if EKAN font driver is required])
+       echo "Enabled EKAN font driver"],
+      [echo "Disabled EKAN font driver"])
+
+AC_SUBST(gf_objs)
+gf_objs="drv_gf.lo"
+AC_ARG_WITH([gf],
+  [AS_HELP_STRING([--disable-gf], [Build VFlib without TeX GF font driver])],
+  [gf_objs=""], [])
+AS_IF([test "x$with_gf" != xno],
+      [AC_DEFINE([WITH_GF], [1], [Define if TeX GF font driver is required])
+       echo "Enabled TeX GF font driver"],
+      [echo "Disabled TeX GF font driver"])
+
+AC_SUBST(pk_objs)
+pk_objs="drv_pk.lo"
+AC_ARG_WITH([pk],
+  [AS_HELP_STRING([--disable-pk], [Build VFlib without TeX PK font driver])],
+  [pk_objs=""], [])
+AS_IF([test "x$with_pk" != xno],
+      [AC_DEFINE([WITH_PK], [1], [Define if TeX PK font driver is required])
+       echo "Enabled TeX PK font driver"],
+      [echo "Disabled TeX PK font driver"])
+
+AC_SUBST(tfm_objs)
+tfm_objs="drv_tfm.lo"
+AC_ARG_WITH([tfm],
+  [AS_HELP_STRING([--disable-tfm], [Build VFlib without TeX TFM font driver])],
+  [tfm_objs=""], [])
+AS_IF([test "x$with_tfm" != xno],
+      [AC_DEFINE([WITH_TFM], [1], [Define if TeX TFM font driver is required])
+       echo "Enabled TeX TFM font driver"],
+      [echo "Disabled TeX TFM font driver"])
+
+AC_SUBST(vf_objs)
+vf_objs="drv_vf.lo"
+AC_ARG_WITH([vf],
+  [AS_HELP_STRING([--disable-vf], [Build VFlib without TeX VF font driver])],
+  [vf_objs=""], [])
+AS_IF([test "x$with_vf" != xno],
+      [AC_DEFINE([WITH_VF], [1], [Define if TeX VF font driver is required])
+       echo "Enabled TeX VF font driver"],
+      [echo "Disabled TeX VF font driver"])
+
+AC_SUBST(jtex_objs)
+jtex_objs="drv_jtex.lo"
+AC_ARG_WITH([jtex],
+  [AS_HELP_STRING([--disable-jtex], [Build VFlib without Japanese TeX Kanji font driver])],
+  [jtex_objs=""], [])
+AS_IF([test "x$with_jtex" != xno],
+      [AC_DEFINE([WITH_JTEX], [1], [Define if Japanese TeX Kanji font driver is required])
+       echo "Enabled TeX Japanese Kanji (by ASCII Co.) font driver"],
+      [echo "Disabled TeX Japanese Kanji (by ASCII Co.) font driver"])
+
+AC_SUBST(texfonts_objs)
+texfonts_objs="texfonts.lo tfm.lo jfmbi.lo"
+AC_ARG_WITH([tex-fonts],
+  [AS_HELP_STRING([--disable-tex-fonts], [Build VFlib without any TeX font drivers])],
+  [gf_objs="";pk_objs="";tfm_objs="";vf_objs="";jtex_objs="";
+   texfonts_objs="", ], 
+  [])
+AS_IF([test "x$with_texfonts" != xno],
+      [AC_DEFINE([WITH_TEXFONTS], [1],
+                 [Define if TeX font driver is required])],
+      [echo "Disabled all TeX-related font drivers"])
+
+AC_SUBST(comic_objs)
+comic_objs="drv_comic.lo"
+AC_ARG_WITH([comic],
+  [AS_HELP_STRING([--disable-comic], [Build VFlib without Comic font driver])],
+  [comic_objs=""], [])
+AS_IF([test "x$with_comic" != xno],
+      [AC_DEFINE([WITH_COMIC], [1], [Define if COMIC font driver is required])
+       echo "Enabled COMIC font driver"],
+      [echo "Disabled COMIC font driver"])
+
+AC_SUBST(try_objs)
+try_objs="drv_try.lo"
+AC_ARG_WITH([try],
+  [AS_HELP_STRING([--disable-try], [Build VFlib without Try font driver])],
+  [try_objs=""], [])
+AS_IF([test "x$with_try" != xno],
+      [AC_DEFINE([WITH_TRY], [1], [Define if TRY font driver is required])
+       echo "Enabled TRY font driver"],
+      [echo "Disabled TRY font driver"])
+
+AC_SUBST(mojikmap_objs)
+mojikmap_objs="drv_mojikmap.lo"
+AC_ARG_WITH([mojikmap],
+  [AS_HELP_STRING([--disable-mojikmap], [Build VFlib without Mojikyo font driver])],
+  [mojikmap_objs=""], [])
+AS_IF([test "x$with_mojikmap" != xno],
+      [AC_DEFINE([WITH_MOJIKMAP], [1], [Define if Mojikyo font driver is required])
+       echo "Enabled Mojikyo font driver"],
+      [echo "Disabled Mojikyo font driver"])
+
+AC_SUBST(kpathsea_includedir)
+AC_SUBST(kpathsea_libdir)
+AC_SUBST(kpathsea_lib)
+AC_ARG_WITH(
+ kpathsea,
+ [  --with-kpathsea[=LIB]            Build VFlib with kpathsea library],
+ if test "${withval}" = yes; then withval="kpathsea"; fi;
+ if test "${withval}" = no;  then withval="";         fi;
+ if test "${withval}" = "";  then withval="kpathsea"; fi;
+ if test "${withval}" != ""; then
+   kpathsea_lib=-l$withval; AC_DEFINE(WITH_KPATHSEA)
+ fi)
+AC_ARG_WITH(
+ kpathsea-includedir, 
+ [  --with-kpathsea-includedir=DIR   Kpathsea include files are in DIR], 
+ if test "${withval}" = yes; then withval=""; fi;
+ if test "${withval}" = ""; 
+ then kpathsea_includedir=""
+ else kpathsea_includedir="-I${withval} -I${withval}/kpathsea"; fi)
+AC_ARG_WITH(
+ kpathsea-libdir, 
+ [  --with-kpathsea-libdir=DIR       Kpathsea library files are in DIR], 
+ if test "${withval}" = yes; then withval=""; fi;
+ if test "${withval}" = ""; 
+ then kpathsea_libdir=""
+ else kpathsea_libdir=-L${withval}; fi)
+if test -n "$kpathsea_lib" ; then
+  echo "Enabled the kpathsea library for font search"; 
+  OLD_CPPFLAGS=${CPPFLAGS}; OLD_LIBS=${LIBS};
+  CPPFLAGS="${kpathsea_includedir} ${CPPFLAGS}"
+  LIBS="${kpathsea_libdir} ${kpathsea_lib} ${LIBS}"; 
+  AC_TRY_CPP([#include <kpathsea/kpathsea.h>], , 
+    AC_MSG_ERROR(Header file is not found: ${kpathsea_includedir}))
+  AC_TRY_LINK([#include <kpathsea/kpathsea.h>], 
+    [kpse_init_prog("/usr/local/bin/xldvi", 300, "cx", NULL)], ,
+    AC_MSG_ERROR(Library file is not found: ${kpathsea_lib}))
+  CPPFLAGS=${OLD_CPPFLAGS}; LIBS=${OLD_LIBS}
+else  echo "Disabled the kpathsea library for font search"; 
+      kpathsea_includedir=""; kpathsea_libdir=""; 
+fi
+
+
+KPSEWHICH="kpsewhich"
+TEXMF_CHECK="tex.fmt:fmt plain.fmt:fmt latex.fmt:fmt \
+             tex.pool:texpool plain.pool:texpool latex.fmt:texpool"
+
+TEXMF_ROOT=""
+if test ! -z "$KPSEWHICH" ; then
+  for f in $TEXMF_CHECK 
+  do
+    c=`echo $f | sed 's/:/ /' | awk '{ print $1 }'`
+    s=`echo $f | sed 's/:/ /' | awk '{ print $2 }'`
+    g=""
+    $KPSEWHICH $c > /dev/null 2> /dev/null
+    if test $? = 0  ; then
+      g=`$KPSEWHICH $c`
+    else
+      $KPSEWHICH $s $c > /dev/null 2> /dev/null
+      if test $? = 0  ; then
+        g=`$KPSEWHICH $s $c`
+      fi
+    fi
+    if test X-$g != X-  ; then
+      TEXMF_ROOT=`echo $g | sed "s|/web2c/$c||"`
+      break;
+    fi
+  done
+fi
+
+#if test "X-${TEXMF_ROOT}" = "X-" ; then
+#  TEXMF_ROOT="${datadir}/texmf"
+#  echo "Failed to detect TeX directory. Assume ${TEXMF_ROOT} as default."
+#else
+#  echo "Detected TeX directory is ${TEXMF_ROOT}"
+#fi
+#texmf_root=$TEXMF_ROOT
+
+
+AC_ARG_WITH(
+ texmf-root,
+ [  --with-texmf-root=DIR    Top directory of TeX is DIR],
+ if test "${withval}" = yes; then withval=""; fi;
+ if test "${withval}" = "";  
+ then texmf_root=""
+ else texmf_root=${withval}; fi,
+ texmf_root=${datadir}/texmf; )
+echo "texmf directory: $texmf_root"
+
+
+AC_CHECK_HEADERS(libintl.h)
+if test "X-${ac_cv_header_libintl_h}" = "X-yes"; then
+ gettext="yes";
+fi
+AC_ARG_WITH(
+ gettext,
+ [  --with-gettext                 Compile xgdvi with GNU gettext library],
+ gettext="yes")
+
+AC_SUBST(gettext_lib)
+AC_SUBST(gettext_include)
+if test "X-${gettext}" = "X-no"; then
+ gettext_lib=""
+ gettext_include=""
+else
+AC_DEFINE(WITH_GETTEXT)
+AC_ARG_WITH(
+ gettext_prefix,
+ [  --with-gettext-prefix=DIR      GNU gettext preffix direcotry is DIR],
+ gettext_lib="-L${withval}/lib"; gettext_include="-I${withval}/include",
+ gettext_lib='-L${prefix}/lib';  gettext_include='-I${prefix}/include')
+fi
+AC_TRY_LINK([#include <libintl.h>], 
+ [ bindtextdomain("xxx", "/usr/share/locale"); ], 
+ AC_MSG_RESULT(Use libc built-in gettext functions.); ,
+ AC_MSG_RESULT(Use external gettext library.); gettext_lib="${gettext_lib} -lintl")
+
+
+AC_CHECK_SIZEOF(int,0)
+AC_CHECK_SIZEOF(long,0)
+
+if test ${ac_cv_sizeof_long} -eq 4; then
+	ol_elem_type="long"
+elif test ${ac_cv_sizeof_long} -ge 4; then
+	if test ${ac_cv_sizeof_long} -eq ${ac_cv_sizeof_int}; then
+		ol_elem_type="long"
+	else
+		ol_elem_type="int"
+	fi
+else
+	AC_MSG_ERROR([Long is too small to contain outline data element.])
+fi
+AC_SUBST(ol_elem_type)
+AC_MSG_RESULT([Outline element type: ${ol_elem_type}.])
+
+
+AC_CONFIG_HEADER(src/config.h src/with.h)
+AC_OUTPUT(Makefile make-sub VFlib3-config \
+	  src/VFlib-3_7.h src/Makefile \
+	  src/vflmkcaptex \
+	  ccv/Makefile \
+	  t1lib/Makefile \
+	  ascii-jtex/Makefile \
+	  doc/Makefile \
+	  utils/Makefile \
+	    utils/ctext2pgm/Makefile utils/vfl2bdf/Makefile\
+	    utils/vflx11/Makefile utils/hyaku/Makefile )
+
+chmod a+x VFlib3-config 
+chmod a+x src/vflmkcaptex
+
+#(cd X11; ./runxmkmf; make x11.mk )
+
+
+echo "**"
+echo "** Configureation Finished!"
+echo "**"
+if test "x-${freetype1_lib}" = "x-"; then
+  echo "** Configured NOT to use FreeType1 for TrueType."
+else
+  echo "** Configured to use FreeType1 for TrueType."
+fi
+if test "x-${opentype_lib}" = "x-"; then
+  echo "** Configured NOT to use FreeType2 for OpenType."
+else
+  echo "** Configured to use FreeType2 for OpenType."
+fi
+if test "x-${t1lib_lib}" = "x-"; then
+  echo "** Configured NOT to use T1Lib for Type 1."
+else
+  echo "** Configured to use T1Lib for Type 1."
+fi
+if test "x-${kpathsea_lib}" = "x-"; then
+  echo "** Configured NOT to use Kpathsea for TeX file search."
+else
+  echo "** Configured to use Kpathsea for TeX file search."
+fi
+echo "**"
+echo "** (If it is not what you want, invoke configure with --help option,"
+echo "**  or see 'configure-site' file."
+echo "**"
+echo "** Now run 'make' to compile."
+echo "**"
+
+dnl EOF

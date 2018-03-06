@@ -1,0 +1,50 @@
+# Common definitions
+
+CC=@CC@
+VFCFLAGS=${CFLAGS} @XX_CFLAGS@ -DVFLIB_VERSION=\"@vflib_version@\"
+LDFLAGS=@LDFLAGS@
+EXT_LIBRARY= @freetype_libdir@  @freetype_lib@ \
+             @opentype_lib@ \
+             @t1lib_libdir@ @t1lib_lib@ \
+             @kpathsea_libdir@ @kpathsea_lib@ \
+             @gettext_lib@ \
+             @LIBS@
+INSTALL=install-sh -c
+INSTALL_DATA=install-sh -c -m 644
+INSTALL_PROGRAM=install-sh -c
+CP=cp
+RM=rm -f
+RM_RF=rm -rf
+RMDIR=rmdir
+
+prefix      = @prefix@
+exec_prefix = @exec_prefix@
+libdir      = @libdir@
+datarootdir = @datarootdir@
+datadir     = @datadir@
+bindir      = @bindir@
+includedir  = @includedir@
+infodir     = @infodir@
+
+default_vflibcap  = @default_vflibcap@
+runtimesitedir    = @runtimesitedir@
+runtimedir        = @runtimedir@
+subdir_ccv        = @subdir_ccv@
+subdir_t1enc      = @subdir_t1enc@
+subdir_ascii_jtex = @subdir_ascii_jtex@
+texmf_fonts_vflib    = @texmf_root@/fonts/tfm/ptex/VFlib
+texmf_platex_vflib   = @texmf_root@/tex/platex/VFlib
+
+clean::
+	-$(RM) *.o *.lo *.la *.core core gmon.out a.out 
+veryclean:: do-clean
+	-$(RM) *.o *.lo *.la *.core core gmon.out a.out 
+distclean:: do-clean
+	-$(RM) *.o *.lo *.la *.core core gmon.out a.out 
+	-$(RM) config.h Makefile Makefile.bak *~
+do-clean:: 
+	-$(RM) config.cache config.log config.status missfont.log 
+	-$(RM) .libs/* Imakefile 
+	-$(RMDIR) .libs
+
+#EOF

@@ -1,0 +1,51 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  f5ajchm3-ttf   10  1.0 1.0
+open1  dfhsmw5-ttc    10  1.0 1.0
+open1  mincho-zeit    10  1.0 1.0
+open1  zkyo0by-jg     10  1.0 1.0
+open1  dfhsm3-comic   10  1.0 1.0
+open1  activa-ttf     10  1.0 1.0
+open1  cmr10-pk       10  1.0 1.0
+open1  cmr10-tfm      10  1.0 1.0
+open1  timR24-pcf     10  1.2 1.2
+open1  latin1-bdf     10  1.2 1.2
+
+bitmap1  !0 0x4567
+bitmap1  !1 0x4567
+bitmap1  !2 0x4567
+bitmap1  !3 0x4567
+bitmap1  !6 0x4567
+bitmap1  !7 0x67
+bitmap1  !8 0x67
+bitmap1  !9 0x67
+bitmap1 !10 0x67
+bitmap1 !11 0x67
+
+bitmap1  !0 0x4567  1.2 1.2
+bitmap1  !1 0x4567  1.2 1.2
+bitmap1  !2 0x4567  1.2 1.2
+bitmap1  !3 0x4567  1.2 1.2
+bitmap1  !6 0x4567  1.2 1.2
+bitmap1  !7 0x67    1.2 1.2
+bitmap1  !8 0x67    1.2 1.2
+bitmap1  !9 0x67    1.2 1.2
+bitmap1 !10 0x67    1.2 1.2
+bitmap1 !11 0x67    1.2 1.2
+
+bitmap1  !0 0x4567  1.4 1.4
+bitmap1  !1 0x4567  1.4 1.4
+bitmap1  !2 0x4567  1.4 1.4
+bitmap1  !3 0x4567  1.4 1.4
+bitmap1  !6 0x4567  1.4 1.4
+bitmap1  !7 0x67    1.4 1.4
+bitmap1  !8 0x67    1.4 1.4
+bitmap1  !9 0x67    1.4 1.4
+bitmap1 !10 0x67    1.4 1.4
+bitmap1 !11 0x67    1.4 1.4
+
+quit

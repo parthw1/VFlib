@@ -1,0 +1,13 @@
+\ProvidesFile{jt1hsg.fd}[1998/09/07 Heisei Gothic (Vertical)]
+\DeclareKanjiFamily{JT1}{hsg}{}
+\DeclareRelationFont{JT1}{hsg}{sl}{}{OT1}{cmr}{}{}
+\DeclareRelationFont{JT1}{hsg}{m}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{hsg}{sb}{}{OT1}{cmr}{m}{}
+\DeclareRelationFont{JT1}{hsg}{b}{}{OT1}{cmr}{bx}{}
+\DeclareRelationFont{JT1}{hsg}{bx}{}{OT1}{cmr}{bx}{}
+\DeclareFontShape{JT1}{hsg}{sl}{n}{ <-> tdfhsgmaa  }{}
+\DeclareFontShape{JT1}{hsg}{m}{n}{ <-> tdfhsgpaa  }{}
+\DeclareFontShape{JT1}{hsg}{sb}{n}{ <-> tdfhsgraa  }{}
+\DeclareFontShape{JT1}{hsg}{b}{n}{ <-> tdfhsgsaa  }{}
+\DeclareFontShape{JT1}{hsg}{bx}{n}{ <-> tdfhsgvaa  }{}
+\endinput

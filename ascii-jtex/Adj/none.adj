@@ -1,0 +1,42 @@
+; none.adj
+;   Shift the vecter to reference point for Japanese TeX by ASCII co.
+
+; See minXX.pl (or generete it by tftopl command) to see 
+; the relation between code point and char-type.
+;   Shift bitmap to right:  give positive value for delta-X
+;   Shift bitmap to up:  give positive value for delta-Y
+
+;--------------------------------------------------------
+; Writing direction 
+;--------------------------------------------------------
+(direction horizontal)
+
+;--------------------------------------------------------
+; Semantics for delta-X and delta-Y
+;--------------------------------------------------------
+(semantics bitmap-size)
+
+;--------------------------------------------------------
+;  global shift
+;--------------------------------------------------------
+(char-all  0.00  0.00)
+
+;--------------------------------------------------------
+;  CharType       delta-X  delta-Y
+;--------------------------------------------------------
+(char-type   0      0.00     0.00 )  ; e.g. 0x3131
+(char-type   1      0.00     0.00 )  ; e.g. 0x214b
+(char-type   2      0.00     0.00 )  ; e.g. 0x212b
+(char-type   3      0.00     0.00 )  ; e.g. 0x2136
+(char-type   4      0.00     0.00 )  ; e.g. 0x2126
+(char-type   5      0.00     0.00 )  ; e.g. 0x2129
+(char-type   6      0.00     0.00 )  ; e.g. 0x214a
+(char-type   7      0.00     0.00 )  ; e.g. 0x2384
+(char-type   8      0.00     0.00 )  ; e.g. 0x2124
+(char-type   9      0.00     0.00 )  ; e.g. 0x2122
+(char-type  10      0.00     0.00 )  ; e.g. 0x23de
+(char-type  11      0.00     0.00 )  ; e.g. 0x23eb
+(char-type  12      0.00     0.00 )  ; e.g. 0x24ac
+;--------------------------------------------------------
+
+;EOF

@@ -1,0 +1,56 @@
+COMMENT VFlib 3.6
+COMMENT Test file for `vflserver' program.  by H.Kakugawa
+COMMENT % ./vflserver -v VFLIBCAP < THIS-FILE
+
+debug bitmap
+
+open1  cmr10.300tfm -1 1.2 1.2
+open1  cmr10.360tfm -1 1.0 1.0
+open1  cmr10.400tfm -1 1.2 1.2
+open1  cmr10.300tfm -1 1.2 1.2 400 400
+open1  CMR10A.TFM 10 1.0 1.0
+open1  CMR10B.TFM 10 1.0 1.0
+
+
+metric1 !0 0x67  1.0 1.0
+bitmap1 !0 0x67  1.0 1.0
+bitmap1 !0 0x67  1.2 1.2
+bitmap1 !0 0x67  1.4 1.4 
+
+metric1 !1 0x67  1.0 1.0
+bitmap1 !1 0x67  1.0 1.0
+bitmap1 !1 0x67  1.2 1.2
+bitmap1 !1 0x67  1.4 1.4
+
+metric1 !2 0x67  1.0 1.0
+bitmap1 !2 0x67  1.0 1.0
+bitmap1 !2 0x67  1.2 1.2
+bitmap1 !2 0x67  1.4 1.4
+
+metric1 !3 0x67  1.0 1.0
+bitmap1 !3 0x67  1.0 1.0
+bitmap1 !3 0x67  1.2 1.2
+bitmap1 !3 0x67  1.4 1.4
+
+bitmap1 !4 0x67  1.0 1.0
+bitmap1 !5 0x67  1.0 1.0
+bitmap1 !4 0x67  1.2 1.2
+bitmap1 !5 0x67  1.2 1.2
+bitmap1 !4 0x67  1.4 1.4
+bitmap1 !5 0x67  1.4 1.4
+
+
+property !0 RESOLUTION_X
+property !0 RESOLUTION_Y
+property !0 POINT_SIZE
+
+property !1 RESOLUTION_X
+property !1 RESOLUTION_Y
+property !1 POINT_SIZE
+
+property !2 RESOLUTION_X
+property !2 RESOLUTION_Y
+property !2 POINT_SIZE
+
+
+quit
